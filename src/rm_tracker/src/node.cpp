@@ -103,7 +103,7 @@ void RmTrackerNode::armors_cb(const rm_interfaces::msg::ArmorsMsg::SharedPtr msg
     data.imu_rpy = imu_rpy_;
 
     {
-        std::lock_guard<std::mutex> lock(tracker_lock_);
+        std::lock_guard<std::mutex> lock(queue_lock_);
         // 核心机制：锁定并清空阻塞旧数据队列。长度维持为1，触发跳帧，确保永远只追踪战场最新画面
         std::queue<TrackData> empty;
         std::swap(track_queue_, empty);
@@ -119,7 +119,7 @@ void RmTrackerNode::processing_worker() {
     while (rclcpp::ok() && worker_running_) {
         TrackData data;
         {
-            std::unique_lock<std::mutex> lock(tracker_lock_);
+            std::unique_lock<std::mutex> lock(queue_lock_);
             // 阻塞直至受到条件变量唤醒
             cv_.wait(lock, [this]() { return !track_queue_.empty() || !worker_running_; });
             if (!worker_running_) break;

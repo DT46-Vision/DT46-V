@@ -112,6 +112,7 @@ private:
     std::mutex tracker_lock_;
     std::mutex render_lock_;
     std::mutex imu_lock_;
+    std::mutex queue_lock_;
 
     std::queue<TrackData> track_queue_;
     std::condition_variable cv_;
