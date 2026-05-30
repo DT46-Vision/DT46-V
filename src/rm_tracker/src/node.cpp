@@ -32,7 +32,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
 
     // 5. 绑定并订阅高频基础数据
     sub_imu_rpy_ = this->create_subscription<geometry_msgs::msg::Vector3Stamped>(
-        "/imu/rpy", sensor_qos, std::bind(&RmTrackerNode::imu_rpy_cb, this, std::placeholders::_1));
+        "/imu/rpy", 10, std::bind(&RmTrackerNode::imu_rpy_cb, this, std::placeholders::_1));
 
     sub_armors_ = this->create_subscription<rm_interfaces::msg::ArmorsMsg>(
         "/detector/armors_info", sensor_qos, std::bind(&RmTrackerNode::armors_cb, this, std::placeholders::_1));
@@ -44,7 +44,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
         "/nav/decision", sensor_qos, std::bind(&RmTrackerNode::cb_opponent_color, this, std::placeholders::_1));
 
     sub_raw_img_ = this->create_subscription<sensor_msgs::msg::Image>(
-        "/image_raw", sensor_qos, std::bind(&RmTrackerNode::res_img_cb, this, std::placeholders::_1));
+        "/image_raw", rclcpp::SensorDataQoS(), std::bind(&RmTrackerNode::res_img_cb, this, std::placeholders::_1));
 
     // 6. 声明输出发布器
     pub_tracking_state_img_ = this->create_publisher<sensor_msgs::msg::Image>("/tracker/tracking_state_img", sensor_qos);
@@ -59,7 +59,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     worker_running_ = true;
     worker_thread_ = std::thread(&RmTrackerNode::processing_worker, this);
 
-    RCLCPP_INFO(this->get_logger(), "DT46 Tracker [C++ 纯血版] 节点启动成功。");
+    RCLCPP_INFO(this->get_logger(), "DT46 Tracker 节点启动成功。");
 }
 
 RmTrackerNode::~RmTrackerNode() {
@@ -128,16 +128,35 @@ void RmTrackerNode::processing_worker() {
             track_queue_.pop();
         }
 
+        // 【补全1】获取云台的世界系 Yaw (角度)，供下面的循环使用
+        double gimbal_yaw_deg = data.imu_rpy(2);
+
         // 1. 将 ROS 自定义检测消息反序列化解析为我们的标准 Armor 结构体
         std::vector<Armor> raw_armors;
         for (const auto& a : data.msg->armors) {
-            // mm 统一转为物理世界标准的米(m)
-            Armor armor(a.armor_id, a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0, -a.yaw);
+            // 1. 颜色过滤
+            if (target_color_ == 1 && a.armor_id >= 6) continue;
+            if (target_color_ == 0 && a.armor_id < 6) continue;
+
+            // 2. 坐标系转换 (Cam -> World)
+            Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);
+            Eigen::Vector3d world_pos = tf_.cam_to_world(raw_pos, data.imu_rpy);
+
+            // 3. 角度对齐与转换 (Degree -> Radian)
+            double pnp_yaw_deg = -a.yaw;
+            double world_yaw_deg = gimbal_yaw_deg + pnp_yaw_deg;
+            double yaw_rad = world_yaw_deg * (M_PI / 180.0);
+            double norm_yaw = std::fmod(yaw_rad + M_PI, 2.0 * M_PI);
+            if (norm_yaw < 0) norm_yaw += 2.0 * M_PI;
+            norm_yaw -= M_PI;
+
+            Armor armor(a.armor_id, world_pos(0), world_pos(1), world_pos(2), norm_yaw);
             raw_armors.push_back(armor);
         }
 
+        // 把原版调用 Tracker 进行 EKF 更新的代码加回来
         rclcpp::Time ros_clock = data.msg->header.stamp;
-        double dt = 0.01; // 临时设定为固定控制周期 (根据硬件可扩展为基于 header 差分计算的真实 dt)
+        double dt = 0.01; // 临时设定为固定控制周期 (可根据 ros_clock 差分)
 
         // 2. 线程同步锁：开始调用核心预测状态机与滤波器
         std::tuple<double, double, bool> gimbal_cmd;
@@ -158,7 +177,7 @@ void RmTrackerNode::processing_worker() {
 
             // 数据拷贝：提取非阻塞式渲染快照
             std::lock_guard<std::mutex> r_lock(render_lock_);
-            render_snapshot_ = get_render_snapshot();
+            render_snapshot_ = tracker_.get_render_snapshot();
         }
 
         // 3. 构建并发布电控/微控制器需要的最终云台控制包
@@ -170,8 +189,10 @@ void RmTrackerNode::processing_worker() {
         // 显式规避 bool 隐式转换风险
         gb_msg.can_fire = static_cast<int>(std::get<2>(gimbal_cmd));
         pub_gimbal_control_->publish(gb_msg);
+
+        }
     }
-}
+
 
 // =====================================================================
 // 图像渲染流与可视化发布
@@ -213,14 +234,6 @@ void RmTrackerNode::res_img_cb(const sensor_msgs::msg::Image::SharedPtr msg) {
     } catch (cv_bridge::Exception& e) {
         RCLCPP_ERROR(this->get_logger(), "cv_bridge 渲染管道捕获到异常: %s", e.what());
     }
-}
-
-RenderSnapshot RmTrackerNode::get_render_snapshot() {
-    RenderSnapshot s;
-    s.tracker_state = tracker_.tracker_state;
-    // 分离无锁数据
-    s.gimbal_control = render_snapshot_ ? render_snapshot_->gimbal_control : std::make_tuple(0.0, 0.0, false);
-    return s;
 }
 
 // =====================================================================
@@ -311,7 +324,40 @@ void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapsho
     cv::putText(draw, text, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 2);
     cv::putText(draw, can_fire ? "FIRE ENABLE" : "HOLD FIRE", cv::Point(20, 90),
                 cv::FONT_HERSHEY_SIMPLEX, 0.8, fire_color, 2);
-}
+
+    if (snapshot.target.has_value()) {
+        Eigen::Vector3d target_world = snapshot.target.value().pos; // 世界系 3D 坐标
+
+        // 获取当前安全的 IMU 数据
+        Eigen::Vector3d current_imu;
+        {
+            std::lock_guard<std::mutex> lock(imu_lock_);
+            current_imu = imu_rpy_;
+        }
+
+        // 1. 世界系转回相机系
+        Eigen::Vector3d target_cam = tf_.world_to_cam(target_world, current_imu);
+
+        // 2. 3D 相机系坐标投影为 2D 像素坐标 (u, v)
+        auto [uv, is_valid] = tf_.project_point(target_cam);
+
+        if (is_valid) {
+            // 依据距离动态计算锁定圈的大小（越远圈越小）
+            int radius = static_cast<int>(35.0 / snapshot.target.value().dist);
+            radius = std::clamp(radius, 15, 60);
+
+            // 绘制锁定圈（发射允许为绿色，不允许为红色）
+            cv::circle(draw, uv, radius, fire_color, 2);
+
+            // 标签文字：展示当前追踪的 ID 和是否进入小陀螺
+            std::string state_label = snapshot.spin ? " [SPIN]" : " [NORMAL]";
+            std::string full_text = "ID:" + std::to_string(snapshot.target.value().id) + state_label;
+
+            cv::putText(draw, full_text, cv::Point(uv.x + radius + 4, uv.y - radius),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.55, fire_color, 2);
+            }
+        }
+    }
 
 } // namespace dt46_vision
 

@@ -48,23 +48,6 @@ struct TrackData {
     Eigen::Vector3d imu_rpy;
 };
 
-// 渲染快照结构体
-struct RenderSnapshot {
-    TrackerState tracker_state;
-    Eigen::Matrix<double, 9, 1> target_state;
-    double another_r;
-    double dz;
-    std::vector<Armor> debug_yaw_armors;
-    std::optional<Armor> target;
-    std::optional<Armor> muzzle_target;
-    bool spin;
-    double yaw_tolerance_deg;
-    double pitch_tolerance_deg;
-    std::tuple<double, double, bool> gimbal_control;
-    double ekf_yaw_vel;
-    double bullet_speed;
-};
-
 class RmTrackerNode : public rclcpp::Node {
 public:
     RmTrackerNode(const rclcpp::NodeOptions& options);
@@ -85,7 +68,6 @@ private:
     // =============== 渲染工具函数 ===============
     void draw_tracking_state(cv::Mat& draw, const RenderSnapshot& snapshot);
     void draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapshot);
-    RenderSnapshot get_render_snapshot();
 
     // =============== 组件与状态 ===============
     Tracker tracker_;

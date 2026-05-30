@@ -65,6 +65,23 @@ struct RadiusParams {
 // 状态机枚举
 enum class TrackerState { LOST, DETECTING, TRACKING, TEMP_LOST };
 
+// 渲染快照结构体
+struct RenderSnapshot {
+    TrackerState tracker_state;
+    Eigen::Matrix<double, 9, 1> target_state;
+    double another_r;
+    double dz;
+    std::vector<Armor> debug_yaw_armors;
+    std::optional<Armor> target;
+    std::optional<Armor> muzzle_target;
+    bool spin;
+    double yaw_tolerance_deg;
+    double pitch_tolerance_deg;
+    std::tuple<double, double, bool> gimbal_control;
+    double ekf_yaw_vel;
+    double bullet_speed;
+};
+
 // 角度工具函数
 inline double normalize_angle(double angle) {
     return std::fmod(angle + M_PI, 2.0 * M_PI) - M_PI;
@@ -118,6 +135,15 @@ public:
     TrackerState tracker_state;
     int tracked_id;
 
+
+    // 【新增】：专门用于存放当前帧解算结果，供 UI 快照读取
+    std::optional<Armor> target_cam_cache_ = std::nullopt;
+    std::optional<Armor> target_muzzle_cache_ = std::nullopt;
+    std::tuple<double, double, bool> gimbal_control_cache_ = {0.0, 0.0, false};
+
+    // 【新增】：声明快照提取函数
+    RenderSnapshot get_render_snapshot() const;
+
 private:
     ExtendedKalmanFilter ekf_;
     std::vector<RobotAppearance> robot_list_;
@@ -132,6 +158,13 @@ private:
     double dz_ = 0.0;
     double another_r_ = 0.23;
     bool spin_ = false;
+
+    // 小陀螺状态机计数器
+    int min_spinning_frame_count_ = 0;
+    int spinning_frame_lost_count_ = 0;
+    const int min_spinning_frame_ = 10;
+    const int spinning_frame_lost_ = 5;
+    const double min_spinning_vel_ = 5.0; // 进入小陀螺的最小角速度 (rad/s)
 
     // =============== 内部逻辑函数 ===============
     void try_init_tracker(std::vector<Armor>& armors);
