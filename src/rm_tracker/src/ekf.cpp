@@ -134,10 +134,13 @@ void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
 
     // 4. 计算残差协方差 S (Innovation Covariance)
     Eigen::Matrix<double, 4, 4> S = H * P_ * H.transpose() + R_;
-    Eigen::Matrix<double, 4, 4> S_inv = S.inverse();
+
+    // 使用 LDLT 分解代替直接求逆（优化）
+    Eigen::LDLT<Eigen::Matrix<double, 4, 4>> ldlt(S);
+    Eigen::Matrix<double, 4, 4> S_inv = ldlt.solve(Eigen::Matrix<double, 4, 4>::Identity());
 
     // 5. 【马氏距离野值剔除】自由度为 4 的卡方分布
-    double mahalanobis_sq = (Y.transpose() * S_inv * Y).value();
+    double mahalanobis_sq = (Y.transpose() * ldlt.solve(Y)).value();
     if (mahalanobis_sq > 30.0) {
         // 如果测量值离群严重，拒绝更新，直接信任当前的预测步
         return;

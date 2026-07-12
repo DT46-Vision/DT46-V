@@ -76,7 +76,7 @@ void Tracker::init_ekf(const Armor& armor) {
             za, 0, last_yaw_, 0, r_init;
 
     Eigen::Matrix<double, 9, 9> init_p = Eigen::Matrix<double, 9, 9>::Identity();
-    init_p(1,1) = 50.0; init_p(3,3) = 50.0; init_p(5,5) = 10.0; init_p(7,7) = 50.0;
+    init_p(1,1) = 5.0; init_p(3,3) = 5.0; init_p(5,5) = 1.0; init_p(7,7) = 5.0;
 
     ekf_.init(init_x, init_p);
     target_state_ = init_x;
@@ -209,7 +209,7 @@ Eigen::Matrix<double, 9, 1> Tracker::predict_future_state() const {
 
     double xc = current_state(0), yc = current_state(2), za = current_state(4);
     double v_xc = current_state(1), v_yc = current_state(3), v_za = current_state(5);
-    double yaw = current_state(6), v_yaw = current_state(7);
+    double v_yaw = current_state(7);
     double r = current_state(8);
 
     // 估算子弹飞行时间 + 系统发弹延迟

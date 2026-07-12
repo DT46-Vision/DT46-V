@@ -117,7 +117,8 @@ std::tuple<cv::Point2i, bool> RmTF::project_point(const Eigen::Vector3d& xyz_cam
     std::vector<cv::Point3d> objectPoints = { cv::Point3d(0.0, 0.0, 0.0) };
 
     // tvec 平移向量本身就是当前点在相机系中的坐标
-    cv::Mat tvec = (cv::Mat_<double>(3, 1) << xyz_cam(0), xyz_cam(1), xyz_cam(2));
+    // 指针映射零拷贝
+    cv::Mat tvec(3, 1, CV_64F, (void*)xyz_cam.data());
 
     // rvec 设为 0 (无需额外旋转)
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);

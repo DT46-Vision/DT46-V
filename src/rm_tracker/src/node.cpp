@@ -23,6 +23,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
                      this->declare_parameter("rotation_rpy_y", -180.0);
 
     // 3. 初始化日志节流器和计时器
+
     logger_throttler_ = std::make_unique<LogThrottler>(this->get_logger(), 1000);
     last_fps_log_time_ = std::chrono::steady_clock::now();
     last_render_time_ = std::chrono::steady_clock::now();
@@ -133,6 +134,9 @@ void RmTrackerNode::processing_worker() {
 
         // 1. 将 ROS 自定义检测消息反序列化解析为我们的标准 Armor 结构体
         std::vector<Armor> raw_armors;
+        // 预分配器
+        raw_armors.reserve(data.msg->armors.size());
+
         for (const auto& a : data.msg->armors) {
             // 1. 颜色过滤
             if (target_color_ == 1 && a.armor_id >= 6) continue;
@@ -156,10 +160,23 @@ void RmTrackerNode::processing_worker() {
 
         // 把原版调用 Tracker 进行 EKF 更新的代码加回来
         rclcpp::Time ros_clock = data.msg->header.stamp;
-        double dt = 0.01; // 临时设定为固定控制周期 (可根据 ros_clock 差分)
+
+        // 动态获取真实 dt
+        static rclcpp::Time last_time = data.msg->header.stamp;
+        rclcpp::Time current_time = data.msg->header.stamp;
+
+        double dt = (current_time - last_time).nanoseconds() / 1e9;
+        last_time = current_time;
+
+        // 防抖保护：如果时间戳异常或停顿太久，限制 dt 范围
+        if (dt <= 0.001 || dt > 0.1) {
+            dt = 0.01;
+        }
+
 
         // 2. 线程同步锁：开始调用核心预测状态机与滤波器
         std::tuple<double, double, bool> gimbal_cmd;
+        std::vector<std::pair<std::string, std::string>> tracker_logs;
         {
             std::lock_guard<std::mutex> lock(tracker_lock_);
             process_counter_++;
@@ -167,6 +184,8 @@ void RmTrackerNode::processing_worker() {
             // 解包复合返回值并安全隔离底层
             auto track_result = tracker_.track(tf_, raw_armors, data.imu_rpy, dt);
             auto cmd_vec = std::get<0>(track_result);
+
+            tracker_logs = std::get<1>(track_result);
 
             // 严谨校验解算向量完整度，防爆越界
             if (cmd_vec.size() >= 3) {
@@ -190,8 +209,26 @@ void RmTrackerNode::processing_worker() {
         gb_msg.can_fire = static_cast<int>(std::get<2>(gimbal_cmd));
         pub_gimbal_control_->publish(gb_msg);
 
+        if (logger_throttler_->should_log()) {
+            // 1. 计算 FPS
+            auto now = std::chrono::steady_clock::now();
+            std::chrono::duration<double> dt_fps = now - last_fps_log_time_;
+            double current_fps = process_counter_ / dt_fps.count();
+            process_counter_ = 0;
+            last_fps_log_time_ = now;
+
+            // 2. 打印底层 Tracker 传上来的状态机转换日志
+            for (const auto& log : tracker_logs) {  // <--- 改成遍历 tracker_logs
+                RCLCPP_INFO(this->get_logger(), "%s", log.second.c_str());
+            }
+
+            // 3. 打印当前云台解算状态
+            RCLCPP_INFO(this->get_logger(),
+                "[Tracker] FPS: %.1f | Gimbal - yaw: %.2f, pitch: %.2f, fire: %d",
+                current_fps, gb_msg.yaw, gb_msg.pitch, gb_msg.can_fire);
         }
     }
+}
 
 
 // =====================================================================
