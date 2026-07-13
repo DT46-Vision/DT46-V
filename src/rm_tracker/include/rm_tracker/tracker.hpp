@@ -100,7 +100,7 @@ public:
     track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vector3d& imu_rpy, double dt);
 
     // 更新状态机与滤波器
-    void update(const std::vector<Armor>& armors, double dt);
+    void update(const std::vector<Armor>& armors, double dt, std::vector<std::pair<std::string, std::string>>& logs);
 
     // 弹道求解
     std::tuple<double, double, bool> solve_ballistic(RmTF& tf, const Armor& muzzle_target,

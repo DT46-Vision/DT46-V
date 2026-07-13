@@ -63,5 +63,11 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+  "C_Cpp_Runner.msvcSecureNoWarnings": false,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/install/rm_serial/lib/python3.10/site-packages"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/install/rm_serial/lib/python3.10/site-packages"
+  ]
 }

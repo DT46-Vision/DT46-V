@@ -22,6 +22,42 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
                      this->declare_parameter("rotation_rpy_p", 0.0),
                      this->declare_parameter("rotation_rpy_y", -180.0);
 
+    // 2.5 加载相机到枪口外参
+    tracker_.cam_to_gun_pos = Eigen::Vector3d(
+        this->declare_parameter("cam_to_gun_pos_x", 0.0),
+        this->declare_parameter("cam_to_gun_pos_y", 0.125),
+        this->declare_parameter("cam_to_gun_pos_z", 0.0));
+    tracker_.cam_to_gun_rpy = Eigen::Vector3d(
+        this->declare_parameter("cam_to_gun_rpy_r", 0.0),
+        this->declare_parameter("cam_to_gun_rpy_p", 0.0),
+        this->declare_parameter("cam_to_gun_rpy_y", 0.0));
+
+    // 2.6 加载跟踪匹配与状态机参数
+    tracker_.max_match_distance = this->declare_parameter("max_match_distance", 0.2);
+    tracker_.max_match_yaw_diff = this->declare_parameter("max_match_yaw_diff", 57.0) * (M_PI / 180.0);
+    tracker_.jump_cooldown_max = this->declare_parameter("jump_cooldown_max", 20);
+    tracker_.tracking_thres = this->declare_parameter("tracking_thres", 5);
+    tracker_.lost_thres = this->declare_parameter("lost_thres", 20);
+    tracker_.dist_tol = this->declare_parameter("dist_tol", 0.15);
+
+    // 2.7 加载 EKF Q/R 噪声参数
+    tracker_.ekf_QR_params.q_xyz = this->declare_parameter("ekf_QR_q_xyz", 20.0);
+    tracker_.ekf_QR_params.q_yaw = this->declare_parameter("ekf_QR_q_yaw", 100.0);
+    tracker_.ekf_QR_params.q_r = this->declare_parameter("ekf_QR_q_r", 800.0);
+    tracker_.ekf_QR_params.r_xyz_factor = this->declare_parameter("ekf_QR_r_xyz_factor", 0.05);
+    tracker_.ekf_QR_params.r_yaw = this->declare_parameter("ekf_QR_r_yaw", 0.02);
+    tracker_.ekf_QR_params.stable_dist = this->declare_parameter("ekf_QR_stable_dist", 1.5);
+
+    // 2.8 加载半径限幅参数
+    tracker_.radius_params.r_max = this->declare_parameter("radius_r_max", 0.4);
+    tracker_.radius_params.r_min = this->declare_parameter("radius_r_min", 0.12);
+
+    // 2.9 加载弹道与射击参数
+    tracker_.system_delay = this->declare_parameter("system_delay", 0.1);
+    tracker_.shootable_dist = this->declare_parameter("shootable_dist", 3.0);
+    tracker_.yaw_tolerance_deg = this->declare_parameter("yaw_tolerance_deg", 5.0);
+    tracker_.pitch_tolerance_deg = this->declare_parameter("pitch_tolerance_deg", 2.0);
+
     // 3. 初始化日志节流器和计时器
 
     logger_throttler_ = std::make_unique<LogThrottler>(this->get_logger(), 1000);
@@ -138,9 +174,10 @@ void RmTrackerNode::processing_worker() {
         raw_armors.reserve(data.msg->armors.size());
 
         for (const auto& a : data.msg->armors) {
-            // 1. 颜色过滤
-            if (target_color_ == 1 && a.armor_id >= 6) continue;
-            if (target_color_ == 0 && a.armor_id < 6) continue;
+            // 1. 颜色过滤：只保留目标敌人颜色的装甲板
+            // target_color_ == 0 表示要打红色 (id 1~5), target_color_ == 1 表示要打蓝色 (id 6+)
+            if (target_color_ == 0 && a.armor_id >= 6) continue;
+            if (target_color_ == 1 && a.armor_id < 6) continue;
 
             // 2. 坐标系转换 (Cam -> World)
             Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);

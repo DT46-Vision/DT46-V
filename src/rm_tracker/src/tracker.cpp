@@ -1,5 +1,6 @@
 #include "rm_tracker/tracker.hpp"
 #include <algorithm>
+#include <string>
 
 namespace dt46_vision {
 
@@ -117,7 +118,7 @@ void Tracker::handle_armor_jump(const Armor& current_armor) {
     ekf_.smooth_reset_covariance();
 }
 
-void Tracker::update(const std::vector<Armor>& armors, double dt) {
+void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<std::pair<std::string, std::string>>& logs) {
     if (jump_cooldown_ > 0) jump_cooldown_--;
 
     ekf_.predict(dt);
@@ -175,16 +176,19 @@ void Tracker::update(const std::vector<Armor>& armors, double dt) {
             if (++detect_count_ > tracking_thres) {
                 tracker_state = TrackerState::TRACKING;
                 detect_count_ = 0;
+                logs.emplace_back("state", "DETECTING -> TRACKING (ID: " + std::to_string(tracked_id) + ")");
             }
         } else {
             if (--detect_count_ <= 0) {
                 tracker_state = TrackerState::LOST;
+                logs.emplace_back("state", "DETECTING -> LOST (detect timeout)");
             }
         }
     } else if (tracker_state == TrackerState::TRACKING) {
         if (!matched) {
             tracker_state = TrackerState::TEMP_LOST;
             lost_count_ = 1;
+            logs.emplace_back("state", "TRACKING -> TEMP_LOST");
         } else {
             lost_count_ = 0;
         }
@@ -192,10 +196,12 @@ void Tracker::update(const std::vector<Armor>& armors, double dt) {
         if (!matched) {
             if (++lost_count_ > lost_thres) {
                 tracker_state = TrackerState::LOST;
+                logs.emplace_back("state", "TEMP_LOST -> LOST (lost timeout)");
             }
         } else {
             tracker_state = TrackerState::TRACKING;
             lost_count_ = 0;
+            logs.emplace_back("state", "TEMP_LOST -> TRACKING (recovered)");
         }
     }
 }
@@ -471,16 +477,18 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
             init_ekf(raw_armors[0]);
             tracker_state = TrackerState::DETECTING;
             detect_count_ = 1;
+            logs.emplace_back("state", "LOST -> DETECTING (ID: " + std::to_string(tracked_id) + ")");
         }
         return {gimbal_control, logs};
     } else {
         // 如果处于追踪期：灌入 EKF 进行多阶导数更新
-        update(raw_armors, dt);
+        update(raw_armors, dt, logs);
     }
 
     // 兜底机制：若更新判定目标大范围离群导致状态机瞬间跌落，紧急刹车退出
     if (tracker_state == TrackerState::LOST) {
         tracked_id = -1;
+        logs.emplace_back("state", "TRACKING/TEMP_LOST -> LOST (target lost)");
         return {gimbal_control, logs};
     }
 
@@ -493,7 +501,11 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     std::vector<Armor> robot_armors = find_all_armors(future_state);
 
     // 3. 小陀螺决策选板
+    bool was_spin = spin_;
     std::optional<Armor> target_cam = find_target(robot_armors, future_state);
+    if (was_spin != spin_) {
+        logs.emplace_back("spin", spin_ ? "SPIN MODE ON (yaw_vel > threshold)" : "SPIN MODE OFF");
+    }
     if (!target_cam.has_value()) {
         return {gimbal_control, logs};
     }
