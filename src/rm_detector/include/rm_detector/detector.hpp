@@ -70,6 +70,7 @@ namespace DT46_VISION {
     public:
         cv::Mat img;
         cv::Mat crop_img;
+        cv::Mat gray_img_;
         cv::Mat img_binary;
         cv::Mat img_armor;
         cv::Mat img_armor_processed;

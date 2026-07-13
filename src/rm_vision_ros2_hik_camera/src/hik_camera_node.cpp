@@ -77,6 +77,11 @@ public:
       while (rclcpp::ok()) {
         nRet = MV_CC_GetImageBuffer(camera_handle_, &out_frame, 1000);
         if (MV_OK == nRet) {
+          image_msg_.height = out_frame.stFrameInfo.nHeight;
+          image_msg_.width = out_frame.stFrameInfo.nWidth;
+          image_msg_.step = out_frame.stFrameInfo.nWidth * 3;
+          image_msg_.data.resize(image_msg_.width * image_msg_.height * 3);
+
           convert_param_.pDstBuffer = image_msg_.data.data();
           convert_param_.nDstBufferSize = image_msg_.data.size();
           convert_param_.pSrcData = out_frame.pBufAddr;
@@ -86,10 +91,6 @@ public:
           MV_CC_ConvertPixelType(camera_handle_, &convert_param_);
 
           image_msg_.header.stamp = this->now();
-          image_msg_.height = out_frame.stFrameInfo.nHeight;
-          image_msg_.width = out_frame.stFrameInfo.nWidth;
-          image_msg_.step = out_frame.stFrameInfo.nWidth * 3;
-          image_msg_.data.resize(image_msg_.width * image_msg_.height * 3);
 
           camera_info_msg_.header = image_msg_.header;
           camera_pub_.publish(image_msg_, camera_info_msg_);

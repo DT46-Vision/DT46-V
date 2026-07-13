@@ -29,11 +29,12 @@ namespace DT46_VISION {
         );
 
     private:
-        rclcpp::Logger logger_;   // ROS 2日志器
+        rclcpp::Logger logger_;
+        cv::Mat cached_K_;
+        cv::Mat cached_D_;
+        bool has_cached_caminfo_ = false;
 
-        //  解析相机参数
-        bool parseCameraInfo(const sensor_msgs::msg::CameraInfo::SharedPtr& msg, cv::Mat& K, cv::Mat& D);
-        // 物体3D坐标选择
+        void parseCameraInfo(const sensor_msgs::msg::CameraInfo::SharedPtr& msg);
         std::vector<cv::Point3f> getObjectPoints(int object_size);
     };
 

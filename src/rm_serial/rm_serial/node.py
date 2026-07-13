@@ -31,9 +31,9 @@ class SerialNode(Node):
 
         # 创建qos
         qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
-            depth=50,
+            depth=10,
             durability=DurabilityPolicy.VOLATILE,
         )
 
@@ -117,57 +117,63 @@ class SerialNode(Node):
 
     def receive_data(self):
         packet_length = 20
-        self.get_logger().info("接收数据线程已启动 (CRC16 Mode - 20 Bytes)")
+        header_byte = self.serial_receive_header
+        self.get_logger().info("接收数据线程已启动 (非阻塞缓冲模式, CRC16 - 20 Bytes)")
 
         try:
             self.serial.reset_input_buffer()
         except Exception:
             pass
 
+        buf = bytearray()
+
         while rclpy.ok():
             try:
-                header = self.serial.read(1)
-                if not header or header[0] != self.serial_receive_header:
+                if self.serial.in_waiting > 0:
+                    buf.extend(self.serial.read(self.serial.in_waiting))
+                else:
+                    time.sleep(0.001)
                     continue
 
-                remaining_data = self.serial.read(packet_length - 1)
-                if len(remaining_data) != packet_length - 1:
-                    self.get_logger().warn("数据包不完整")
-                    continue
+                while True:
+                    idx = buf.find(header_byte)
+                    if idx < 0 or idx + packet_length > len(buf):
+                        break
 
-                full_packet = header + remaining_data
-                data_payload = full_packet[:-2]
-                checksum_bytes = full_packet[-2:]
+                    frame = buf[idx:idx + packet_length]
+                    buf = buf[idx + packet_length:]
 
-                received_crc = struct.unpack('<H', checksum_bytes)[0]
-                calculated_crc = get_crc16_check_sum(data_payload)
+                    data_payload = frame[:-2]
+                    checksum_bytes = frame[-2:]
 
-                if calculated_crc != received_crc:
-                    continue
+                    received_crc = struct.unpack('<H', checksum_bytes)[0]
+                    calculated_crc = get_crc16_check_sum(data_payload)
 
-                _, detect_color, roll, pitch, yaw, bullet_speed = struct.unpack("<BBffff", data_payload)
+                    if calculated_crc != received_crc:
+                        continue
 
-                if self.pub_rpy:
-                    # 发布 IMU 消息
-                    rpy_msg = Vector3Stamped()
-                    rpy_msg.header.stamp = self.get_clock().now().to_msg()
-                    rpy_msg.header.frame_id = 'imu_link'
-                    rpy_msg.vector.x = float(roll)
-                    rpy_msg.vector.y = float(pitch)
-                    rpy_msg.vector.z = float(yaw)
-                    self.pub_uart_receive_imu.publish(rpy_msg)
+                    _, detect_color, roll, pitch, yaw, bullet_speed = struct.unpack("<BBffff", data_payload)
 
-                # 发布 Decision 消息
-                serial_decision_msg = Decision()
-                serial_decision_msg.header.frame_id = 'serial_receive_frame'
-                serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
-                serial_decision_msg.color = detect_color
-                serial_decision_msg.bullet_speed = bullet_speed
-                self.pub_uart_receive_decision.publish(serial_decision_msg)
+                    if self.pub_rpy:
+                        rpy_msg = Vector3Stamped()
+                        rpy_msg.header.stamp = self.get_clock().now().to_msg()
+                        rpy_msg.header.frame_id = 'imu_link'
+                        rpy_msg.vector.x = float(roll)
+                        rpy_msg.vector.y = float(pitch)
+                        rpy_msg.vector.z = float(yaw)
+                        self.pub_uart_receive_imu.publish(rpy_msg)
+
+                    serial_decision_msg = Decision()
+                    serial_decision_msg.header.frame_id = 'serial_receive_frame'
+                    serial_decision_msg.header.stamp = self.get_clock().now().to_msg()
+                    serial_decision_msg.color = detect_color
+                    serial_decision_msg.bullet_speed = bullet_speed
+                    self.pub_uart_receive_decision.publish(serial_decision_msg)
 
             except (serial.SerialException, struct.error, ValueError, OSError) as e:
                 self.get_logger().error(f"接收数据异常: {str(e)}")
                 self.reopen_port()
+                buf = bytearray()
 
     def send_data_loop(self):
         """专门用于发送数据的独立线程循环"""

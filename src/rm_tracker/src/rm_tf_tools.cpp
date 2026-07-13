@@ -113,33 +113,21 @@ std::tuple<cv::Point2i, bool> RmTF::project_point(const Eigen::Vector3d& xyz_cam
         return {cv::Point2i(0, 0), false};
     }
 
-    // 准备 OpenCV 所需的数据结构
-    std::vector<cv::Point3d> objectPoints = { cv::Point3d(0.0, 0.0, 0.0) };
-
-    // tvec 平移向量本身就是当前点在相机系中的坐标
-    // 指针映射零拷贝
-    cv::Mat tvec(3, 1, CV_64F, (void*)xyz_cam.data());
-
-    // rvec 设为 0 (无需额外旋转)
-    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);
-
-    std::vector<cv::Point2d> imagePoints;
-
-    try {
-        // 调用 OpenCV PnP 投影
-        cv::projectPoints(objectPoints, rvec, tvec, camera_matrix_, dist_coeffs_, imagePoints);
-
-        int u = static_cast<int>(std::round(imagePoints[0].x));
-        int v = static_cast<int>(std::round(imagePoints[0].y));
-
-        // 基础边界保护，防止绘图炸裂
-        bool is_valid = (u > -10000 && u < 10000 && v > -10000 && v < 10000);
-        return {cv::Point2i(u, v), is_valid};
-
-    } catch (const cv::Exception& e) {
-        std::cerr << "Project point error: " << e.what() << std::endl;
+    double Z = xyz_cam(2);
+    if (std::abs(Z) < 1e-6) {
         return {cv::Point2i(0, 0), false};
     }
+
+    double fx = camera_matrix_.at<double>(0, 0);
+    double fy = camera_matrix_.at<double>(1, 1);
+    double cx = camera_matrix_.at<double>(0, 2);
+    double cy = camera_matrix_.at<double>(1, 2);
+
+    int u = static_cast<int>(fx * xyz_cam(0) / Z + cx + 0.5);
+    int v = static_cast<int>(fy * xyz_cam(1) / Z + cy + 0.5);
+
+    bool is_valid = (u > -10000 && u < 10000 && v > -10000 && v < 10000);
+    return {cv::Point2i(u, v), is_valid};
 }
 
 } // namespace dt46_vision

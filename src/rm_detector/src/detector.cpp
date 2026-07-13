@@ -154,9 +154,8 @@ namespace DT46_VISION{
             std::cerr << "Input image is empty!" << std::endl;
             return cv::Mat();
         }
-        img = img_input.clone();
-        //判断 roi 局部模式
-        cv::Mat working_img = img;     // img ---> working_img
+        img = img_input;
+        cv::Mat working_img = img;
         crop_img = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
 
         if (params.roi_crop){
@@ -172,15 +171,14 @@ namespace DT46_VISION{
 
             roi_rect = cv::Rect(x, y, crop_w, crop_h);
 
-            if (roi_rect.area() > 0){  //最小面积阈值
-                crop_img = img(roi_rect).clone(); // 裁剪
+            if (roi_rect.area() > 0){
+                crop_img = img(roi_rect);
                 working_img = crop_img;
             }
         }
 
-        cv::Mat gray_img;
-        cv::cvtColor(working_img, gray_img, cv::COLOR_BGR2GRAY);
-        cv::threshold(gray_img, img_binary, binary_val, 255, cv::THRESH_BINARY);
+        cv::cvtColor(working_img, gray_img_, cv::COLOR_BGR2GRAY);
+        cv::threshold(gray_img_, img_binary, binary_val, 255, cv::THRESH_BINARY);
         return img_binary;
     }
 
@@ -221,26 +219,25 @@ namespace DT46_VISION{
 
             int length = static_cast<int>(calculate_distance(up, down));
 
-            if (length <= 0) continue;  // 避免空 ROI
-
-            cv::Mat roi(1, length, CV_8UC3, cv::Scalar(0, 0, 0));
+            if (length <= 0) continue;
 
             cv::Mat raw = img;
             if (params.roi_crop){
                 raw = crop_img;
             }
-            for (int i = 0; i < length; ++i) {
-                float t = static_cast<float>(i) / length;
-                int current_x = static_cast<int>(up_x + (down_x - up_x) * t);
-                int current_y = static_cast<int>(up_y + (down_y - up_y) * t);
 
-                if (current_x >= 0 && current_x < img.cols && current_y >= 0 && current_y < img.rows) {
-                    roi.at<cv::Vec3b>(0, i) = raw.at<cv::Vec3b>(current_y, current_x);
+            int sum_b = 0, sum_r = 0;
+            int sample_count = std::min(10, length);
+            for (int i = 0; i < sample_count; ++i) {
+                float t = static_cast<float>(i) / (sample_count - 1);
+                int cx = static_cast<int>(up_x + (down_x - up_x) * t);
+                int cy = static_cast<int>(up_y + (down_y - up_y) * t);
+                if (cx >= 0 && cx < raw.cols && cy >= 0 && cy < raw.rows) {
+                    cv::Vec3b p = raw.at<cv::Vec3b>(cy, cx);
+                    sum_b += p[0];
+                    sum_r += p[2];
                 }
             }
-
-            int sum_b = cv::sum(roi)[0];
-            int sum_r = cv::sum(roi)[2];
 
             if ((color == 1 || color == 2) && sum_b > sum_r * params.light_blue_ratio) {
                 lights_found.push_back(Light(up, down, 1));
@@ -527,15 +524,12 @@ namespace DT46_VISION{
     }
 
     std::tuple<cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat> ArmorDetector::display() {
-        if (display_mode == true) {
+        if (display_mode) {
             img_drawn = draw_img();
             return std::make_tuple(crop_img, img_binary, img_drawn, img_armor, img_armor_processed);
-        } else if (display_mode == false) {
-            return std::make_tuple(cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)));
-        } else {
-            std::cerr << "Invalid display mode" << std::endl;
-            return std::make_tuple(cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)), cv::Mat(1, 1, CV_8UC1, cv::Scalar(0)));
         }
+        static const cv::Mat empty_mat(1, 1, CV_8UC1, cv::Scalar(0));
+        return std::make_tuple(empty_mat, empty_mat, empty_mat, empty_mat, empty_mat);
     }
 
     std::vector<Armor> ArmorDetector::detect_armors(const cv::Mat& img_input) {

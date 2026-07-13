@@ -11,20 +11,23 @@ namespace DT46_VISION {
             throw std::runtime_error("NumberClassifier: failed to load ONNX model: " + onnx_path);
         }
 
-        // ---- DNN 加速配置 ----
+        net_.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        net_.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+
         try {
             net_.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
             net_.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
-        } catch (...) {
-            try {
-                net_.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-                net_.setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL);
-            } catch (...) {
-                net_.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-                net_.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-            }
+            cv::Mat dummy(20, 28, CV_8UC1, cv::Scalar(0));
+            cv::Mat blob = cv::dnn::blobFromImage(dummy, 1.0/255.0, input_size_, cv::Scalar(), false, false, CV_32F);
+            net_.setInput(blob);
+            net_.forward();
+        } catch (const cv::Exception&) {
+            net_.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+            net_.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
         }
+
         bin_f_.create(input_size_, CV_8UC1);
+        blob_.create(1, 1, CV_32F);
     }
 
     NumberClassifier::Result NumberClassifier::classify(const cv::Mat& armor_img)
@@ -34,20 +37,17 @@ namespace DT46_VISION {
 
         cv::resize(armor_img, bin_f_, input_size_, 0, 0, cv::INTER_AREA);
 
-        // 转 blob 并归一化（单通道也可以直接 blobFromImage）
-        cv::Mat blob = cv::dnn::blobFromImage(bin_f_, 1.0 / 255.0, input_size_, cv::Scalar(), false, false, CV_32F);
+        blob_ = cv::dnn::blobFromImage(bin_f_, 1.0 / 255.0, input_size_, cv::Scalar(), false, false, CV_32F);
 
-        // 前向推理
-        net_.setInput(blob);
-        cv::Mat logits = net_.forward(); // shape: 1xC
+        net_.setInput(blob_);
+        cv::Mat logits = net_.forward();
 
-        // 取最大值/类别
         cv::Point classIdPoint;
         double confidence;
         cv::minMaxLoc(logits, nullptr, &confidence, nullptr, &classIdPoint);
 
         out.class_id = classIdPoint.x;
-        out.confidence = static_cast<float>(confidence);  // 仍然是 logit / 未 softmax 的值
+        out.confidence = static_cast<float>(confidence);
 
         return out;
     }

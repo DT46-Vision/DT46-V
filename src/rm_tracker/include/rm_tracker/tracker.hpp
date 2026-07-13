@@ -144,6 +144,8 @@ public:
     // 【新增】：声明快照提取函数
     RenderSnapshot get_render_snapshot() const;
 
+    void build_ballistic_lut();
+
 private:
     ExtendedKalmanFilter ekf_;
     std::vector<RobotAppearance> robot_list_;
@@ -165,6 +167,19 @@ private:
     const int min_spinning_frame_ = 10;
     const int spinning_frame_lost_ = 5;
     const double min_spinning_vel_ = 5.0; // 进入小陀螺的最小角速度 (rad/s)
+
+    // 弹道查找表
+    static constexpr int LUT_DIST_BINS = 25;
+    static constexpr int LUT_HEIGHT_BINS = 15;
+    static constexpr double LUT_DIST_MIN = 0.1;
+    static constexpr double LUT_DIST_MAX = 12.0;
+    static constexpr double LUT_DIST_STEP = 0.5;
+    static constexpr double LUT_HEIGHT_MIN = -3.5;
+    static constexpr double LUT_HEIGHT_MAX = 3.5;
+    static constexpr double LUT_HEIGHT_STEP = 0.5;
+    double ballistic_lut_[LUT_DIST_BINS][LUT_HEIGHT_BINS];
+
+    inline double lut_lookup(double dist_h, double z) const;
 
     // =============== 内部逻辑函数 ===============
     void try_init_tracker(std::vector<Armor>& armors);

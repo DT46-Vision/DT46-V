@@ -2,23 +2,18 @@
 
 namespace DT46_VISION {
 
-    // 解析相机内参矩阵和畸变系数
-    bool PNP::parseCameraInfo(const sensor_msgs::msg::CameraInfo::SharedPtr& msg, cv::Mat& K, cv::Mat& D) {
-        if (msg == nullptr) {
-            return false;
-        }
+    void PNP::parseCameraInfo(const sensor_msgs::msg::CameraInfo::SharedPtr& msg) {
+        if (msg == nullptr || has_cached_caminfo_) return;
 
-        // 内参矩阵 K (3x3)
-        K = (cv::Mat_<double>(3, 3) <<
+        cached_K_ = (cv::Mat_<double>(3, 3) <<
             msg->k[0], msg->k[1], msg->k[2],
             msg->k[3], msg->k[4], msg->k[5],
             msg->k[6], msg->k[7], msg->k[8]);
 
-        // 畸变系数矩阵 D (1x5)
-        D = (cv::Mat_<double>(1, 5) <<
+        cached_D_ = (cv::Mat_<double>(1, 5) <<
             msg->d[0], msg->d[1], msg->d[2], msg->d[3], msg->d[4]);
 
-        return true;
+        has_cached_caminfo_ = true;
     }
 
     // 根据物体尺寸ID选择物体3D坐标 (单位: mm)
@@ -68,21 +63,18 @@ namespace DT46_VISION {
 
         // 获取相机参数
         cv::Mat cameraMatrix, distCoeffs;
-        if (!parseCameraInfo(cam_info, cameraMatrix, distCoeffs)) {
-            // 默认参数 (如果没有收到 camera_info，请务必校准这里)
-            // 这里的默认值可能会导致巨大的误差，请确认日志中是否有 "no cam_info"
-            cameraMatrix = (cv::Mat_<double>(3, 3) <<
-                1320.127401, 0.0, 609.90294,
-                0.0, 1329.050651, 457.308236,
-                0.0, 0.0, 1.0);
-            distCoeffs = (cv::Mat_<double>(1, 5) <<
-                -0.034135, 0.131210, -0.015866, -0.004433, 0.0);
+        parseCameraInfo(cam_info);
 
-            RCLCPP_WARN(logger_, "no cam_info");
+        if (has_cached_caminfo_) {
+            cameraMatrix = cached_K_;
+            distCoeffs = cached_D_;
         }
 
         // 强制使用图像几何中心 (仅在特定裁切策略下使用)
         if (use_geometric_center) {
+            if (!has_cached_caminfo_) {
+                cameraMatrix = cv::Mat_<double>(3, 3);
+            }
             cameraMatrix.at<double>(0,2) = frame.cols / 2.0;
             cameraMatrix.at<double>(1,2) = frame.rows / 2.0;
         }

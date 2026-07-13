@@ -206,10 +206,8 @@ class DM_Serial:
                     self.cnt_crc += 1
                     continue
 
-            # 解 3 个 float32（LE）
-            f1 = struct.unpack('<f', frame[4:8])[0]
-            f2 = struct.unpack('<f', frame[8:12])[0]
-            f3 = struct.unpack('<f', frame[12:16])[0]
+            # 解 3 个 float32（LE）- 单次调用
+            f1, f2, f3 = struct.unpack('<fff', frame[4:16])
             results.append((rid, (f1, f2, f3)))
 
             # 丢弃已消费的数据（到帧尾），并从头继续找

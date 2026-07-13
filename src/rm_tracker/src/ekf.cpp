@@ -43,13 +43,11 @@ void ExtendedKalmanFilter::predict(double dt) {
     F_(4, 5) = dt; // z  += vz * dt
     F_(6, 7) = dt; // yaw+= vyaw * dt
 
-    // 2. 动态构建过程噪声矩阵 Q
-    Q_.setZero();
+    // 2. 动态构建过程噪声矩阵 Q (复用预先设为零的 Q_)
     double t2 = dt * dt;
     double t3 = t2 * dt;
     double t4 = t3 * dt;
 
-    // XYZ 噪声分量
     double q_xyz_x  = (t4 / 4.0) * s2qxyz_;
     double q_xyz_vx = (t3 / 2.0) * s2qxyz_;
     double q_xyz_vv = t2 * s2qxyz_;
@@ -61,7 +59,6 @@ void ExtendedKalmanFilter::predict(double dt) {
     Q_(4,4) = q_xyz_x; Q_(4,5) = q_xyz_vx;
     Q_(5,4) = q_xyz_vx; Q_(5,5) = q_xyz_vv;
 
-    // Yaw 噪声分量
     double q_yaw_x  = (t4 / 4.0) * s2qyaw_;
     double q_yaw_vx = (t3 / 2.0) * s2qyaw_;
     double q_yaw_vv = t2 * s2qyaw_;
@@ -69,11 +66,13 @@ void ExtendedKalmanFilter::predict(double dt) {
     Q_(6,6) = q_yaw_x; Q_(6,7) = q_yaw_vx;
     Q_(7,6) = q_yaw_vx; Q_(7,7) = q_yaw_vv;
 
-    // 半径噪声分量
     Q_(8,8) = t2 * s2qr_;
 
-    // 3. 预测步：先验状态与协方差更新
-    X_ = F_ * X_;
+    // 3. 状态传播：F_ 仅有4个非对角非零元素，直接标量操作替代稠密矩阵乘法
+    X_(0) += X_(1) * dt;
+    X_(2) += X_(3) * dt;
+    X_(4) += X_(5) * dt;
+    X_(6) += X_(7) * dt;
     X_(6) = normalizeAngle(X_(6));
     P_ = F_ * P_ * F_.transpose() + Q_;
 }
@@ -114,10 +113,12 @@ void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     double dist_h = std::hypot(obs_x, obs_y);
     double base_noise = 0.05;
 
-    R_.setZero();
     R_(0,0) = std::abs(r_xyz_factor_ * obs_x) + base_noise;
     R_(1,1) = std::abs(r_xyz_factor_ * obs_y) + base_noise;
     R_(2,2) = std::abs(r_xyz_factor_ * obs_z) + base_noise;
+    R_(1,0) = 0; R_(2,0) = 0; R_(3,0) = 0;
+    R_(2,1) = 0; R_(3,1) = 0;
+    R_(3,2) = 0;
 
     // 远距离 Yaw 角信任降级
     if (dist_h > stable_dist_) {

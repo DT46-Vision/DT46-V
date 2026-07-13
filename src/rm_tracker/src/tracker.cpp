@@ -9,7 +9,6 @@ Tracker::Tracker() {
     tracked_id = -1;
     target_state_.setZero();
 
-    // 初始化机器人列表 (部分示例，对应 Python 的 robot_list)
     robot_list_.emplace_back(0, 230.0, 125.0, 0.3, 0.285);
     robot_list_.emplace_back(1, 135.0, 125.0, 0.23, 0.21);
     robot_list_.emplace_back(2, 135.0, 125.0, 0.3, 0.27);
@@ -18,7 +17,8 @@ Tracker::Tracker() {
     robot_list_.emplace_back(5, 135.0, 125.0, 0.24, 0.22);
     robot_list_.emplace_back(6, 230.0, 125.0, 0.3, 0.285);
     robot_list_.emplace_back(7, 135.0, 125.0, 0.23, 0.21);
-    // 可根据实际情况补全
+
+    build_ballistic_lut();
 }
 
 Eigen::Vector3d Tracker::get_armor_position_from_state(const Eigen::Matrix<double, 9, 1>& x) const {
@@ -401,6 +401,66 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
     return {yaw, pitch, fire_flag};
 }
 
+// =====================================================================
+// 5.5 弹道查找表预计算与查询
+// =====================================================================
+void Tracker::build_ballistic_lut() {
+    const double g = 9.81;
+    const double v_init = bullet_speed > 0 ? bullet_speed : 28.0;
+
+    for (int i = 0; i < LUT_DIST_BINS; ++i) {
+        for (int j = 0; j < LUT_HEIGHT_BINS; ++j) {
+            double dist_h = LUT_DIST_MIN + i * LUT_DIST_STEP;
+            double z_target = LUT_HEIGHT_MIN + j * LUT_HEIGHT_STEP;
+
+            double pitch = std::atan2(z_target, dist_h);
+
+            for (int iter = 0; iter < 5; ++iter) {
+                double sim_x = 0.0, sim_z = 0.0;
+                double v_x = v_init * std::cos(pitch);
+                double v_z = v_init * std::sin(pitch);
+                double t = 0.0;
+
+                while (sim_x < dist_h && t < 2.0) {
+                    double v = std::hypot(v_x, v_z);
+                    double a_x = -k_v2 * v * v_x;
+                    double a_z = -g - k_v2 * v * v_z;
+
+                    sim_x += v_x * 0.005;
+                    sim_z += v_z * 0.005;
+                    v_x += a_x * 0.005;
+                    v_z += a_z * 0.005;
+                    t += 0.005;
+                }
+
+                double z_error = z_target - sim_z;
+                if (std::abs(z_error) < 0.005) break;
+                pitch += z_error / std::max(dist_h, 0.1);
+            }
+
+            ballistic_lut_[i][j] = pitch;
+        }
+    }
+}
+
+double Tracker::lut_lookup(double dist_h, double z) const {
+    double di = (dist_h - LUT_DIST_MIN) / LUT_DIST_STEP;
+    double dj = (z - LUT_HEIGHT_MIN) / LUT_HEIGHT_STEP;
+
+    int i0 = std::clamp(static_cast<int>(di), 0, LUT_DIST_BINS - 1);
+    int j0 = std::clamp(static_cast<int>(dj), 0, LUT_HEIGHT_BINS - 1);
+    int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
+    int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
+
+    double fi = di - i0;
+    double fj = dj - j0;
+
+    return (1.0 - fi) * (1.0 - fj) * ballistic_lut_[i0][j0]
+         + fi * (1.0 - fj) * ballistic_lut_[i1][j0]
+         + (1.0 - fi) * fj * ballistic_lut_[i0][j1]
+         + fi * fj * ballistic_lut_[i1][j1];
+}
+
 // -------------------------------------------------------------
 // 6. 弹道打靶法 (重力与空气阻力积分)
 // -------------------------------------------------------------
@@ -412,48 +472,18 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
     double x = muzzle_target.pos(0), y = muzzle_target.pos(1), z = muzzle_target.pos(2);
     double dist_h = std::hypot(x, y);
 
-    if (dist_h < 0.1 || dist_h > 12.0 || std::isnan(dist_h)) return {0.0, 0.0, false};
+    if (dist_h < 0.1 || std::isnan(dist_h)) return {0.0, 0.0, false};
 
-    double v_init = bullet_speed;
-    const double g = 9.81;
-    double pitch_rad = std::atan2(z, dist_h); // 初始瞄准角度猜测
+    double pitch_rad = dist_h <= LUT_DIST_MAX ? lut_lookup(dist_h, z) : std::atan2(z, dist_h);
 
-    // 5 次打靶逼近迭代
-    for (int i = 0; i < 5; ++i) {
-        double sim_x = 0.0, sim_z = 0.0;
-        double v_x = v_init * std::cos(pitch_rad);
-        double v_z = v_init * std::sin(pitch_rad);
-        double t = 0.0;
-        const double dt_sim = 0.005;
-
-        while (sim_x < dist_h && t < 2.0) {
-            double v = std::hypot(v_x, v_z);
-            double a_x = -k_v2 * v * v_x;
-            double a_z = -g - k_v2 * v * v_z;
-
-            sim_x += v_x * dt_sim;
-            sim_z += v_z * dt_sim;
-            v_x += a_x * dt_sim;
-            v_z += a_z * dt_sim;
-            t += dt_sim;
-        }
-
-        double z_error = z - sim_z;
-        if (std::abs(z_error) < 0.005) break; // 误差小于 5mm，认为命中
-        pitch_rad += z_error / dist_h; // 比例调节
-    }
-
-    // 虚拟无重力瞄准点映射回世界系
     double z_aim = dist_h * std::tan(pitch_rad);
     Eigen::Vector3d aim_point_world(x, y, z_aim);
 
-    // 调用 TF 转回相机系 (伪代码，调用你的 TF 模块)
     Eigen::Vector3d aim_point_cam = tf.world_to_cam(aim_point_world, imu_rpy);
 
     double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
     double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
 
-    // 外参机械补偿
     delta_yaw += cam_to_gun_rpy(2) * DEG2RAD;
     delta_pitch += cam_to_gun_rpy(1) * DEG2RAD;
 

@@ -36,6 +36,7 @@ namespace DT46_VISION {  // 添加命名空间
 
         // --- 内存复用 buffer ---
         cv::Mat bin_f_;
+        cv::Mat blob_;
     };
 
 }

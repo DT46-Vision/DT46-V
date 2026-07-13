@@ -34,7 +34,7 @@ class DmImuNode(Node):
         self.declare_parameter('frame_id', 'imu_link')
         self.declare_parameter('publish_rpy_in_degree', True) # 若希望 /imu/rpy 以“度”发布，把 False 改 True
         self.declare_parameter('verbose', False)          # 终端打印
-        self.declare_parameter('qos_reliable', True)     # 发布端 QoS（默认 Reliable，RViz 直接可见）
+        self.declare_parameter('qos_reliable', False)
         # 新增：三个话题的开关（默认全开）
         self.declare_parameter('publish_imu_data', False)  # /imu/data
         self.declare_parameter('publish_rpy', True)       # /imu/rpy
@@ -94,8 +94,8 @@ class DmImuNode(Node):
         self._no_frame_ticks = 0
         self._pub_count = 0
 
-        # 200 Hz 轮询
-        self.timer_pub = self.create_timer(0.005, self._on_timer_publish)
+        # 100 Hz 轮询
+        self.timer_pub = self.create_timer(0.01, self._on_timer_publish)
         # 每 2s 打一次统计（若你的类提供 get_stats）
         self.timer_stat = self.create_timer(2.0, self._on_timer_stats)
 
@@ -219,48 +219,11 @@ class DmImuNode(Node):
 
     # ----------- Helpers -----------
     def _extract_latest(self, latest) -> Tuple[bool, Optional[float], float, float, float]:
-        """
-        返回 (ok, stamp_ts, roll_deg, pitch_deg, yaw_deg)
-        - 兼容你的嵌套：((rid, (r,p,y)), ts, extra)
-        - 也兼容 dict / 扁平 tuple / 对象字段
-        """
         try:
-            # dict
-            if isinstance(latest, dict):
-                r = latest.get('roll') or latest.get('r') or latest.get('Roll')
-                p = latest.get('pitch') or latest.get('p') or latest.get('Pitch')
-                y = latest.get('yaw') or latest.get('y') or latest.get('Yaw')
-                ts = latest.get('ts') or latest.get('timestamp') or latest.get('time') or None
-                if r is not None and p is not None and y is not None:
-                    return True, (float(ts) if ts is not None else None), float(r), float(p), float(y)
-
-            # tuple/list
-            if isinstance(latest, (tuple, list)):
-                # ((rid, (r,p,y)), ts, extra)
-                if len(latest) >= 2 and isinstance(latest[0], (tuple, list)):
-                    rid_part = latest[0]
-                    ts = latest[1] if isinstance(latest[1], (int, float)) else None
-                    if len(rid_part) == 2 and isinstance(rid_part[1], (tuple, list)) and len(rid_part[1]) >= 3:
-                        r, p, y = rid_part[1][0], rid_part[1][1], rid_part[1][2]
-                        return True, (float(ts) if ts is not None else None), float(r), float(p), float(y)
-                # (rid, r, p, y)
-                if len(latest) >= 4 and not isinstance(latest[0], (tuple, list)):
-                    _, r, p, y = latest[0], latest[1], latest[2], latest[3]
-                    return True, None, float(r), float(p), float(y)
-                # (r, p, y)
-                if len(latest) == 3:
-                    r, p, y = latest[0], latest[1], latest[2]
-                    return True, None, float(r), float(p), float(y)
-
-            # 对象字段
-            r = getattr(latest, 'roll', None)
-            p = getattr(latest, 'pitch', None)
-            y = getattr(latest, 'yaw', None)
-            ts = getattr(latest, 'ts', None) or getattr(latest, 'timestamp', None) or None
-            if r is not None and p is not None and y is not None:
-                return True, (float(ts) if ts is not None else None), float(r), float(p), float(y)
-
-            return False, None, 0.0, 0.0, 0.0
+            rid_part = latest[0]
+            ts = latest[1] if isinstance(latest[1], (int, float)) else None
+            r, p, y = rid_part[1][0], rid_part[1][1], rid_part[1][2]
+            return True, (float(ts) if ts is not None else None), float(r), float(p), float(y)
         except Exception as e:
             if self.verbose:
                 self.get_logger().debug(f'_extract_latest exception: {e}')

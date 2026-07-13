@@ -58,6 +58,9 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.yaw_tolerance_deg = this->declare_parameter("yaw_tolerance_deg", 5.0);
     tracker_.pitch_tolerance_deg = this->declare_parameter("pitch_tolerance_deg", 2.0);
 
+    // 2.10 重新构建弹道查找表 (基于加载的弹速)
+    tracker_.build_ballistic_lut();
+
     // 3. 初始化日志节流器和计时器
 
     logger_throttler_ = std::make_unique<LogThrottler>(this->get_logger(), 1000);
@@ -290,20 +293,17 @@ void RmTrackerNode::res_img_cb(const sensor_msgs::msg::Image::SharedPtr msg) {
     try {
         // 利用 cv_bridge 快速实现零拷贝/浅拷贝数据转换
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        cv::Mat draw_state = cv_ptr->image.clone();
-        cv::Mat draw_hud = cv_ptr->image.clone();
+        cv::Mat draw = cv_ptr->image.clone();
 
         if (tf_.has_camera_info()) {
-            draw_tracking_state(draw_state, snapshot);
-            draw_aiming_hud(draw_hud, snapshot);
+            draw_tracking_state(draw, snapshot);
+            draw_aiming_hud(draw, snapshot);
         }
 
         // 封装为 ROS 2 格式打包发回
-        auto msg_state = cv_bridge::CvImage(msg->header, "bgr8", draw_state).toImageMsg();
-        auto msg_hud = cv_bridge::CvImage(msg->header, "bgr8", draw_hud).toImageMsg();
-
+        auto msg_state = cv_bridge::CvImage(msg->header, "bgr8", draw).toImageMsg();
         pub_tracking_state_img_->publish(*msg_state);
-        pub_ballistic_img_->publish(*msg_hud);
+        pub_ballistic_img_->publish(*msg_state);
 
     } catch (cv_bridge::Exception& e) {
         RCLCPP_ERROR(this->get_logger(), "cv_bridge 渲染管道捕获到异常: %s", e.what());
@@ -330,6 +330,7 @@ void RmTrackerNode::cb_opponent_color(const rm_interfaces::msg::Decision::Shared
         if (std::abs(msg->bullet_speed - tracker_.bullet_speed) > 0.1) {
             std::lock_guard<std::mutex> lock(tracker_lock_);
             tracker_.bullet_speed = msg->bullet_speed;
+            tracker_.build_ballistic_lut();
         }
     }
 }

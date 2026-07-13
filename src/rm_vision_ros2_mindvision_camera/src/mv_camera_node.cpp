@@ -109,16 +109,17 @@ public:
       while (rclcpp::ok()) {
         int status = CameraGetImageBuffer(h_camera_, &s_frame_info_, &pby_buffer_, 1000);
         if (status == CAMERA_STATUS_SUCCESS) {
+          image_msg_.height = s_frame_info_.iHeight;
+          image_msg_.width = s_frame_info_.iWidth;
+          image_msg_.step = s_frame_info_.iWidth * 3;
+          image_msg_.data.resize(s_frame_info_.iWidth * s_frame_info_.iHeight * 3);
+
           CameraImageProcess(h_camera_, pby_buffer_, image_msg_.data.data(), &s_frame_info_);
           if (flip_image_) {
             CameraFlipFrameBuffer(image_msg_.data.data(), &s_frame_info_, 3);
           }
           camera_info_msg_.header.stamp = image_msg_.header.stamp = this->now();
           camera_info_msg_.header.frame_id = "camera_optical_frame";
-          image_msg_.height = s_frame_info_.iHeight;
-          image_msg_.width = s_frame_info_.iWidth;
-          image_msg_.step = s_frame_info_.iWidth * 3;
-          image_msg_.data.resize(s_frame_info_.iWidth * s_frame_info_.iHeight * 3);
 
           camera_pub_.publish(image_msg_, camera_info_msg_);
 
