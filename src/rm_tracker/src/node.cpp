@@ -1,5 +1,7 @@
 #include "rm_tracker/node.hpp"
 
+#include <cstdio>
+
 using namespace std::chrono_literals;
 
 namespace dt46_vision {
@@ -16,6 +18,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     display_ = this->declare_parameter("display", false);
     follow_decision_ = this->declare_parameter("follow_decision", false);
     display_fps_limit_ = this->declare_parameter("display_fps_limit", true);
+    text_size_ = this->declare_parameter("text_size", 1.0);
 
     // 2. 加载机械外参：轴固定偏移修正（例如 pitch/yaw 轴不共轴或相机倒置补偿）
     rotation_rpy_ << this->declare_parameter("rotation_rpy_r", 0.0),
@@ -283,7 +286,6 @@ void RmTrackerNode::res_img_cb(const sensor_msgs::msg::Image::SharedPtr msg) {
 
     auto now = std::chrono::steady_clock::now();
     std::chrono::duration<double> diff = now - last_render_time_;
-    // 强制限帧到 30FPS，不浪费计算算力在显示器刷新率上限之上
     if (display_fps_limit_ && diff.count() < (1.0 / 30.0)) return;
     last_render_time_ = now;
 
@@ -295,19 +297,19 @@ void RmTrackerNode::res_img_cb(const sensor_msgs::msg::Image::SharedPtr msg) {
     }
 
     try {
-        // 利用 cv_bridge 快速实现零拷贝/浅拷贝数据转换
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        cv::Mat draw = cv_ptr->image.clone();
 
-        if (tf_.has_camera_info()) {
-            draw_tracking_state(draw, snapshot);
-            draw_aiming_hud(draw, snapshot);
-        }
+        if (!tf_.has_camera_info()) return;
 
-        // 封装为 ROS 2 格式打包发回
-        auto msg_state = cv_bridge::CvImage(msg->header, "bgr8", draw).toImageMsg();
-        pub_tracking_state_img_->publish(*msg_state);
-        pub_ballistic_img_->publish(*msg_state);
+        cv::Mat tracking_img = cv_ptr->image.clone();
+        draw_tracking_state(tracking_img, snapshot);
+        auto tracking_msg = cv_bridge::CvImage(msg->header, "bgr8", tracking_img).toImageMsg();
+        pub_tracking_state_img_->publish(*tracking_msg);
+
+        cv::Mat ballistic_img = cv_ptr->image.clone();
+        draw_aiming_hud(ballistic_img, snapshot);
+        auto ballistic_msg = cv_bridge::CvImage(msg->header, "bgr8", ballistic_img).toImageMsg();
+        pub_ballistic_img_->publish(*ballistic_msg);
 
     } catch (cv_bridge::Exception& e) {
         RCLCPP_ERROR(this->get_logger(), "cv_bridge 渲染管道捕获到异常: %s", e.what());
@@ -370,73 +372,181 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
 void RmTrackerNode::draw_tracking_state(cv::Mat& draw, const RenderSnapshot& snapshot) {
     if (snapshot.tracker_state == TrackerState::LOST) return;
 
-    Eigen::Vector3d center_world(0.0, 0.0, 0.0);
-    Eigen::Vector3d cam_c = tf_.world_to_cam(center_world, imu_rpy_);
+    double scale = text_size_;
+
+    int circle_r = std::max(2, static_cast<int>(5 * scale));
+    int marker_size = static_cast<int>(20 * scale);
+    int thick_1 = std::max(1, static_cast<int>(1 * scale));
+    int thick_2 = std::max(1, static_cast<int>(2 * scale));
+
+    double xc = snapshot.target_state(0), yc = snapshot.target_state(2), za = snapshot.target_state(4);
+    double yaw = snapshot.target_state(6);
+    double r1 = snapshot.target_state(8);
+    double r2 = snapshot.another_r;
+    double dz = snapshot.dz;
+
+    Eigen::Vector3d current_imu;
+    {
+        std::lock_guard<std::mutex> lock(imu_lock_);
+        current_imu = imu_rpy_;
+    }
+
+    std::vector<cv::Point> virtual_armors_pts(4, cv::Point(-1, -1));
+
+    for (int i = 0; i < 4; ++i) {
+        double theta = yaw - i * (M_PI / 2.0);
+        double r = (i % 2 == 0) ? r1 : r2;
+        double z = (i % 2 == 0) ? za : (za + dz);
+
+        double ax = xc - r * std::cos(theta);
+        double ay = yc - r * std::sin(theta);
+
+        Eigen::Vector3d world_pos(ax, ay, z);
+        Eigen::Vector3d cam_pos = tf_.world_to_cam(world_pos, current_imu);
+        auto [uv, visible] = tf_.project_point(cam_pos);
+
+        if (visible) {
+            cv::Scalar color = (i == 0) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 255, 255);
+            cv::circle(draw, uv, circle_r, color, -1);
+            virtual_armors_pts[i] = uv;
+        }
+    }
+
+    Eigen::Vector3d center_world(xc, yc, za + dz / 2.0);
+    Eigen::Vector3d cam_c = tf_.world_to_cam(center_world, current_imu);
     auto [uv_c, vis_c] = tf_.project_point(cam_c);
+
     if (vis_c) {
-        cv::drawMarker(draw, uv_c, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, 20, 2);
+        cv::drawMarker(draw, uv_c, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, marker_size, thick_2);
+
+        cv::Scalar line_color(100, 100, 100);
+        if (virtual_armors_pts[0].x >= 0 && virtual_armors_pts[2].x >= 0) {
+            cv::line(draw, virtual_armors_pts[0], virtual_armors_pts[2], line_color, thick_1);
+        }
+        if (virtual_armors_pts[1].x >= 0 && virtual_armors_pts[3].x >= 0) {
+            cv::line(draw, virtual_armors_pts[1], virtual_armors_pts[3], line_color, thick_1);
+        }
+
+        double vx = snapshot.target_state(1), vy = snapshot.target_state(3);
+        double speed = std::sqrt(vx * vx + vy * vy);
+        if (speed > 0.1) {
+            Eigen::Vector3d end_world(xc + vx * 0.5, yc + vy * 0.5, za);
+            Eigen::Vector3d cam_end = tf_.world_to_cam(end_world, current_imu);
+            auto [uv_end, vis_end] = tf_.project_point(cam_end);
+
+            if (vis_end) {
+                cv::arrowedLine(draw, uv_c, uv_end, cv::Scalar(0, 0, 255), thick_2);
+            }
+        }
     }
 }
 
-// =====================================================================
-// 枪口弹道 HUD 视图绘制实现
-// =====================================================================
 void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapshot) {
     int h = draw.rows;
     int w = draw.cols;
-    int cx = w / 2, cy = h / 2, size = 20;
+
     cv::Scalar pink(255, 0, 255);
-    cv::line(draw, cv::Point(cx - size, cy), cv::Point(cx + size, cy), pink, 2);
-    cv::line(draw, cv::Point(cx, cy - size), cv::Point(cx, cy + size), pink, 2);
+    {
+        int size = 20;
+        int cx = w / 2, cy = h / 2;
+        cv::line(draw, cv::Point(cx - size, cy), cv::Point(cx + size, cy), pink, 2);
+        cv::line(draw, cv::Point(cx, cy - size), cv::Point(cx, cy + size), pink, 2);
+    }
 
     if (snapshot.tracker_state == TrackerState::LOST) {
-        cv::putText(draw, "SEARCHING...", cv::Point(w / 2 - 80, h / 2 - 40),
+        cv::putText(draw, "SEARCHING...", cv::Point(w / 2 - 80, h / 2),
                     cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(150, 150, 150), 2);
         return;
     }
 
-    char text[128];
-    bool can_fire = std::get<2>(snapshot.gimbal_control);
-    cv::Scalar fire_color = can_fire ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
+    if (!snapshot.target.has_value()) {
+        return;
+    }
 
-    std::snprintf(text, sizeof(text), "YAW: %.2f PITCH: %.2f", std::get<0>(snapshot.gimbal_control), std::get<1>(snapshot.gimbal_control));
-    cv::putText(draw, text, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 255, 255), 2);
-    cv::putText(draw, can_fire ? "FIRE ENABLE" : "HOLD FIRE", cv::Point(20, 90),
-                cv::FONT_HERSHEY_SIMPLEX, 0.8, fire_color, 2);
+    Eigen::Vector3d current_imu;
+    {
+        std::lock_guard<std::mutex> lock(imu_lock_);
+        current_imu = imu_rpy_;
+    }
 
-    if (snapshot.target.has_value()) {
-        Eigen::Vector3d target_world = snapshot.target.value().pos; // 世界系 3D 坐标
+    Eigen::Vector3d target_cam = tf_.world_to_cam(snapshot.target.value().pos, current_imu);
+    auto [uv_tgt, vis_tgt] = tf_.project_point(target_cam);
+    if (vis_tgt) {
+        cv::circle(draw, uv_tgt, 18, cv::Scalar(0, 0, 255), 2);
+    }
 
-        // 获取当前安全的 IMU 数据
-        Eigen::Vector3d current_imu;
-        {
-            std::lock_guard<std::mutex> lock(imu_lock_);
-            current_imu = imu_rpy_;
-        }
-
-        // 1. 世界系转回相机系
-        Eigen::Vector3d target_cam = tf_.world_to_cam(target_world, current_imu);
-
-        // 2. 3D 相机系坐标投影为 2D 像素坐标 (u, v)
-        auto [uv, is_valid] = tf_.project_point(target_cam);
-
-        if (is_valid) {
-            // 依据距离动态计算锁定圈的大小（越远圈越小）
-            int radius = static_cast<int>(35.0 / snapshot.target.value().dist);
-            radius = std::clamp(radius, 15, 60);
-
-            // 绘制锁定圈（发射允许为绿色，不允许为红色）
-            cv::circle(draw, uv, radius, fire_color, 2);
-
-            // 标签文字：展示当前追踪的 ID 和是否进入小陀螺
-            std::string state_label = snapshot.spin ? " [SPIN]" : " [NORMAL]";
-            std::string full_text = "ID:" + std::to_string(snapshot.target.value().id) + state_label;
-
-            cv::putText(draw, full_text, cv::Point(uv.x + radius + 4, uv.y - radius),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.55, fire_color, 2);
-            }
+    if (snapshot.muzzle_target.has_value()) {
+        Eigen::Vector3d aim_cam = tf_.world_to_cam(snapshot.muzzle_target.value().pos, current_imu);
+        auto [uv_aim, vis_aim] = tf_.project_point(aim_cam);
+        if (vis_aim) {
+            cv::drawMarker(draw, uv_aim, cv::Scalar(0, 255, 0), cv::MARKER_CROSS, 25, 2);
         }
     }
+
+    double scale = text_size_;
+    int start_x = static_cast<int>(20 * scale);
+    int base_y = static_cast<int>(50 * scale);
+    int step_y = static_cast<int>(30 * scale);
+
+    double font_normal = 0.7 * scale;
+    double font_large = 0.8 * scale;
+    int thick_normal = std::max(1, static_cast<int>(1 * scale));
+    int thick_bold = std::max(1, static_cast<int>(2 * scale));
+
+    double dist = snapshot.target.value().dist;
+    double angle_diff_deg = snapshot.target.value().angle_diff * (180.0 / M_PI);
+    double yaw_tol = snapshot.yaw_tolerance_deg;
+    double pitch_tol = snapshot.pitch_tolerance_deg;
+    double ekf_yaw_vel = snapshot.ekf_yaw_vel;
+
+    bool can_fire = std::get<2>(snapshot.gimbal_control);
+    double gc_yaw = std::get<0>(snapshot.gimbal_control);
+    double gc_pitch = std::get<1>(snapshot.gimbal_control);
+
+    bool is_spin = snapshot.spin;
+    double bullet_speed = snapshot.bullet_speed;
+
+    cv::Scalar color_fire = can_fire ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
+    std::string text_fire = can_fire ? "FIRE ENABLE" : "HOLD FIRE";
+    cv::Scalar color_spin = is_spin ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
+    std::string text_spin = is_spin ? "SPIN" : "NORMAL";
+
+    auto put_text = [&](int row, const std::string& text, double font_s, cv::Scalar color, int thick) {
+        cv::putText(draw, text, cv::Point(start_x, base_y + step_y * row),
+                    cv::FONT_HERSHEY_SIMPLEX, font_s, color, thick);
+    };
+
+    char buf[128];
+    int row = 0;
+
+    put_text(row, "[" + text_spin + "]", font_large, color_spin, thick_bold); row++;
+
+    std::snprintf(buf, sizeof(buf), "Yaw Vel: %5.2f rad/s", ekf_yaw_vel);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Dist   : %5.2f m", dist);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Diff   : %5.1f deg", angle_diff_deg);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Pitch  : %5.2f deg", gc_pitch);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Yaw    : %5.2f deg", gc_yaw);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "P_Tol  : %5.2f deg", pitch_tol);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Y_Tol  : %5.2f deg", yaw_tol);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "Bullet Speed: %5.2f m/s", bullet_speed);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    put_text(row, "[" + text_fire + "]", font_large, color_fire, thick_bold);
+}
 
 } // namespace dt46_vision
 
