@@ -70,15 +70,33 @@ void Tracker::init_ekf(const Armor& armor) {
         }
     }
 
-    // ekf_.init() 初始化 9 维状态
+    // ================== 新增：Yaw 翻转校验 ==================
+    double xc = xa + r_init * std::cos(last_yaw_);
+    double yc = ya + r_init * std::sin(last_yaw_);
+
+    double norm_a_sq = xa * xa + ya * ya;
+    double norm_c_sq = xc * xc + yc * yc;
+
+    // 如果装甲板比推算出的车体中心还要远，说明 Yaw 反了
+    if (norm_a_sq > norm_c_sq) {
+        // 翻转 Yaw 角 (加上 PI 并归一化)
+        last_yaw_ = normalize_angle(last_yaw_ + M_PI);
+        
+        // 使用正确的 Yaw 重新计算中心点
+        xc = xa + r_init * std::cos(last_yaw_);
+        yc = ya + r_init * std::sin(last_yaw_);
+    }
+    // =======================================================
+
+    // 注意这里的尖括号不能丢
     Eigen::Matrix<double, 9, 1> init_x;
-    init_x << xa + r_init * std::cos(last_yaw_), 0,
-            ya + r_init * std::sin(last_yaw_), 0,
-            za, 0, last_yaw_, 0, r_init;
+    init_x << xc, 0, yc, 0, za, 0, last_yaw_, 0, r_init;
 
     Eigen::Matrix<double, 9, 9> init_p = Eigen::Matrix<double, 9, 9>::Identity();
-    init_p(1,1) = 5.0; init_p(3,3) = 5.0; init_p(5,5) = 1.0; init_p(7,7) = 5.0;
+    init_p(1,1) = 50.0; init_p(3,3) = 50.0; init_p(5,5) = 10.0; init_p(7,7) = 50.0;
 
+    ekf_.init_QR(ekf_QR_params.q_xyz, ekf_QR_params.q_yaw, ekf_QR_params.q_r,
+                 ekf_QR_params.r_xyz_factor, ekf_QR_params.r_yaw, ekf_QR_params.stable_dist);
     ekf_.init(init_x, init_p);
     target_state_ = init_x;
     dz_ = 0.0;
@@ -502,11 +520,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     // 1. 判断并调度基础状态机
     if (tracker_state == TrackerState::LOST) {
         if (!raw_armors.empty()) {
-            // 目标发现：直接捕获第一块进入视野的装甲板初始化卡尔曼状态核
-            tracked_id = raw_armors[0].id;
-            init_ekf(raw_armors[0]);
-            tracker_state = TrackerState::DETECTING;
-            detect_count_ = 1;
+            // 拷贝一份用于排序，避免破坏传入的 const raw_armors
+            std::vector<Armor> temp_armors = raw_armors;
+            try_init_tracker(temp_armors); 
             logs.emplace_back("state", "LOST -> DETECTING (ID: " + std::to_string(tracked_id) + ")");
         }
         return {gimbal_control, logs};

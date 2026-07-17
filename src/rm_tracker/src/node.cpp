@@ -54,11 +54,15 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
 
     // 2.9 加载弹道与射击参数
     tracker_.system_delay = this->declare_parameter("system_delay", 0.1);
+    tracker_.k_v2 = this->declare_parameter("k_v2", 0.019);
     tracker_.shootable_dist = this->declare_parameter("shootable_dist", 3.0);
     tracker_.yaw_tolerance_deg = this->declare_parameter("yaw_tolerance_deg", 5.0);
     tracker_.pitch_tolerance_deg = this->declare_parameter("pitch_tolerance_deg", 2.0);
 
-    // 2.10 重新构建弹道查找表 (基于加载的弹速)
+    // 2.10 加载小陀螺检测参数
+    tracker_.min_spinning_vel_ = this->declare_parameter("min_spinning_vel", 5.0);
+
+    // 2.11 重新构建弹道查找表 (基于加载的弹速和k_v2)
     tracker_.build_ballistic_lut();
 
     // 3. 初始化日志节流器和计时器
@@ -179,8 +183,8 @@ void RmTrackerNode::processing_worker() {
         for (const auto& a : data.msg->armors) {
             // 1. 颜色过滤：只保留目标敌人颜色的装甲板
             // target_color_ == 0 表示要打红色 (id 1~5), target_color_ == 1 表示要打蓝色 (id 6+)
-            if (target_color_ == 0 && a.armor_id >= 6) continue;
-            if (target_color_ == 1 && a.armor_id < 6) continue;
+            if (target_color_ == 0 && a.armor_id < 6) continue;
+            if (target_color_ == 1 && a.armor_id >= 6) continue;
 
             // 2. 坐标系转换 (Cam -> World)
             Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);
@@ -209,7 +213,7 @@ void RmTrackerNode::processing_worker() {
         last_time = current_time;
 
         // 防抖保护：如果时间戳异常或停顿太久，限制 dt 范围
-        if (dt <= 0.001 || dt > 0.1) {
+        if (dt <= 0.001 || dt > 0.03) {
             dt = 0.01;
         }
 

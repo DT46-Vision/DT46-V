@@ -128,6 +128,7 @@ public:
     double system_delay = 0.1;
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
+    double min_spinning_vel_ = 5.0;
     double shootable_dist = 3.0;
     double yaw_tolerance_deg = 5.0;
     double pitch_tolerance_deg = 2.0;
@@ -164,9 +165,8 @@ private:
     // 小陀螺状态机计数器
     int min_spinning_frame_count_ = 0;
     int spinning_frame_lost_count_ = 0;
-    const int min_spinning_frame_ = 10;
-    const int spinning_frame_lost_ = 5;
-    const double min_spinning_vel_ = 5.0; // 进入小陀螺的最小角速度 (rad/s)
+    int min_spinning_frame_ = 10;
+    int spinning_frame_lost_ = 5;
 
     // 弹道查找表
     static constexpr int LUT_DIST_BINS = 25;
