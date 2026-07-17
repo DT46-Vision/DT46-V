@@ -4,14 +4,14 @@ camera_name: hero_hik_camera
 camera_matrix:
   rows: 3
   cols: 3
-  data: [1420.95527,    0.     ,  680.96336,
-            0.     , 1420.36124,  554.10444,
-            0.     ,    0.     ,    1.     ]
+  data: [1804.01251, 0.0, 683.03641,
+         0.0, 1803.16024, 545.04723,
+         0.0, 0.0, 1.0]
 distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
   cols: 5
-  data: [-0.399800, 0.201011, -0.000566, -0.000099, 0.000000]
+  data: [-0.076346, 0.093893, -0.001325, -0.001778, 0.0]
 rectification_matrix:
   rows: 3
   cols: 3
@@ -21,6 +21,6 @@ rectification_matrix:
 projection_matrix:
   rows: 3
   cols: 4
-  data: [1266.13956,    0.     ,  671.50854,    0.     ,
-            0.     , 1334.67636,  555.575  ,    0.     ,
-            0.     ,    0.     ,    1.     ,    0.     ]
+  data: [1785.648740, 0.0, 680.900100, 0.0,
+         0.0, 1791.966807, 544.440000, 0.0,
+         0.0, 0.0, 1.0, 0.0]
