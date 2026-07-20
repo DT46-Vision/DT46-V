@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
-from rclpy.qos import qos_profile_sensor_data   # <--- 新增这一行
+from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 # 自己写的日志管理器
 from .modules.logger import LogThrottler                         # 日志节流
 # 各种消息类型
@@ -182,12 +182,18 @@ class RmTracker(Node):
 
         self.add_on_set_parameters_callback(self._on_params)
 
-        # 订阅 /imu/rpy
+        # 订阅 /imu/rpy (使用 RELIABLE 匹配 DM IMU 发布端 QoS)
+        imu_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE,
+        )
         self.sub_imu_rpy = self.create_subscription(
             Vector3Stamped,
             '/imu/rpy',
             self.imu_rpy_cb,
-            qos_profile_sensor_data
+            imu_qos
         )
         self.sub_armors = self.create_subscription(
             ArmorsMsg,
@@ -523,7 +529,7 @@ class RmTracker(Node):
                                 self.get_logger().warn(log_msg)
                 
                 if self.log_throttler.should_log("gimbal_control_info"):
-                    target_color_str = f"{self.tracker.c.PINK}跟踪红色{self.tracker.c.RESET}" if self.tracker.target_color == 0 else f"{self.tracker.c.PINK}跟踪蓝色{self.tracker.c.RESET}" if self.tracker.target_color == 1 else "我不知道"
+                    target_color_str = f"{self.tracker.c.PINK}跟踪红色{self.tracker.c.RESET}" if self.tracker.target_color == 0 else f"{self.tracker.c.PINK}跟踪蓝色{self.tracker.c.RESET}" if self.tracker.target_color == 1 else "don‘t know"
                     self.get_logger().info(f"[rm_tracker] FPS: {self.check_and_get_fps():.2f} {target_color_str} Gimbal - pitch: {gimbal_control[1]:.2f} || yaw: {gimbal_control[0]:.2f} || fire: {gimbal_control[2]:.0f}")
 
             except Exception as e:
