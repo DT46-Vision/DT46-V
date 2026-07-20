@@ -12,9 +12,9 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>  <!-- 新增 -->
   <depend>cv_bridge</depend>
-  <depend>opencv4</depend>   <!-- 新增，视 ROS 发行版可能为 opencv -->
+  <depend>opencv</depend>   <!-- 新增，视 ROS 发行版可能为 opencv -->
   <depend>rm_interfaces</depend>
-  
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

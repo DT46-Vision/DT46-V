@@ -7,13 +7,10 @@
   <maintainer email="c1470759@outlook.com">Kielas</maintainer>
   <license>MIT</license>
 
-  <buildtool_depend>ament_python</buildtool_depend>
-
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
 
-  <!-- 你可以选：apt 或 pip。若用 apt，就保留这行；若打算 pip 安装 pyserial，就把这行删掉改到 setup.py -->
   <exec_depend>python3-serial</exec_depend>
 
   <export>
