@@ -10,7 +10,7 @@ def generate_launch_description():
     params_file = os.path.join(
         get_package_share_directory("mindvision_camera"), "config", "infantry_camera_params.yaml"
     )
-    camera_info_url = "package://mindvison_camera/config/infantry_camera_info.yaml"
+    camera_info_url = "package://mindvision_camera/config/infantry_camera_info.yaml"
 
     # ---------------- 装甲板检测参数 ----------------
     detector_params_infantry_file = os.path.join(

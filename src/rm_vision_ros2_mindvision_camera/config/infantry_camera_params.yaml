@@ -1,8 +1,8 @@
 /mv_camera:
   ros__parameters:
     camera_name: mv_camera # 相机名
-    
-    camera_info_url: package://mindvision_camera/config/camera_info.yaml
+
+    camera_info_url: package://mindvision_camera/config/infantry_camera_info.yaml
 
     # exposure_time: 1500 #  曝光时间
     exposure_time: 1500  # 曝光时间 us
