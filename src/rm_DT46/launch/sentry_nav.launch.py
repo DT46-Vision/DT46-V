@@ -10,9 +10,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # ---------------- 相机参数 ----------------
     params_file = os.path.join(
-        get_package_share_directory("hik_camera"), "config", "camera_params.yaml"
+        get_package_share_directory("hik_camera"), "config", "sentry_camera_params.yaml"
     )
-    camera_info_url = "package://hik_camera/config/camera_info.yaml"
+    camera_info_url = "package://hik_camera/config/sentry_camera_info.yaml"
 
     # ---------------- 装甲板检测参数 ----------------
     detector_params_sentry_file = os.path.join(
