@@ -81,7 +81,7 @@ void Tracker::init_ekf(const Armor& armor) {
     if (norm_a_sq > norm_c_sq) {
         // 翻转 Yaw 角 (加上 PI 并归一化)
         last_yaw_ = normalize_angle(last_yaw_ + M_PI);
-        
+
         // 使用正确的 Yaw 重新计算中心点
         xc = xa + r_init * std::cos(last_yaw_);
         yc = ya + r_init * std::sin(last_yaw_);
@@ -112,27 +112,39 @@ void Tracker::handle_armor_jump(const Armor& current_armor) {
     double yaw = orientation_to_yaw(current_armor.yaw, target_state_(6));
     target_state_(6) = yaw;
 
-    // 高度钳制
+    // 1. 高度钳制
     double raw_dz = target_state_(4) - current_armor.pos(2);
     dz_ = std::clamp(raw_dz, -0.085, 0.085);
     target_state_(4) = current_armor.pos(2);
     target_state_(5) = 0.0; // 斩断 Z 轴错误速度积分
 
-    // 水平速度衰减
+    // 2. 速度衰减
     target_state_(1) *= 0.8;
     target_state_(3) *= 0.8;
 
-    // 半径交换
+    // 3. 半径交换
     std::swap(target_state_(8), another_r_);
 
-    // 中心位置强制校正
-    double r = target_state_(8);
-    target_state_(0) = current_armor.pos(0) + r * std::cos(yaw);
-    target_state_(2) = current_armor.pos(1) + r * std::sin(yaw);
+    // 4. 【修复】：增加推算位置比对条件，防止无脑重置中心
+    Eigen::Vector3d current_p = current_armor.pos;
+    Eigen::Vector3d infer_p = get_armor_position_from_state(target_state_);
 
-    // 重新写回 EKF
+    if ((current_p - infer_p).norm() > max_match_distance) {
+        double r = target_state_(8);
+        double test_xc = current_p(0) + r * std::cos(yaw);
+        double test_yc = current_p(1) + r * std::sin(yaw);
+
+        // 法向量反向校验
+        if ((current_p(0)*current_p(0) + current_p(1)*current_p(1)) > (test_xc*test_xc + test_yc*test_yc)) {
+            yaw += M_PI;
+            target_state_(6) = yaw;
+        }
+
+        target_state_(0) = current_p(0) + r * std::cos(yaw);
+        target_state_(2) = current_p(1) + r * std::sin(yaw);
+    }
+
     ekf_.setState(target_state_);
-    // 在 EKF 中实现 smooth_reset_covariance 方法
     ekf_.smooth_reset_covariance();
 }
 
@@ -401,6 +413,8 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
 
     double yaw_tol_mix = std::clamp(dynamic_yaw_tol, 1.0, 5.0);
     double pitch_tol_mix = std::clamp(dynamic_pitch_tol, 1.0, 5.0);
+    this->yaw_tolerance_deg = yaw_tol_mix;
+    this->pitch_tolerance_deg = pitch_tol_mix;
 
     bool fire_flag = false;
     if (spin_) {
@@ -514,6 +528,9 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
 std::tuple<std::vector<double>, std::vector<std::pair<std::string, std::string>>>
 Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vector3d& imu_rpy, double dt) {
 
+    // 【新增】：将原始观测数据存入缓存，供 UI 快照读取！
+    debug_yaw_armors_cache_ = raw_armors;
+
     std::vector<std::pair<std::string, std::string>> logs;
     std::vector<double> gimbal_control = {0.0, 0.0, 0.0}; // 映射：[yaw_deg, pitch_deg, can_fire_flag]
 
@@ -522,7 +539,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
         if (!raw_armors.empty()) {
             // 拷贝一份用于排序，避免破坏传入的 const raw_armors
             std::vector<Armor> temp_armors = raw_armors;
-            try_init_tracker(temp_armors); 
+            try_init_tracker(temp_armors);
             logs.emplace_back("state", "LOST -> DETECTING (ID: " + std::to_string(tracked_id) + ")");
         }
         return {gimbal_control, logs};
@@ -590,6 +607,7 @@ RenderSnapshot Tracker::get_render_snapshot() const {
     s.target_state = target_state_;
     s.another_r = another_r_;
     s.dz = dz_;
+    s.debug_yaw_armors = debug_yaw_armors_cache_;
     s.target = target_cam_cache_;
     s.muzzle_target = target_muzzle_cache_;
     s.spin = spin_;

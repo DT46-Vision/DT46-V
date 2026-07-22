@@ -84,7 +84,11 @@ struct RenderSnapshot {
 
 // 角度工具函数
 inline double normalize_angle(double angle) {
-    return std::fmod(angle + M_PI, 2.0 * M_PI) - M_PI;
+    double a = std::fmod(angle + M_PI, 2.0 * M_PI);
+    if (a < 0.0) {
+        a += 2.0 * M_PI;
+    }
+    return a - M_PI;
 }
 inline double shortest_angular_distance(double from_rad, double to_rad) {
     return normalize_angle(to_rad - from_rad);
@@ -141,6 +145,9 @@ public:
     std::optional<Armor> target_cam_cache_ = std::nullopt;
     std::optional<Armor> target_muzzle_cache_ = std::nullopt;
     std::tuple<double, double, bool> gimbal_control_cache_ = {0.0, 0.0, false};
+
+    // 【新增】：缓存当前帧所有原始装甲板观测，用于 UI 渲染
+    std::vector<Armor> debug_yaw_armors_cache_;
 
     // 【新增】：声明快照提取函数
     RenderSnapshot get_render_snapshot() const;

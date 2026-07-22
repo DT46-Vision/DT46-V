@@ -27,24 +27,22 @@ void RmTF::set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coe
 }
 
 Eigen::Matrix3d RmTF::euler_to_matrix(const Eigen::Vector3d& rpy_deg, const std::string& order) const {
-    // 角度转弧度
-    double r = rpy_deg(0) * M_PI / 180.0;
-    double p = rpy_deg(1) * M_PI / 180.0;
-    double y = rpy_deg(2) * M_PI / 180.0;
+    double a0 = rpy_deg(0) * M_PI / 180.0;
+    double a1 = rpy_deg(1) * M_PI / 180.0;
+    double a2 = rpy_deg(2) * M_PI / 180.0;
 
-    // 根据 Scipy 的外旋 (Extrinsic) 规则: 'xyz' = 绕固定轴 x, y, z 依次旋转
-    // 这在矩阵乘法中等价于 R_z * R_y * R_x
     if (order == "xyz") {
-        return (Eigen::AngleAxisd(y, Eigen::Vector3d::UnitZ()) *
-                Eigen::AngleAxisd(p, Eigen::Vector3d::UnitY()) *
-                Eigen::AngleAxisd(r, Eigen::Vector3d::UnitX())).toRotationMatrix();
+        // Extrinsic XYZ: Rz(a2) * Ry(a1) * Rx(a0)
+        return (Eigen::AngleAxisd(a2, Eigen::Vector3d::UnitZ()) *
+                Eigen::AngleAxisd(a1, Eigen::Vector3d::UnitY()) *
+                Eigen::AngleAxisd(a0, Eigen::Vector3d::UnitX())).toRotationMatrix();
     }
-    // tracker_node.py 中的 world_to_cam 使用了 'zyx'
-    // 等价于 R_x * R_y * R_z
     else if (order == "zyx") {
-        return (Eigen::AngleAxisd(r, Eigen::Vector3d::UnitX()) *
-                Eigen::AngleAxisd(p, Eigen::Vector3d::UnitY()) *
-                Eigen::AngleAxisd(y, Eigen::Vector3d::UnitZ())).toRotationMatrix();
+        // Extrinsic ZYX: Rx(a2) * Ry(a1) * Rz(a0)
+        // a0 对应 Z 轴，a1 对应 Y 轴，a2 对应 X 轴
+        return (Eigen::AngleAxisd(a2, Eigen::Vector3d::UnitX()) *
+                Eigen::AngleAxisd(a1, Eigen::Vector3d::UnitY()) *
+                Eigen::AngleAxisd(a0, Eigen::Vector3d::UnitZ())).toRotationMatrix();
     }
 
     return Eigen::Matrix3d::Identity();

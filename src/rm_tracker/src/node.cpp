@@ -359,6 +359,7 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
             tracker_.tracked_id = -1;
         } else if (name == "bullet_speed") {
             tracker_.bullet_speed = param.as_double();
+            tracker_.build_ballistic_lut(); // 确保弹速更新和重建 LUT 在一起
         } else if (name == "display") {
             display_ = param.as_bool();
         }

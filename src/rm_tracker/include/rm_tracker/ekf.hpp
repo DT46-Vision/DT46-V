@@ -58,7 +58,11 @@ private:
 
     // 工具函数：角度归一化 [-PI, PI]
     static inline double normalizeAngle(double angle) {
-        return std::fmod(angle + M_PI, 2.0 * M_PI) - M_PI;
+        double a = std::fmod(angle + M_PI, 2.0 * M_PI);
+        if (a < 0.0) {
+            a += 2.0 * M_PI;
+        }
+        return a - M_PI;
     }
 };
 
