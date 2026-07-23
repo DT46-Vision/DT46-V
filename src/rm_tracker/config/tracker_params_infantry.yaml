@@ -35,10 +35,10 @@ rm_tracker:
     tracking_thres: 5           # 连续检测帧数 (进入 TRACKING) - int
     lost_thres: 20              # 连续丢失帧数 (进入 LOST) - int
 
-    # [EKF Q/R 参数] - 参考此前代码中的调优值
-    ekf_QR_q_xyz: 200.0          # Process Noise Q: 位置/速度
-    ekf_QR_q_yaw: 150.0         # Process Noise Q: 偏航角
-    ekf_QR_q_r: 0.5           # Process Noise Q: 半径 (给大一点允许快速变径)
+    # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
+    ekf_QR_q_xyz: 5.0           # 加速度谱密度 (m²/s³) — 越大越信任观测
+    ekf_QR_q_yaw: 1.0           # 角加速度谱密度 (rad²/s³)
+    ekf_QR_q_r: 0.015           # 半径游走谱密度 (m²/s)
 
     ekf_QR_r_xyz_factor: 0.5   # Measurement Noise R: 位置因子
     ekf_QR_r_yaw: 0.002          # Measurement Noise R: 角度方差

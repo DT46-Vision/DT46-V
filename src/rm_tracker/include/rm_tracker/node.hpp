@@ -90,6 +90,11 @@ private:
     int process_counter_ = 0;
     std::chrono::steady_clock::time_point last_fps_log_time_;
 
+    // 云台输出 EMA 平滑
+    double smooth_yaw_ = 0.0;
+    double smooth_pitch_ = 0.0;
+    bool smooth_ready_ = false;
+
     // =============== 多线程通信组件 ===============
     std::mutex tracker_lock_;
     std::mutex render_lock_;

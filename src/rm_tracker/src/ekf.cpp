@@ -10,9 +10,9 @@ ExtendedKalmanFilter::ExtendedKalmanFilter() : is_initialized_(false) {
     R_.setZero();
 
     // 给定初始安全参数
-    s2qxyz_ = 20.0;
-    s2qyaw_ = 100.0;
-    s2qr_   = 800.0;
+    s2qxyz_ = 2.5;
+    s2qyaw_ = 15.0;
+    s2qr_   = 0.05;
     r_xyz_factor_ = 0.05;
     r_yaw_ = 0.02;
     stable_dist_ = 1.5;
@@ -43,14 +43,14 @@ void ExtendedKalmanFilter::predict(double dt) {
     F_(4, 5) = dt; // z  += vz * dt
     F_(6, 7) = dt; // yaw+= vyaw * dt
 
-    // 2. 动态构建过程噪声矩阵 Q (复用预先设为零的 Q_)
+    // 2. 连续白噪声离散化构建过程噪声矩阵 Q
+    //    标准 CV 模型: Q_pos = q * dt³/3, Q_cross = q * dt²/2, Q_vel = q * dt
     double t2 = dt * dt;
     double t3 = t2 * dt;
-    double t4 = t3 * dt;
 
-    double q_xyz_x  = (t4 / 4.0) * s2qxyz_;
-    double q_xyz_vx = (t3 / 2.0) * s2qxyz_;
-    double q_xyz_vv = t2 * s2qxyz_;
+    double q_xyz_x  = (t3 / 3.0) * s2qxyz_;
+    double q_xyz_vx = (t2 / 2.0) * s2qxyz_;
+    double q_xyz_vv = dt * s2qxyz_;
 
     Q_(0,0) = q_xyz_x; Q_(0,1) = q_xyz_vx;
     Q_(1,0) = q_xyz_vx; Q_(1,1) = q_xyz_vv;
@@ -59,14 +59,14 @@ void ExtendedKalmanFilter::predict(double dt) {
     Q_(4,4) = q_xyz_x; Q_(4,5) = q_xyz_vx;
     Q_(5,4) = q_xyz_vx; Q_(5,5) = q_xyz_vv;
 
-    double q_yaw_x  = (t4 / 4.0) * s2qyaw_;
-    double q_yaw_vx = (t3 / 2.0) * s2qyaw_;
-    double q_yaw_vv = t2 * s2qyaw_;
+    double q_yaw_x  = (t3 / 3.0) * s2qyaw_;
+    double q_yaw_vx = (t2 / 2.0) * s2qyaw_;
+    double q_yaw_vv = dt * s2qyaw_;
 
     Q_(6,6) = q_yaw_x; Q_(6,7) = q_yaw_vx;
     Q_(7,6) = q_yaw_vx; Q_(7,7) = q_yaw_vv;
 
-    Q_(8,8) = t2 * s2qr_;
+    Q_(8,8) = dt * s2qr_;
 
     // 3. 状态传播：F_ 仅有4个非对角非零元素，直接标量操作替代稠密矩阵乘法
     X_(0) += X_(1) * dt;

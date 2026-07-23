@@ -48,9 +48,9 @@ struct Armor {
 
 // 3. EKF 参数结构体
 struct EKF_QR_Params {
-    double q_xyz = 20.0;
-    double q_yaw = 100.0;
-    double q_r = 800.0;
+    double q_xyz = 2.5;
+    double q_yaw = 15.0;
+    double q_r = 0.05;
     double r_xyz_factor = 0.05;
     double r_yaw = 0.02;
     double stable_dist = 1.5;
@@ -133,6 +133,8 @@ public:
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
     double min_spinning_vel_ = 5.0;
+    double spin_enter_time_ = 0.3;
+    double spin_exit_time_ = 0.15;
     double shootable_dist = 3.0;
     double yaw_tolerance_deg = 5.0;
     double pitch_tolerance_deg = 2.0;
@@ -169,11 +171,9 @@ private:
     double another_r_ = 0.23;
     bool spin_ = false;
 
-    // 小陀螺状态机计数器
-    int min_spinning_frame_count_ = 0;
-    int spinning_frame_lost_count_ = 0;
-    int min_spinning_frame_ = 10;
-    int spinning_frame_lost_ = 5;
+    // 小陀螺状态机—时间累计 (帧率无关)
+    double spin_enter_accum_ = 0.0;
+    double spin_exit_accum_ = 0.0;
 
     // 弹道查找表
     static constexpr int LUT_DIST_BINS = 25;
@@ -196,7 +196,7 @@ private:
 
     Eigen::Matrix<double, 9, 1> predict_future_state() const;
     std::vector<Armor> find_all_armors(const Eigen::Matrix<double, 9, 1>& state) const;
-    std::optional<Armor> find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state);
+    std::optional<Armor> find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state, double dt);
     std::optional<Armor> world_to_muzzle(RmTF& tf, const Armor& target, const Eigen::Vector3d& offset_pos, const Eigen::Vector3d& imu_rpy);
 
     Eigen::Vector3d get_armor_position_from_state(const Eigen::Matrix<double, 9, 1>& x) const;

@@ -289,7 +289,7 @@ std::vector<Armor> Tracker::find_all_armors(const Eigen::Matrix<double, 9, 1>& s
 // =====================================================================
 // 3. 小陀螺选板决策与抗抖动
 // =====================================================================
-std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state) {
+std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state, double dt) {
     if (robot_armors.empty()) return std::nullopt;
 
     std::optional<Armor> best_armor = std::nullopt;
@@ -299,22 +299,22 @@ std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, cons
     double xc = state(0), yc = state(2);
     double yaw_center_to_cam = std::atan2(-yc, -xc);
 
-    // --- 状态机：引入退出防抖，检测是否在打小陀螺 ---
+    // --- 时间累计小陀螺检测 (帧率无关) ---
     double current_yaw_vel = ekf_.getState()(7);
     if (std::abs(current_yaw_vel) > min_spinning_vel_) {
-        min_spinning_frame_count_++;
-        spinning_frame_lost_count_ = 0;
-        if (min_spinning_frame_count_ > min_spinning_frame_) {
-            min_spinning_frame_count_ = 0;
+        spin_enter_accum_ += dt;
+        spin_exit_accum_ = 0.0;
+        if (spin_enter_accum_ > spin_enter_time_) {
+            spin_enter_accum_ = 0.0;
             spin_ = true;
         }
     } else {
-        min_spinning_frame_count_ = 0;
+        spin_enter_accum_ = 0.0;
         if (spin_) {
-            spinning_frame_lost_count_++;
-            if (spinning_frame_lost_count_ > spinning_frame_lost_) {
+            spin_exit_accum_ += dt;
+            if (spin_exit_accum_ > spin_exit_time_) {
                 spin_ = false;
-                spinning_frame_lost_count_ = 0;
+                spin_exit_accum_ = 0.0;
             }
         }
     }
@@ -363,7 +363,7 @@ std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, cons
             double angle_diff = std::abs(shortest_angular_distance(yaw_center_to_cam, yaw_center_to_armor));
             armor.angle_diff = angle_diff;
 
-            if (angle_diff < min_angle_diff) {
+            if (angle_diff < min_angle_diff - (3.0 * DEG2RAD)) {
                 min_angle_diff = angle_diff;
                 target = armor;
             }
@@ -504,7 +504,22 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
     double x = muzzle_target.pos(0), y = muzzle_target.pos(1), z = muzzle_target.pos(2);
     double dist_h = std::hypot(x, y);
 
-    if (dist_h < 0.1 || std::isnan(dist_h)) return {0.0, 0.0, false};
+    if (dist_h < 0.2 || std::isnan(dist_h)) return {0.0, 0.0, false};
+
+    if (dist_h < 1.5) {
+        double pitch_rad = std::atan2(z, dist_h);
+        double z_aim = dist_h * std::tan(pitch_rad);
+        Eigen::Vector3d aim_point_world(x, y, z_aim);
+        Eigen::Vector3d aim_point_cam = tf.world_to_cam(aim_point_world, imu_rpy);
+
+        double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
+        double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
+
+        delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
+        delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
+
+        return {delta_yaw, delta_pitch, true};
+    }
 
     double pitch_rad = dist_h <= LUT_DIST_MAX ? lut_lookup(dist_h, z) : std::atan2(z, dist_h);
 
@@ -516,8 +531,8 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
     double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
     double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
 
-    delta_yaw += cam_to_gun_rpy(2) * DEG2RAD;
-    delta_pitch += cam_to_gun_rpy(1) * DEG2RAD;
+    delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
+    delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
 
     return {delta_yaw, delta_pitch, true};
 }
@@ -565,7 +580,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
 
     // 3. 小陀螺决策选板
     bool was_spin = spin_;
-    std::optional<Armor> target_cam = find_target(robot_armors, future_state);
+    std::optional<Armor> target_cam = find_target(robot_armors, future_state, dt);
     if (was_spin != spin_) {
         logs.emplace_back("spin", spin_ ? "SPIN MODE ON (yaw_vel > threshold)" : "SPIN MODE OFF");
     }

@@ -44,9 +44,9 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.dist_tol = this->declare_parameter("dist_tol", 0.15);
 
     // 2.7 加载 EKF Q/R 噪声参数
-    tracker_.ekf_QR_params.q_xyz = this->declare_parameter("ekf_QR_q_xyz", 20.0);
-    tracker_.ekf_QR_params.q_yaw = this->declare_parameter("ekf_QR_q_yaw", 100.0);
-    tracker_.ekf_QR_params.q_r = this->declare_parameter("ekf_QR_q_r", 800.0);
+    tracker_.ekf_QR_params.q_xyz = this->declare_parameter("ekf_QR_q_xyz", 2.5);
+    tracker_.ekf_QR_params.q_yaw = this->declare_parameter("ekf_QR_q_yaw", 15.0);
+    tracker_.ekf_QR_params.q_r = this->declare_parameter("ekf_QR_q_r", 0.05);
     tracker_.ekf_QR_params.r_xyz_factor = this->declare_parameter("ekf_QR_r_xyz_factor", 0.05);
     tracker_.ekf_QR_params.r_yaw = this->declare_parameter("ekf_QR_r_yaw", 0.02);
     tracker_.ekf_QR_params.stable_dist = this->declare_parameter("ekf_QR_stable_dist", 1.5);
@@ -64,6 +64,8 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
 
     // 2.10 加载小陀螺检测参数
     tracker_.min_spinning_vel_ = this->declare_parameter("min_spinning_vel", 5.0);
+    tracker_.spin_enter_time_ = this->declare_parameter("spin_enter_time", 0.3);
+    tracker_.spin_exit_time_ = this->declare_parameter("spin_exit_time", 0.15);
 
     // 2.11 重新构建弹道查找表 (基于加载的弹速和k_v2)
     tracker_.build_ballistic_lut();
@@ -250,10 +252,25 @@ void RmTrackerNode::processing_worker() {
         rm_interfaces::msg::GimbalControl gb_msg;
         gb_msg.header.stamp = ros_clock;
         gb_msg.header.frame_id = "tracking_frame";
-        gb_msg.yaw = std::get<0>(gimbal_cmd);
-        gb_msg.pitch = std::get<1>(gimbal_cmd);
+
+        double raw_yaw = std::get<0>(gimbal_cmd);
+        double raw_pitch = std::get<1>(gimbal_cmd);
+        bool can_fire = static_cast<bool>(std::get<2>(gimbal_cmd));
+
+        if (!smooth_ready_) {
+            smooth_yaw_ = raw_yaw;
+            smooth_pitch_ = raw_pitch;
+            smooth_ready_ = true;
+        } else {
+            smooth_yaw_   = 0.25 * raw_yaw   + 0.75 * smooth_yaw_;
+            smooth_pitch_ = 0.25 * raw_pitch + 0.75 * smooth_pitch_;
+        }
+        if (!can_fire) smooth_ready_ = false;
+
+        gb_msg.yaw = smooth_yaw_;
+        gb_msg.pitch = smooth_pitch_;
         // 显式规避 bool 隐式转换风险
-        gb_msg.can_fire = static_cast<int>(std::get<2>(gimbal_cmd));
+        gb_msg.can_fire = static_cast<int>(can_fire);
         pub_gimbal_control_->publish(gb_msg);
 
         if (logger_throttler_->should_log()) {

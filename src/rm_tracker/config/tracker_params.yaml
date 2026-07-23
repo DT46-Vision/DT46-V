@@ -20,8 +20,8 @@ rm_tracker:
 
     # [外参] 相机 -> 枪口 (Camera to Gun) (x:右, y:下, z:前)
     # 注意：单位是米 (m) 和 弧度 (rad)
-    cam_to_gun_pos_x: 0.0       # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
-    cam_to_gun_pos_y: 0.125     # 假设相机在枪管上方 12cm
+    cam_to_gun_pos_x: 0.0
+    cam_to_gun_pos_y: 0.125
     cam_to_gun_pos_z: 0.0
     cam_to_gun_rpy_r: 0.0
     cam_to_gun_rpy_p: 0.0
@@ -30,34 +30,34 @@ rm_tracker:
     # [逻辑与阈值]
     dist_tol: 0.10              # 预处理：两块板距离容差 (m)
     max_match_distance: 0.2     # 匹配：最大距离阈值 (m)
-    max_match_yaw_diff: 57.0     # 匹配：判定跳变的 Yaw 差值 (deg)
+    max_match_yaw_diff: 57.0    # 匹配：判定跳变的 Yaw 差值 (deg)
     jump_cooldown_max: 20
     tracking_thres: 5           # 连续检测帧数 (进入 TRACKING) - int
     lost_thres: 20              # 连续丢失帧数 (进入 LOST) - int
 
-    # [EKF Q/R 参数] - 参考此前代码中的调优值
-    ekf_QR_q_xyz: 200.0          # Process Noise Q: 位置/速度
-    ekf_QR_q_yaw: 150.0         # Process Noise Q: 偏航角
-    ekf_QR_q_r: 0.5           # Process Noise Q: 半径 (给大一点允许快速变径)
+    # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
+    ekf_QR_q_xyz: 2.5           # 加速度谱密度 (m²/s³) — 越大越信任观测
+    ekf_QR_q_yaw: 15.0          # 角加速度谱密度 (rad²/s³)
+    ekf_QR_q_r: 0.05            # 半径游走谱密度 (m²/s)
 
-    ekf_QR_r_xyz_factor: 0.5   # Measurement Noise R: 位置因子
-    ekf_QR_r_yaw: 0.002          # Measurement Noise R: 角度方差
+    ekf_QR_r_xyz_factor: 0.5    # Measurement Noise R: 位置因子
+    ekf_QR_r_yaw: 0.002         # Measurement Noise R: 角度方差
 
     ekf_QR_stable_dist: 1.4
 
     # [车辆物理参数]
     radius_r_max: 0.4              # 车辆最大半径 (m)
-    radius_r_min: 0.15              # 车辆最小半径 (m)
+    radius_r_min: 0.15             # 车辆最小半径 (m)
 
     system_delay: 0.1
 
-    # 反小陀螺
-    max_spinning_frame: 10
-    spinning_frame_lost: 5
-    min_spinning_vel: 1.0
+    # 反小陀螺 — 时间累计 (秒), 帧率无关
+    min_spinning_vel: 1.0          # 角速度门限 (rad/s)
+
+    k_v2: 0.019                    # 平方空气阻力系数
 
     # [发射参数]
-    bullet_speed: 32.0            # 弹速 (m/s)
+    bullet_speed: 32.0             # 弹速 (m/s)
 
     # 发弹角度阈值
     shootable_dist: 10.0
@@ -66,4 +66,3 @@ rm_tracker:
     pitch_tolerance_deg: 5.0   # 允许发射的 pitch 角度阈值
 
     text_size: 2.0
-
