@@ -11,7 +11,7 @@ def generate_launch_description():
     params_file = os.path.join(
         get_package_share_directory('hik_camera'), 'config', 'camera_params.yaml')
 
-    camera_info_url = 'package://hik_camera/config/camera_info.yaml'
+    camera_info_url = 'package://hik_camera/config/camera_params.yaml'
 
     return LaunchDescription([
         DeclareLaunchArgument(name='params_file',

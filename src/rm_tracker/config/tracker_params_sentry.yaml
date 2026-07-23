@@ -57,8 +57,8 @@ rm_tracker:
     min_spinning_vel: 1.0
 
     # [发射参数]
-    k_v2: 0.032
     bullet_speed: 25.0            # 弹速 (m/s)
+    k_v2: 0.019              # 平方阻力系数
 
     # 发弹角度阈值
     shootable_dist: 10.0
