@@ -20,12 +20,12 @@ rm_tracker:
 
     # [外参] 相机 -> 枪口 (Camera to Gun) (x:右, y:下, z:前)
     # 注意：单位是米 (m) 和 弧度 (rad)
-    cam_to_gun_pos_x: 0.0       # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
-    cam_to_gun_pos_y: 0.084     # 假设相机在枪管上方 12cm
-    cam_to_gun_pos_z: 0.0
+    cam_to_gun_pos_x: 0.005       # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
+    cam_to_gun_pos_y: 0.068     # 假设相机在枪管上方 12cm
+    cam_to_gun_pos_z: 0.05
     cam_to_gun_rpy_r: 0.0
     cam_to_gun_rpy_p: 0.0
-    cam_to_gun_rpy_y: -1.0
+    cam_to_gun_rpy_y: 0.0
 
     # [逻辑与阈值]
     dist_tol: 0.10              # 预处理：两块板距离容差 (m)
