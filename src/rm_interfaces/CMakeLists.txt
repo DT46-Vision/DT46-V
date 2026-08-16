@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/GimbalControl.msg"
   "msg/SerialReceive.msg"
   "msg/Decision.msg"
+  "msg/EnemyCenter.msg"
   DEPENDENCIES std_msgs
 )
 

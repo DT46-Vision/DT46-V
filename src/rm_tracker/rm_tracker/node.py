@@ -6,7 +6,7 @@ from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, Hi
 # 自己写的日志管理器
 from .modules.logger import LogThrottler                         # 日志节流
 # 各种消息类型
-from rm_interfaces.msg import ArmorsMsg, Decision, GimbalControl # 装甲板、决策、云台控制 消息
+from rm_interfaces.msg import ArmorsMsg, Decision, EnemyCenter, GimbalControl # 装甲板、决策、敌人中心、云台控制 消息
 from geometry_msgs.msg import Vector3Stamped                     # 解析 dm 陀螺仪消息
 from cv_bridge import CvBridge                                   # ros图像-cv图像 转换器
 from sensor_msgs.msg import Image, CameraInfo                    # 原始图像、相机内参 消息
@@ -238,6 +238,12 @@ class RmTracker(Node):
         self.pub_gimbal_control = self.create_publisher(
             GimbalControl,
             '/tracker/gimbal_control',
+            qos_profile_sensor_data
+        )
+
+        self.pub_enemy_datas = self.create_publisher(
+            EnemyCenter,
+            '/tracker/enemy_datas',
             qos_profile_sensor_data
         )
 
@@ -518,6 +524,30 @@ class RmTracker(Node):
                     GB.pitch = float(gimbal_control[1])
                     GB.can_fire = int(gimbal_control[2])
                     self.pub_gimbal_control.publish(GB)
+
+                # 发布敌人中心数据给导航方 (锁外执行)
+                EC = EnemyCenter()
+                EC.header = Header()
+                EC.header.stamp = ros_clock.to_msg()
+                EC.header.frame_id = 'tracking_frame'
+                tracked = snapshot['tracker_state'] != self.tracker.LOST
+                EC.tracked = tracked
+                if tracked:
+                    EC.yaw = float(gimbal_control[0]) if gimbal_control is not None else 0.0
+                    EC.x = float(snapshot['target_state'][0])
+                    EC.y = float(snapshot['target_state'][2])
+                    EC.z = float(snapshot['target_state'][4])
+                    EC.enemy_yaw = float(snapshot['target_state'][6])
+                    EC.armor_id = int(snapshot['target'].id) if snapshot['target'] is not None else -1
+                else:
+                    # LOST 约定：数值全 0、armor_id=-1，tracked=false 为主判据
+                    EC.yaw = 0.0
+                    EC.x = 0.0
+                    EC.y = 0.0
+                    EC.z = 0.0
+                    EC.enemy_yaw = 0.0
+                    EC.armor_id = -1
+                self.pub_enemy_datas.publish(EC)
 
                 # 日志处理
                 if self.debug:
