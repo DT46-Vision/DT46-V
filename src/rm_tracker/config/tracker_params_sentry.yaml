@@ -36,11 +36,11 @@ rm_tracker:
     lost_thres: 20 # 连续丢失帧数 (进入 LOST) - int
 
     # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
-    ekf_QR_q_xyz: 20.0 # 加速度谱密度 (m²/s³) — 越大越信任观测
+    ekf_QR_q_xyz: 29.0 # 加速度谱密度 (m²/s³) — 越大越信任观测
     ekf_QR_q_yaw: 0.3 # 角加速度谱密度 (rad²/s³)
     ekf_QR_q_r: 0.015 # 半径游走谱密度 (m²/s)
 
-    ekf_QR_r_xyz_factor: 0.2   # Measurement Noise R: 位置因子
+    ekf_QR_r_xyz_factor: 0.2 # Measurement Noise R: 位置因子
     ekf_QR_r_yaw: 0.002 # Measurement Noise R: 角度方差
 
     ekf_QR_stable_dist: 1.4

@@ -67,12 +67,12 @@ public:
         configure_v4l2();
 
         // 打开相机
-        if (web_cam_) {
-            RCLCPP_INFO(this->get_logger(), "使用 Web Camera: %s", web_cam_url_.c_str());
-        } else {
-            RCLCPP_INFO(this->get_logger(), "使用 USB Camera");
-            cap_.open(camera_index_, cv::CAP_V4L2);
-        }
+        // if (web_cam_) {
+        //     RCLCPP_INFO(this->get_logger(), "使用 Web Camera: %s", web_cam_url_.c_str());
+        // } else {
+        //     RCLCPP_INFO(this->get_logger(), "使用 USB Camera");
+        //     cap_.open(camera_index_, cv::CAP_V4L2);
+        // }
 
         if (!cap_.isOpened()) {
             RCLCPP_FATAL(this->get_logger(), "无法打开摄像头 %d", camera_index_);
@@ -353,7 +353,7 @@ private:
     {
         while (rclcpp::ok() && running_.load()) {
             cv::Mat frame;
-            
+
             // cap_.read() 是底层的阻塞调用
             // 只要硬件缓冲区有一帧新图像，就会立刻返回，保证零延迟
             if (!cap_.read(frame)) {
@@ -372,7 +372,7 @@ private:
                 cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
                 target_encoding = "rgb8";
             }
-            
+
             auto img_msg = cv_bridge::CvImage(header, target_encoding, frame).toImageMsg();
             image_pub_->publish(*img_msg);
 

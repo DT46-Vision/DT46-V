@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/glennade/DT46-V/src/rm_tracker/src",
-      "program": "/home/glennade/DT46-V/src/rm_tracker/src/build/Debug/outDebug",
+      "cwd": "/home/glennade/DT46-V/src/rm_tracker/include/rm_tracker",
+      "program": "/home/glennade/DT46-V/src/rm_tracker/include/rm_tracker/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
