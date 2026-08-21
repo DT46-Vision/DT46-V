@@ -39,6 +39,7 @@ class RmTracker(Node):
         self.declare_parameter('text_size', 1.0)                # 显示文字大小
         self.declare_parameter('display_fps_limit', True)       # 控制显示帧率
         self.declare_parameter('display', False)                # 显示处理结果
+        self.declare_parameter('nav_visual_display', False)     # 显示导航数据可视化图像 (/tracker/enemy_nav_img)
         # -----------------------TRACKER---------------------
         self.declare_parameter('target_color', 0)               # 目标敌方阵营 (0: RED, 1: BLUE)
         self.declare_parameter('cam_to_gun_pos_x', 0.0)         # [外参] 相机相对于枪口的平移向量 -> x (x:右, y:下, z:前)
@@ -83,6 +84,7 @@ class RmTracker(Node):
         self.text_size = self.get_parameter('text_size').value  # 显示文字大小
         self.display_fps_limit = self.get_parameter('display_fps_limit').value
         self.display = self.get_parameter('display').value      # 显示处理结果
+        self.nav_visual_display = self.get_parameter('nav_visual_display').value
         # -----------------------TRACKER---------------------
         target_color = self.get_parameter('target_color').value    # 目标敌方阵营
         # [外参] 相机相对于枪口的平移向量
@@ -235,6 +237,12 @@ class RmTracker(Node):
             qos_profile_sensor_data    # <--- 同上
         )
 
+        self.pub_enemy_nav_img = self.create_publisher(
+            Image,
+            '/tracker/enemy_nav_img',
+            qos_profile_sensor_data
+        )
+
         self.pub_gimbal_control = self.create_publisher(
             GimbalControl,
             '/tracker/gimbal_control',
@@ -274,6 +282,8 @@ class RmTracker(Node):
                     self.display_fps_limit = value
                 elif name == 'display':
                     self.display = value
+                elif name == 'nav_visual_display':
+                    self.nav_visual_display = value
 
                 # IMU 修正参数 (仅更新数组)
                 elif name == 'rotation_rpy_r':
@@ -593,8 +603,8 @@ class RmTracker(Node):
 
     # ---------- 图像渲染回调 ----------
     def res_img_cb(self, msg: Image):
-        # 性能开关：如果没开启显示，直接不处理图像，节省 CPU
-        if not self.display:
+        # 性能开关：两个显示开关都没开启时，直接不处理图像，节省 CPU
+        if not (self.display or self.nav_visual_display):
             return
 
         # --- 新增：抽帧降频逻辑 ---
@@ -620,14 +630,26 @@ class RmTracker(Node):
 
             # 核心绘制逻辑
             if self.imu_rpy is not None and self.tf.has_camera_info:
+                ballistic_img = None
+                tracking_state_img = None
                 # 2. 完全无锁渲染：将快照传入新的 display 函数
-                ballistic_img, tracking_state_img = self.tracker.display_with_snapshot(
-                    current_snapshot,
-                    self.debug,
-                    self.tf,
-                    cv_img,
-                    self.imu_rpy
-                )
+                if self.display:
+                    ballistic_img, tracking_state_img = self.tracker.display_with_snapshot(
+                        current_snapshot,
+                        self.debug,
+                        self.tf,
+                        cv_img,
+                        self.imu_rpy
+                    )
+
+                enemy_nav_img = None
+                if self.nav_visual_display:
+                    enemy_nav_img = self.tracker.draw_enemy_nav(
+                        current_snapshot,
+                        self.tf,
+                        cv_img,
+                        self.imu_rpy
+                    )
             else:
                 return
 
@@ -641,6 +663,11 @@ class RmTracker(Node):
                 out_msg = self.bridge.cv2_to_imgmsg(ballistic_img, "bgr8")
                 out_msg.header = msg.header
                 self.pub_ballistic_img.publish(out_msg)
+
+            if enemy_nav_img is not None:
+                out_msg = self.bridge.cv2_to_imgmsg(enemy_nav_img, "bgr8")
+                out_msg.header = msg.header
+                self.pub_enemy_nav_img.publish(out_msg)
 
         except Exception as e:
             self.get_logger().error(f"图像处理回调异常: {e}")

@@ -905,66 +905,116 @@ class Tracker:
                     cv2.putText(draw, text, text_org, cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 0, 255), thickness)
 
         # ================= 第二层：再画 Estimate 预测值（覆盖在上面） =================
-        if snapshot['tracker_state'] != self.LOST:
-            circle_r = max(2, int(5 * scale))
-            marker_size = int(20 * scale)
-            thick_1 = max(1, int(1 * scale))
-            thick_2 = max(1, int(2 * scale))
+        self._draw_virtual_robot(draw, snapshot, tf, imu_rpy)
 
-            x = snapshot['target_state']
-            xc, yc, za = x[0], x[2], x[4]
-            yaw = x[6]
-            r1 = x[8]
-            r2 = snapshot['another_r']
-            dz = snapshot['dz']
+        return draw
 
-            virtual_armors_pts = []
+    def _draw_virtual_robot(self, draw: np.ndarray, snapshot: dict, tf: 'RmTF', imu_rpy: np.ndarray) -> None:
+        """按 EKF 状态绘制整车结构：4 块虚拟装甲板、车体中心、对角连线与速度箭头"""
+        if snapshot['tracker_state'] == self.LOST:
+            return
 
-            for i in range(4):
-                theta = yaw - i * (math.pi / 2.0)
-                r = r1 if (i % 2 == 0) else r2
-                z = za if (i % 2 == 0) else (za + dz)
+        scale = snapshot['text_size']
+        circle_r = max(2, int(5 * scale))
+        marker_size = int(20 * scale)
+        thick_1 = max(1, int(1 * scale))
+        thick_2 = max(1, int(2 * scale))
 
-                ax = xc - r * math.cos(theta)
-                ay = yc - r * math.sin(theta)
+        x = snapshot['target_state']
+        xc, yc, za = x[0], x[2], x[4]
+        yaw = x[6]
+        r1 = x[8]
+        r2 = snapshot['another_r']
+        dz = snapshot['dz']
 
-                world_pos = np.array([ax, ay, z])
-                cam_pos = self.world_to_cam(tf, world_pos, imu_rpy)
-                uv, visible = tf.project_point(cam_pos)
+        virtual_armors_pts = []
 
-                if visible:
-                    uv_int = (int(uv[0]), int(uv[1]))
-                    color = (0, 255, 0) if i == 0 else (0, 255, 255)
-                    cv2.circle(draw, uv_int, circle_r, color, -1)
-                    virtual_armors_pts.append(uv_int)
-                else:
-                    virtual_armors_pts.append(None)
+        for i in range(4):
+            theta = yaw - i * (math.pi / 2.0)
+            r = r1 if (i % 2 == 0) else r2
+            z = za if (i % 2 == 0) else (za + dz)
 
-            center_world = np.array([xc, yc, za + dz/2.0])
-            cam_c = self.world_to_cam(tf, center_world, imu_rpy)
-            uv_c, vis_c = tf.project_point(cam_c)
+            ax = xc - r * math.cos(theta)
+            ay = yc - r * math.sin(theta)
 
-            if vis_c:
-                c_int = (int(uv_c[0]), int(uv_c[1]))
-                cv2.drawMarker(draw, c_int, (255, 255, 255), cv2.MARKER_CROSS, marker_size, thick_2)
+            world_pos = np.array([ax, ay, z])
+            cam_pos = self.world_to_cam(tf, world_pos, imu_rpy)
+            uv, visible = tf.project_point(cam_pos)
 
-                line_color = (100, 100, 100)
-                # 【关键修复】：显式判断 is not None，防止隐式 bool 转换引发 OpenCV 连线崩溃
-                if virtual_armors_pts[0] is not None and virtual_armors_pts[2] is not None:
-                    cv2.line(draw, virtual_armors_pts[0], virtual_armors_pts[2], line_color, thick_1)
-                if virtual_armors_pts[1] is not None and virtual_armors_pts[3] is not None:
-                    cv2.line(draw, virtual_armors_pts[1], virtual_armors_pts[3], line_color, thick_1)
+            if visible:
+                uv_int = (int(uv[0]), int(uv[1]))
+                color = (0, 255, 0) if i == 0 else (0, 255, 255)
+                cv2.circle(draw, uv_int, circle_r, color, -1)
+                virtual_armors_pts.append(uv_int)
+            else:
+                virtual_armors_pts.append(None)
 
-                vx, vy = x[1], x[3]
-                speed = math.sqrt(vx**2 + vy**2)
-                if speed > 0.1:
-                    end_point_world = np.array([xc + vx * 0.5, yc + vy * 0.5, za])
-                    cam_end = self.world_to_cam(tf, end_point_world, imu_rpy)
-                    uv_end, vis_end = tf.project_point(cam_end)
+        center_world = np.array([xc, yc, za + dz/2.0])
+        cam_c = self.world_to_cam(tf, center_world, imu_rpy)
+        uv_c, vis_c = tf.project_point(cam_c)
 
-                    if vis_end:
-                        e_int = (int(uv_end[0]), int(uv_end[1]))
-                        cv2.arrowedLine(draw, c_int, e_int, (0, 0, 255), thick_2)
+        if vis_c:
+            c_int = (int(uv_c[0]), int(uv_c[1]))
+            cv2.drawMarker(draw, c_int, (255, 255, 255), cv2.MARKER_CROSS, marker_size, thick_2)
+
+            line_color = (100, 100, 100)
+            # 显式判断 is not None，防止隐式 bool 转换引发 OpenCV 连线崩溃
+            if virtual_armors_pts[0] is not None and virtual_armors_pts[2] is not None:
+                cv2.line(draw, virtual_armors_pts[0], virtual_armors_pts[2], line_color, thick_1)
+            if virtual_armors_pts[1] is not None and virtual_armors_pts[3] is not None:
+                cv2.line(draw, virtual_armors_pts[1], virtual_armors_pts[3], line_color, thick_1)
+
+            vx, vy = x[1], x[3]
+            speed = math.sqrt(vx**2 + vy**2)
+            if speed > 0.1:
+                end_point_world = np.array([xc + vx * 0.5, yc + vy * 0.5, za])
+                cam_end = self.world_to_cam(tf, end_point_world, imu_rpy)
+                uv_end, vis_end = tf.project_point(cam_end)
+
+                if vis_end:
+                    e_int = (int(uv_end[0]), int(uv_end[1]))
+                    cv2.arrowedLine(draw, c_int, e_int, (0, 0, 255), thick_2)
+
+    def draw_enemy_nav(self, snapshot: dict, tf: 'RmTF', img: np.ndarray, imu_rpy: np.ndarray) -> np.ndarray:
+        """绘制导航可视化：整车结构 + 左上角 EnemyCenter 下发数据面板"""
+        draw = img.copy()
+
+        self._draw_virtual_robot(draw, snapshot, tf, imu_rpy)
+
+        scale = snapshot['text_size']
+        tracked = snapshot['tracker_state'] != self.LOST
+        gc = snapshot['gimbal_control'] if snapshot['gimbal_control'] else None
+
+        if tracked:
+            nav_yaw = float(gc[0]) if gc is not None else 0.0
+            nav_x = float(snapshot['target_state'][0])
+            nav_y = float(snapshot['target_state'][2])
+            nav_z = float(snapshot['target_state'][4])
+            nav_enemy_yaw = float(snapshot['target_state'][6])
+            nav_armor_id = int(snapshot['target'].id) if snapshot['target'] is not None else -1
+        else:
+            # LOST 约定与 enemy_datas 话题一致：数值全 0、armor_id = -1
+            nav_yaw = nav_x = nav_y = nav_z = nav_enemy_yaw = 0.0
+            nav_armor_id = -1
+
+        font = 0.7 * scale
+        thick = max(1, int(1 * scale))
+        start_x = int(20 * scale)
+        base_y = int(50 * scale)
+        step_y = int(30 * scale)
+
+        lines = [
+            (f"[NAV] tracked: {tracked}", (0, 255, 0) if tracked else (0, 0, 255)),
+            (f"yaw      : {nav_yaw:6.2f} deg", (255, 255, 255)),
+            (f"x        : {nav_x:6.3f} m", (255, 255, 255)),
+            (f"y        : {nav_y:6.3f} m", (255, 255, 255)),
+            (f"z        : {nav_z:6.3f} m", (255, 255, 255)),
+            (f"enemy_yaw: {nav_enemy_yaw:6.2f} rad", (255, 255, 255)),
+            (f"armor_id : {nav_armor_id}", (255, 255, 255)),
+        ]
+        for i, (text, color) in enumerate(lines):
+            cv2.putText(draw, text, (start_x, base_y + i * step_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, font, color, thick)
 
         return draw
 
