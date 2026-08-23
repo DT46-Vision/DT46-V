@@ -388,9 +388,42 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
 // 状态标记图绘制实现
 // =====================================================================
 void RmTrackerNode::draw_tracking_state(cv::Mat& draw, const RenderSnapshot& snapshot) {
-    if (snapshot.tracker_state == TrackerState::LOST) return;
+    if (snapshot.tracker_state == TrackerState::LOST && snapshot.debug_yaw_armors.empty()) return;
 
     double scale = text_size_;
+
+    Eigen::Vector3d current_imu;
+    {
+        std::lock_guard<std::mutex> lock(imu_lock_);
+        current_imu = imu_rpy_;
+    }
+
+    if (!snapshot.debug_yaw_armors.empty()) {
+        double font_scale = 1.0 * scale;
+        int thickness = std::max(1, static_cast<int>(3 * scale));
+        int stroke_thickness = thickness + std::max(1, static_cast<int>(5 * scale));
+
+        for (const auto& armor : snapshot.debug_yaw_armors) {
+            Eigen::Vector3d cam_pos = tf_.world_to_cam(armor.pos, current_imu);
+            auto [uv, visible] = tf_.project_point(cam_pos);
+            if (!visible) continue;
+
+            char buf[16];
+            std::snprintf(buf, sizeof(buf), "%.1f", armor.yaw);
+            std::string text(buf);
+
+            cv::Point uv_int(static_cast<int>(uv.x), static_cast<int>(uv.y));
+            cv::Size text_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, font_scale, thickness, nullptr);
+            cv::Point text_org(uv_int.x - text_size.width / 2, uv_int.y + text_size.height / 2);
+
+            cv::putText(draw, text, text_org, cv::FONT_HERSHEY_SIMPLEX, font_scale,
+                        cv::Scalar(0, 0, 0), stroke_thickness);
+            cv::putText(draw, text, text_org, cv::FONT_HERSHEY_SIMPLEX, font_scale,
+                        cv::Scalar(255, 0, 255), thickness);
+        }
+    }
+
+    if (snapshot.tracker_state == TrackerState::LOST) return;
 
     int circle_r = std::max(2, static_cast<int>(5 * scale));
     int marker_size = static_cast<int>(20 * scale);
@@ -402,12 +435,6 @@ void RmTrackerNode::draw_tracking_state(cv::Mat& draw, const RenderSnapshot& sna
     double r1 = snapshot.target_state(8);
     double r2 = snapshot.another_r;
     double dz = snapshot.dz;
-
-    Eigen::Vector3d current_imu;
-    {
-        std::lock_guard<std::mutex> lock(imu_lock_);
-        current_imu = imu_rpy_;
-    }
 
     std::vector<cv::Point> virtual_armors_pts(4, cv::Point(-1, -1));
 

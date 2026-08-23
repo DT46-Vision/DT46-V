@@ -28,6 +28,8 @@ class SerialNode(Node):
         self.lock = threading.Lock()
         self.serial_lock = threading.Lock()
         self.is_reconnecting = False
+        self.crc_fail_count = 0
+        self.crc_ok_count = 0
 
         # 创建qos
         qos = QoSProfile(
@@ -150,7 +152,16 @@ class SerialNode(Node):
                     calculated_crc = get_crc16_check_sum(data_payload)
 
                     if calculated_crc != received_crc:
+                        self.crc_fail_count += 1
+                        if self.crc_fail_count <= 5:
+                            self.get_logger().warn(
+                                f"CRC校验失败 第{self.crc_fail_count}帧: hex={frame.hex(' ')} 本端CRC={calculated_crc:04X} 帧内CRC={received_crc:04X}"
+                            )
                         continue
+
+                    self.crc_ok_count += 1
+                    if self.crc_ok_count == 1:
+                        self.get_logger().info(f"CRC校验成功: hex={frame.hex(' ')} 成功计数={self.crc_ok_count} 失败计数={self.crc_fail_count}")
 
                     _, detect_color, roll, pitch, yaw, bullet_speed = struct.unpack("<BBffff", data_payload)
 
