@@ -81,6 +81,14 @@ def generate_launch_description():
                 emulate_tty=True,
                 parameters=[LaunchConfiguration("tracker_params_sentry_file")],
             ),
+            # ----------- 启动敌人坐标 tf 发布节点 -----------
+            Node(
+                package="rm_tf_broadcaster",
+                executable="enemy_tf_node",
+                name="enemy_tf_node",
+                output="screen",
+                emulate_tty=True,
+            ),
             # ----------- 启动海康相机节点 -----------
             Node(
                 package="hik_camera",
