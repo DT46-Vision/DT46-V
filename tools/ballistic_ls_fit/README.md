@@ -1,83 +1,97 @@
-# 弹道参数离线拟合说明
+# 弹道参数离线拟合 / 采数
 
-这套脚本**不参与** ROS / colcon 编译，用本机 Python 跑即可。  
-依赖：`numpy`、`scipy`、`pyyaml`（`pip install numpy scipy pyyaml`）
+不进 colcon。依赖拟合：`numpy` `scipy` `pyyaml`；采数还需已 source 的工作空间（`rm_interfaces`）。
+
+## 目录
+
+```text
+ballistic_ls_fit/
+  README.md          # 本说明
+  record.sh          # 采数启动
+  fit.sh             # 拟合启动
+  python/            # Python 脚本
+  config/            # 拟合配置（开关、初值）
+  data/              # CSV（示例 + 实采）
+```
+
+参数放在 **`config/`**（和 CSV 分开：一个是拟合设定，一个是观测数据）。
 
 ---
 
-## 怎么跑
+## 三种用法
 
-1. 按下面格式准备 CSV  
-2. 编辑 `fit_config.yaml`：改初值，把本次要估的参数 `fit: true`，其余 `false`  
-3. 执行：
+### 1. 平时自瞄
+
+照常 launch（如 `infantry.launch.py` / 你的 `start.sh`），**不用**本目录。
+
+### 2. 采数据（写 CSV）
+
+先开着自瞄，再：
+
+```bash
+cd <仓库>/tools/ballistic_ls_fit
+chmod +x record.sh    # 首次
+./record.sh
+```
+
+启动后终端会列出 `data/` 里已有的 `.csv`，输入序号选择；选 `0` 可新建。  
+然后弹出小窗，点「记录一点」追加到所选文件。
+
+跳过交互、直接指定文件：
+
+```bash
+CSV_PATH=$PWD/data/run1.csv ./record.sh
+```
+
+### 3. 算参数（离线）
+
+```bash
+cd <仓库>/tools/ballistic_ls_fit
+# 可先改 config/fit_config.yaml 里的 fit 开关
+./fit.sh
+```
+
+启动后同样从 `data/` 列表里选一个 CSV。也可：
+
+```bash
+./fit.sh --csv data/sample_data.csv
+```
+
+Windows：
 
 ```powershell
-cd D:\project\Python\DT46-V\tools\ballistic_ls_fit
-python fit.py --config fit_config.yaml
+cd tools\ballistic_ls_fit
+python python\fit.py --config config\fit_config.yaml
+python python\record_csv_node.py --ros-args -p enable_gui:=true
 ```
 
 ---
 
-## 采数流程
-
-1. 静靶，车体尽量不动。  
-2. **手动**把云台调到能稳定连续命中的姿态，保持稳定。  
-3. 连续采若干帧（如 30–50），对下面 7 项分别取平均，写成 CSV **一行**。  
-4. 换距离 / 高度，重复（近、远都要有）。  
-5. 只保存确认打中的时段。
-
----
-
-## 数据格式（只要这 7 项）
+## CSV 格式（仅 7 列）
 
 ```text
 x_cam,y_cam,z_cam,imu_roll,imu_pitch,imu_yaw,v_bullet
 ```
 
-| 列名 | 含义 | 单位 |
-|------|------|------|
-| `x_cam` | 目标相机系 X | 米 |
-| `y_cam` | 目标相机系 Y | 米 |
-| `z_cam` | 目标相机系 Z | 米 |
-| `imu_roll` | 陀螺仪 roll | **度** |
-| `imu_pitch` | 陀螺仪 pitch | **度** |
-| `imu_yaw` | 陀螺仪 yaw | **度** |
-| `v_bullet` | 弹速 | 米/秒 |
-
-- 相机系与线上一致（注释：x 右、y 下、z 前）。  
-- 默认 CSV 填裸 `/imu/rpy`；`fit_config.yaml` 里 `apply_rotation_rpy: true` 时会按车上的 `rotation_rpy_*` 做叠加（不做开机相对 yaw）。若已是 tracker 内部姿态，把 `apply_rotation_rpy` 设为 `false`。
+单位：位置 **m**，姿态 **度**，弹速 **m/s**。
 
 ---
 
-## yaml 开关（`fit_config.yaml`）
+## 拟合配置（`config/fit_config.yaml`）
 
-每个参数：
-
-```yaml
-k_v2:
-  value: 0.019   # 初值 / 固定值
-  fit: true      # true=本次优化；false=计算时仍使用，但不改
-```
-
-可调项：`k_v2`，`cam_to_gun_pos_x/y/z`，`cam_to_gun_rpy_r/p/y`（rpy 单位为**度**）。
-
-- **计算残差**：始终用全部参数 + 全部观测量，解 `(Δyaw, Δpitch)`，期望 `(0,0)`。  
-- **优化**：只动 `fit: true` 的项。  
-- 注意：当前车上 `solve_ballistic` **未使用** `cam_to_gun_rpy_r`，一般保持 `fit: false`。
-
-写回：`src/rm_tracker/config/tracker_params_*.yaml`。
+- **不写 CSV 路径**；启动时从 `data/` 选择  
+- 每个参数 `value` + `fit: true/false`  
+- 算残差用全部参数；只优化 `fit: true` 的项；期望 `(Δyaw, Δpitch)≈(0,0)`
 
 ---
 
-## 文件
+## 文件说明
 
-| 文件 | 说明 |
+| 路径 | 说明 |
 |------|------|
-| `fit.py` | 统一拟合入口 |
-| `fit_config.yaml` | 数据路径、初值、开关、边界 |
-| `sample_data.csv` | 7 列示例（假数据，仅试跑） |
-| `README.md` | 本说明 |
-
-## 暂不包含
-
-`system_delay`、动目标提前量、bag 一键采集。
+| `python/fit.py` | 离线最小二乘 |
+| `python/record_csv_node.py` | ROS 采数节点 |
+| `python/csv_io.py` | CSV 追加 |
+| `config/fit_config.yaml` | 拟合开关与初值 |
+| `data/sample_data.csv` | 示例 |
+| `data/calib.csv` | 实采（运行后生成） |

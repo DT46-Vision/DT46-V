@@ -1,6 +1,5 @@
 # 弹道离线拟合配置：改 value / fit 即可，不必改代码
-
-data_csv: sample_data.csv
+# CSV 不在此指定：启动 fit / record 时从 data/ 目录里选
 
 # 若 CSV 里是裸 /imu/rpy，设 true，并与车上 rotation_rpy 一致
 # 若 CSV 已是 tracker 内部用的姿态，设 false

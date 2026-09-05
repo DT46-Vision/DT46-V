@@ -186,17 +186,30 @@ def pack_params(cfg: dict) -> tuple[dict[str, float], list[str]]:
 
 
 def main() -> None:
-    here = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent  # tools/ballistic_ls_fit
+    data_dir = root / "data"
     parser = argparse.ArgumentParser(description="弹道参数非线性最小二乘拟合")
-    parser.add_argument("--config", type=Path, default=here / "fit_config.yaml")
+    parser.add_argument("--config", type=Path, default=root / "config" / "fit_config.yaml")
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=None,
+        help="指定 CSV；不写则启动时从 data/ 列表中选择",
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    csv_path = Path(cfg["data_csv"])
-    if not csv_path.is_absolute():
-        csv_path = (args.config.parent / csv_path).resolve()
+    if args.csv is not None:
+        csv_path = args.csv if args.csv.is_absolute() else (root / args.csv).resolve()
+        if not csv_path.is_file():
+            raise SystemExit(f"找不到 CSV: {csv_path}")
+    else:
+        from csv_io import prompt_choose_csv
+
+        csv_path = prompt_choose_csv(data_dir, allow_new=False)
 
     rows = load_csv(csv_path)
+    print(f"使用数据: {csv_path}")
     base, free_keys = pack_params(cfg)
     rot = np.array(
         [
