@@ -1,0 +1,45 @@
+# 弹道离线拟合配置：改 value / fit 即可，不必改代码
+
+data_csv: sample_data.csv
+
+# 若 CSV 里是裸 /imu/rpy，设 true，并与车上 rotation_rpy 一致
+# 若 CSV 已是 tracker 内部用的姿态，设 false
+apply_rotation_rpy: true
+rotation_rpy_r: 0.0
+rotation_rpy_p: 0.0
+rotation_rpy_y: -180.0
+
+# 参数初值 + 本次是否参与优化（fit: true 才进最小二乘）
+# 算残差时全部 value 都会用上；未 fit 的保持 value 不变
+params:
+  k_v2:
+    value: 0.019
+    fit: true
+  cam_to_gun_pos_x:
+    value: 0.0
+    fit: false
+  cam_to_gun_pos_y:
+    value: 0.0
+    fit: false
+  cam_to_gun_pos_z:
+    value: 0.0
+    fit: false
+  cam_to_gun_rpy_r:
+    value: 0.0
+    fit: false   # 当前车上 solve_ballistic 未使用 roll 偏置，一般保持 false
+  cam_to_gun_rpy_p:
+    value: 0.0
+    fit: true
+  cam_to_gun_rpy_y:
+    value: 0.0
+    fit: true
+
+# 优化边界（仅对 fit: true 的参数生效）
+bounds:
+  k_v2: [0.0, 0.08]
+  cam_to_gun_pos_x: [-0.2, 0.2]
+  cam_to_gun_pos_y: [-0.3, 0.3]
+  cam_to_gun_pos_z: [-0.2, 0.2]
+  cam_to_gun_rpy_r: [-15.0, 15.0]
+  cam_to_gun_rpy_p: [-15.0, 15.0]
+  cam_to_gun_rpy_y: [-15.0, 15.0]
