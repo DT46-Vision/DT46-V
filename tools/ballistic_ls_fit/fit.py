@@ -29,18 +29,33 @@ PARAM_KEYS = [
 ]
 
 
+def _rx(a: float) -> np.ndarray:
+    c, s = np.cos(a), np.sin(a)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+
+
+def _ry(a: float) -> np.ndarray:
+    c, s = np.cos(a), np.sin(a)
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+
+def _rz(a: float) -> np.ndarray:
+    c, s = np.cos(a), np.sin(a)
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+
 def euler_to_matrix(rpy_deg: np.ndarray, order: str = "xyz") -> np.ndarray:
+    """与 C++ RmTF::euler_to_matrix 一致。
+
+    a0,a1,a2 = 输入向量三个分量（弧度）。
+    xyz: Rz(a2)*Ry(a1)*Rx(a0)
+    zyx: Rx(a2)*Ry(a1)*Rz(a0)  — a0 挂 Z、a2 挂 X（不是 Rx(a0)*...*Rz(a2)）
+    """
     a0, a1, a2 = np.asarray(rpy_deg, dtype=float) * DEG2RAD
-    cx, sx = np.cos(a0), np.sin(a0)
-    cy, sy = np.cos(a1), np.sin(a1)
-    cz, sz = np.cos(a2), np.sin(a2)
-    rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
-    ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-    rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
     if order == "xyz":
-        return rz @ ry @ rx
+        return _rz(a2) @ _ry(a1) @ _rx(a0)
     if order == "zyx":
-        return rx @ ry @ rz
+        return _rx(a2) @ _ry(a1) @ _rz(a0)
     raise ValueError(order)
 
 
