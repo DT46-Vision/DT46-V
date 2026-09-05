@@ -1,0 +1,12 @@
+---
+description: git-collab 阶段存档可自动 commit；push 须先询问
+alwaysApply: true
+---
+
+# Git 提交与推送
+
+当 **git-collab-docs** skill 适用，且判定为**阶段存档**（功能分支上阶段成果做完、需要落盘）时，**允许自动 commit**。
+
+- Commit 按 skill：功能分支、一条一事、说明「现在多了/修了什么」；不改 remote、不改 git config。
+- **Push 必须先询问用户**，得到明确同意后再推。
+- 用户在对话里明确要求提交/推送时，仍按其指示执行。
