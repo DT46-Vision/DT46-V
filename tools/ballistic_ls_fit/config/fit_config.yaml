@@ -16,16 +16,16 @@ params:
     fit: true
   cam_to_gun_pos_x:
     value: 0.0
-    fit: false
+    fit: true
   cam_to_gun_pos_y:
     value: 0.0
-    fit: false
+    fit: ture
   cam_to_gun_pos_z:
     value: 0.0
-    fit: false
+    fit: ture
   cam_to_gun_rpy_r:
     value: 0.0
-    fit: false   # 当前车上 solve_ballistic 未使用 roll 偏置，一般保持 false
+    fit: ture   # 当前车上 solve_ballistic 未使用 roll 偏置，一般保持 false
   cam_to_gun_rpy_p:
     value: 0.0
     fit: true

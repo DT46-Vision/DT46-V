@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 WS_SETUP="${WS_SETUP:-}"
 
+set +u
 if [[ -n "$WS_SETUP" && -f "$WS_SETUP" ]]; then
   # shellcheck source=/dev/null
   source "$WS_SETUP"
@@ -18,6 +19,7 @@ elif [[ -f /opt/ros/humble/setup.bash ]]; then
     source "$(cd "$ROOT/../.." && pwd)/install/setup.bash"
   fi
 fi
+set -u
 
 GUI="${ENABLE_GUI:-true}"
 # 若设置了 CSV_PATH 则跳过交互直接用该文件
