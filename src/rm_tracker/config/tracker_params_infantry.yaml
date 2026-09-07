@@ -20,12 +20,12 @@ rm_tracker:
 
     # [外参] 相机 -> 枪口 (Camera to Gun) (x:右, y:下, z:前)
     # 注意：单位是米 (m) 和 弧度 (rad)
-    cam_to_gun_pos_x: 0.1458 # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
-    cam_to_gun_pos_y: -0.097 # 假设相机在枪管上方 12cm
-    cam_to_gun_pos_z: -0.2
-    cam_to_gun_rpy_r: 0.3605
-    cam_to_gun_rpy_p: -2.855
-    cam_to_gun_rpy_y: 1.056
+    cam_to_gun_pos_x: -0.1159 # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
+    cam_to_gun_pos_y: 0.0602 # 假设相机在枪管上方 12cm
+    cam_to_gun_pos_z: -0.102
+    cam_to_gun_rpy_r: 0.00
+    cam_to_gun_rpy_p: -0.02637
+    cam_to_gun_rpy_y: -2.3389
 
     # [逻辑与阈值]
     dist_tol: 0.10 # 预处理：两块板距离容差 (m)
@@ -57,7 +57,7 @@ rm_tracker:
     min_spinning_vel: 1.0
 
     # [发射参数]
-    k_v2: 0.00151 # 平方空气阻力（default.csv 拟合）
+    k_v2: 0.02555363 # 平方空气阻力（default.csv 拟合）
     bullet_speed: 30.0 # 弹速 (m/s)
 
     # 发弹角度阈值
