@@ -24,7 +24,7 @@ rm_tracker:
     cam_to_gun_pos_y: 0.0602 # 假设相机在枪管上方 12cm
     cam_to_gun_pos_z: -0.102
     cam_to_gun_rpy_r: 0.00
-    cam_to_gun_rpy_p: -0.02637
+    cam_to_gun_rpy_p: 0.02637
     cam_to_gun_rpy_y: -2.3389
 
     # [逻辑与阈值]
