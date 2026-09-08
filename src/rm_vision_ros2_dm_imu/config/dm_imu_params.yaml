@@ -6,7 +6,7 @@ dm_imu:
 
     # 三个话题的发布开关
     publish_imu_data: false   # 关掉就设 false
-    publish_rpy: true
+    publish_rpy: false
     publish_pose: false
 
     # RPY 的单位（true=度，false=弧度）

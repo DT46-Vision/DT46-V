@@ -50,8 +50,6 @@ class SerialNode(Node):
         self.serial_receive_header = 0xA5
         self.serial_send_header = 0x5A
 
-        self.pub_rpy = False
-
         # 初始化串口
         try:
             self.serial = serial.Serial(

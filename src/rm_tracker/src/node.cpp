@@ -81,7 +81,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
 
     // 5. 绑定并订阅高频基础数据
     sub_imu_rpy_ = this->create_subscription<geometry_msgs::msg::Vector3Stamped>(
-        "/imu/rpy", 10, std::bind(&RmTrackerNode::imu_rpy_cb, this, std::placeholders::_1));
+        "/imu/rpy", sensor_qos, std::bind(&RmTrackerNode::imu_rpy_cb, this, std::placeholders::_1));
 
     sub_armors_ = this->create_subscription<rm_interfaces::msg::ArmorsMsg>(
         "/detector/armors_info", sensor_qos, std::bind(&RmTrackerNode::armors_cb, this, std::placeholders::_1));
