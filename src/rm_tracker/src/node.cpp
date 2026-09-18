@@ -253,24 +253,11 @@ void RmTrackerNode::processing_worker() {
         gb_msg.header.stamp = ros_clock;
         gb_msg.header.frame_id = "tracking_frame";
 
-        double raw_yaw = std::get<0>(gimbal_cmd);
-        double raw_pitch = std::get<1>(gimbal_cmd);
-        bool can_fire = static_cast<bool>(std::get<2>(gimbal_cmd));
+        gb_msg.yaw = std::get<0>(gimbal_cmd);
+        gb_msg.pitch = std::get<1>(gimbal_cmd);
 
-        if (!smooth_ready_) {
-            smooth_yaw_ = raw_yaw;
-            smooth_pitch_ = raw_pitch;
-            smooth_ready_ = true;
-        } else {
-            smooth_yaw_   = 0.25 * raw_yaw   + 0.75 * smooth_yaw_;
-            smooth_pitch_ = 0.25 * raw_pitch + 0.75 * smooth_pitch_;
-        }
-        if (!can_fire) smooth_ready_ = false;
-
-        gb_msg.yaw = smooth_yaw_;
-        gb_msg.pitch = smooth_pitch_;
         // 显式规避 bool 隐式转换风险
-        gb_msg.can_fire = static_cast<int>(can_fire);
+        gb_msg.can_fire = static_cast<int>(std::get<2>(gimbal_cmd));
         pub_gimbal_control_->publish(gb_msg);
 
         if (logger_throttler_->should_log()) {

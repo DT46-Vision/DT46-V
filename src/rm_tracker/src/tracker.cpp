@@ -501,38 +501,44 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
                                                         const Eigen::Vector3d& imu_rpy) {
     if (bullet_speed < 1e-3) return {0.0, 0.0, false};
 
-    double x = muzzle_target.pos(0), y = muzzle_target.pos(1), z = muzzle_target.pos(2);
-    double dist_h = std::hypot(x, y);
+    // 1. 获取目标在枪口基准水平系下的真实三维相对坐标
+    // x: 水平横向偏差 (m)
+    // y: 水平纵向距离 (m)
+    // z: 垂直高度落差 (m，包含高低台与地面真实高度差)
+    double x = muzzle_target.pos(0);
+    double y = muzzle_target.pos(1);
+    double z = muzzle_target.pos(2);
 
+    double dist_h = std::hypot(x, y); // 水平地面投影距离
     if (dist_h < 0.2 || std::isnan(dist_h)) return {0.0, 0.0, false};
 
-    if (dist_h < 1.5) {
-        double pitch_rad = std::atan2(z, dist_h);
-        double z_aim = dist_h * std::tan(pitch_rad);
-        Eigen::Vector3d aim_point_world(x, y, z_aim);
-        Eigen::Vector3d aim_point_cam = tf.world_to_cam(aim_point_world, imu_rpy);
+    // 2. 求解世界系目标空间绝对朝向 (弧度)
+    // 水平偏航角 (Yaw)：不受重力下坠影响，直接由三维水平坐标分量求解
+    double target_yaw_world_rad = std::atan2(x, y);
 
-        double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
-        double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
-
-        delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
-        delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
-
-        return {delta_yaw, delta_pitch, true};
+    // 垂直仰角 (Pitch)：结合距离与真实高度差查表 (自动补偿重力下坠与地形高低)
+    double target_pitch_world_rad = 0.0;
+    if (dist_h <= LUT_DIST_MAX) {
+        target_pitch_world_rad = lut_lookup(dist_h, z);
+    } else {
+        target_pitch_world_rad = std::atan2(z, dist_h);
     }
 
-    double pitch_rad = dist_h <= LUT_DIST_MAX ? lut_lookup(dist_h, z) : std::atan2(z, dist_h);
+    // 3. 计算相对当前枪口/云台朝向的偏差角度 (Delta)
+    // imu_rpy 输入为角度 (deg)，需统一转为弧度计算
+    double current_yaw_rad = imu_rpy(2) * DEG2RAD;
+    double current_pitch_rad = imu_rpy(1) * DEG2RAD;
 
-    double z_aim = dist_h * std::tan(pitch_rad);
-    Eigen::Vector3d aim_point_world(x, y, z_aim);
+    double delta_yaw = shortest_angular_distance(current_yaw_rad, target_yaw_world_rad);
+    double delta_pitch = target_pitch_world_rad - current_pitch_rad;
 
-    Eigen::Vector3d aim_point_cam = tf.world_to_cam(aim_point_world, imu_rpy);
+    // 4. 叠加机械安装外参偏置补偿 (度转弧度)
+    delta_yaw += cam_to_gun_rpy(2) * DEG2RAD;
+    delta_pitch += cam_to_gun_rpy(1) * DEG2RAD;
 
-    double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
-    double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
-
-    delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
-    delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
+    // 5. 角度限幅保护
+    delta_yaw = std::clamp(delta_yaw, -1.0, 1.0);
+    delta_pitch = std::clamp(delta_pitch, -1.0, 1.0);
 
     return {delta_yaw, delta_pitch, true};
 }
