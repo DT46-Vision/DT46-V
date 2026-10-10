@@ -113,6 +113,17 @@ source install/setup.bash
 ### 3. 串口定向映射 (Udev 规则)
 本系统使用多串口并发通信，需配置 udev 规则绑定软链接，防止设备号飘移。
 
+> **推荐用仓库根目录的脚本自动完成**（免手抄 VID/PID/serial）：
+> ```bash
+> ./setup_serial.sh --discover                      # 先看插着的设备识别成什么
+> ./setup_serial.sh                                 # 交互式选择 IMU / MCU 并安装规则
+> ./setup_serial.sh --check                         # 校验软链接是否生效
+> ./setup_serial.sh --imu /dev/ttyACM0 --mcu /dev/ttyACM1   # 也可直接指定，非交互
+> ./setup_serial.sh --print                         # 只看将写入的规则，不动系统
+> ./setup_serial.sh --uninstall                     # 删除规则
+> ```
+> 脚本会自动 sudo 提权、覆盖前备份旧规则。下面的手工步骤适用于需要自己核对属性的场合。
+
 **获取串口信息**：
 ```bash
 udevadm info -a -n /dev/ttyACM0 | grep -E '{idVendor}|{idProduct}|{serial}'

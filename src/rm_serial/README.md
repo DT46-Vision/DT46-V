@@ -106,6 +106,10 @@ ros2 run rm_serial rm_serial_node --ros-args -r __node:=rm_serial \
 
 参数默认使用 udev 软链接，必须先建立规则，否则节点会因为打不开设备而直接抛异常退出：
 
+> **可用仓库根目录的 `setup_serial.sh` 一键完成**（自动读取 VID/PID/serial、自动 sudo、覆盖前备份）：
+> `./setup_serial.sh --discover` 查看设备 → `./setup_serial.sh` 交互式安装 → `./setup_serial.sh --check` 校验。
+> 下面的手工步骤适用于需要自己核对属性的场合。
+
 1. 查设备信息（插上设备后）：
    ```bash
    udevadm info -a -n /dev/ttyACM0 | grep -E '{idVendor}|{idProduct}|{serial}'
