@@ -163,6 +163,6 @@ USB 模式还是网络模式的判定只看 `web_cam`：为 `false` 时走 V4L2 
 9. `web_cam=true` 时，曝光/增益只能走 OpenCV 的 `cap_.set()`：源码里 V4L2 回退函数 `set_v4l2_control()` 在 `web_cam_` 为真时是空操作，而且失败日志被注释掉了，因此设置失败是静默的。另外网络流通常不会理会 `frame_width/height/fps` 请求。
 10. 采帧线程在 `cap_.read()` 失败时只打 WARN 并继续循环（线程退出标志只在析构函数里置位），摄像头掉线或流中断时会持续刷「捕获帧失败 (Frame Dropped or Timeout)」日志。
 11. `ros2 launch usb_camera usb_camera.launch.py` 无法通过 launch argument 改任何东西（见「launch 启动」）；改 `config` 后必须重新 `colcon build`，因为 launch 读的是 `share/usb_camera/config/`。
-12. 这个仓库里同时存在两套构建产物：根目录的 `build/`、`install/` 与 `src/build/`、`src/install/`。其中 `src/install/usb_camera` 下链接的 2026-05-29 构建是旧版本（运行时会打印当前源码里已被注释掉的 `使用 USB Camera` 日志），源码 `src/usb_camera_node.cpp` 的最后修改时间是 2026-09-09。`ros2 run` 前先确认 source 的是哪一套，避免跑到旧二进制。
+12. 构建产物统一在仓库根目录：`build/`、`install/`、`log/`（均被 gitignore）。历史上 `src/` 下曾误建过另一套 `src/build/`、`src/install/`、`src/log/`，其中 `src/install/usb_camera` 链接的是 2026-05-29 的旧二进制（会打印源码里已被注释掉的 `使用 USB Camera` 日志），现已删除。**只在根目录 `colcon build` 并 `source install/setup.bash`**，就不会跑到旧二进制。
 13. 源码里没有任何 TF 发布，`header.frame_id` 固定为 `camera_optical_frame`，但包内没有这个坐标系，使用方需要自己在 TF 树里提供。
 14. 旧 README 写的「ROS2的节点名为usb_camera_node」与源码一致；它用的标题 `ROS2_USB_CAM` 是历史名，实际包名是 `usb_camera`。

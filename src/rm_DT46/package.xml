@@ -9,7 +9,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rm_opencv_aim</depend>
   <depend>rm_interfaces</depend>
 
   <export>
