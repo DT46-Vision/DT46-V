@@ -35,7 +35,7 @@ class EnemyTfNode(Node):
 
         now = self.get_clock().now().to_msg()
 
-        # ---- tf: map -> enemy ----
+        # ---- tf: camera → enemy ----
         t = TransformStamped()
         t.header.stamp = now
         t.header.frame_id = 'camera'

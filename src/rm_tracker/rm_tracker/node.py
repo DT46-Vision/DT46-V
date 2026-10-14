@@ -539,15 +539,29 @@ class RmTracker(Node):
                 EC = EnemyCenter()
                 EC.header = Header()
                 EC.header.stamp = ros_clock.to_msg()
-                EC.header.frame_id = 'tracking_frame'
+                EC.header.frame_id = 'camera'                  # 与 TF 父帧一致
                 tracked = snapshot['tracker_state'] != self.tracker.LOST
                 EC.tracked = tracked
                 if tracked:
+                    # EKF 状态是世界系；enemy_tf_node 会把 x/y/z 原样挂到随车转动的
+                    # TF 父帧 camera 下，这里先转回相机安装系，否则 map→enemy 会
+                    # 多偏一个角度（= 视觉启动以来车体转过的角度）
+                    imu_rpy = data['imu_rpy']
+                    world_pos = [snapshot['target_state'][0],
+                                 snapshot['target_state'][2],
+                                 snapshot['target_state'][4]]
+                    cam_pos = self.tracker.world_to_mount(self.tf, world_pos, imu_rpy)
+
+                    # enemy_yaw：世界系弧度 -> 相机安装系弧度（对方向向量做同样的逆变换）
+                    yaw_world = float(snapshot['target_state'][6])
+                    dir_world = [np.cos(yaw_world), np.sin(yaw_world), 0.0]
+                    dir_cam = self.tracker.world_to_mount(self.tf, dir_world, imu_rpy)
+
                     EC.yaw = float(gimbal_control[0]) if gimbal_control is not None else 0.0
-                    EC.x = float(snapshot['target_state'][0])
-                    EC.y = float(snapshot['target_state'][2])
-                    EC.z = float(snapshot['target_state'][4])
-                    EC.enemy_yaw = float(snapshot['target_state'][6])
+                    EC.x = float(cam_pos[0])
+                    EC.y = float(cam_pos[1])
+                    EC.z = float(cam_pos[2])
+                    EC.enemy_yaw = float(np.arctan2(dir_cam[1], dir_cam[0]))
                     EC.armor_id = int(snapshot['target'].id) if snapshot['target'] is not None else -1
                 else:
                     # LOST 约定：数值全 0、armor_id=-1，tracked=false 为主判据

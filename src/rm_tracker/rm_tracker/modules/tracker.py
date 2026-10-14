@@ -191,6 +191,17 @@ class Tracker:
         world_xyz = tf.rotate_pos_axis(normal_axis_xyz, imu_rpy, 'xyz')     # IMU系 -> 世界系 (根据陀螺仪 RPY)
         return world_xyz
 
+    def world_to_mount(self, tf, world_xyz, imu_rpy):
+        """
+        将世界惯性系坐标转回相机安装系（与 TF 父帧 camera 一致：x前 y左 z上）
+        即 world_to_cam 的前半段，但不带 [90,0,90] 的光学系修正
+        参数:
+        world_xyz: [x, y, z] 世界惯性系下的坐标
+        imu_rpy: [roll, pitch, yaw] 经 rotate_pose_axis 处理后的姿态（单位：度）
+        """
+        inv_imu_rpy = [-imu_rpy[2], -imu_rpy[1], -imu_rpy[0]]  # 与 world_to_cam 同一逆变换约定
+        return tf.rotate_pos_axis(world_xyz, inv_imu_rpy, 'zyx')
+
     def world_to_cam(self, tf, world_xyz, imu_rpy):
         """
         world_xyz: [x, y, z] - 世界惯性系下的坐标
