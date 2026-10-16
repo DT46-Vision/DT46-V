@@ -388,7 +388,9 @@ std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, cons
                 spin_ = true;
             }
         } else {
-            spin_enter_accum_ = 0.0;
+            // 软回退而不是硬清零：5m 处 42% 空帧时 vyaw 会短时掉到门限以下，
+            // 硬清零会把已经累计的时间全部作废，导致迟迟进不了 SPIN。
+            spin_enter_accum_ = std::max(0.0, spin_enter_accum_ - dt);
         }
     } else if (std::abs(current_yaw_vel) < exit_vel) {
         spin_exit_accum_ += dt;
