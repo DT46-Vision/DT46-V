@@ -139,20 +139,31 @@ void RmTrackerNode::imu_rpy_cb(const geometry_msgs::msg::Vector3Stamped::SharedP
 }
 
 // 取离图像时间戳最近的 IMU 样本；调用方必须持有 imu_lock_
-bool RmTrackerNode::nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms) const {
+bool RmTrackerNode::nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms) {
     if (imu_buffer_.empty()) return false;
 
+    // 不要用 rclcpp::Time 直接相减：两个时钟类型不同时 operator- 会抛 std::runtime_error，
+    // 而这里在订阅回调链路里、没人接这个异常，会把节点带崩。先取 int64 纳秒再减，等价且不抛。
+    const int64_t stamp_ns = stamp.nanoseconds();
     auto best = imu_buffer_.begin();
-    int64_t best_dt = std::llabs((best->stamp - stamp).nanoseconds());
+    int64_t best_dt = std::llabs(best->stamp.nanoseconds() - stamp_ns);
     for (auto it = imu_buffer_.begin(); it != imu_buffer_.end(); ++it) {
-        int64_t dt = std::llabs((it->stamp - stamp).nanoseconds());
+        int64_t dt = std::llabs(it->stamp.nanoseconds() - stamp_ns);
         if (dt < best_dt) {
             best_dt = dt;
             best = it;
         }
     }
     rpy = best->rpy;
-    offset_ms = static_cast<double>((best->stamp - stamp).nanoseconds()) / 1e6;
+    offset_ms = static_cast<double>(best->stamp.nanoseconds() - stamp_ns) / 1e6;
+
+    // IMU 断流时原来会静默使用过期姿态（缓冲里最旧的可能差几百 ms），这里给个告警
+    constexpr int64_t kImuMaxAgeNs = 50'000'000; // 50 ms
+    if (best_dt > kImuMaxAgeNs) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+            "[IMU] 时间对齐失败: 最近样本与图像时间戳相差 %.1f ms (>%.0f ms)，本帧姿态可能是过期的",
+            static_cast<double>(best_dt) / 1e6, static_cast<double>(kImuMaxAgeNs) / 1e6);
+    }
     return true;
 }
 

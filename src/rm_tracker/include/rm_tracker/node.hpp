@@ -87,8 +87,8 @@ private:
     };
     std::deque<ImuSample> imu_buffer_;
     static constexpr std::size_t IMU_BUFFER_MAX = 50;
-    // 调用方必须持有 imu_lock_
-    bool nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms) const;
+    // 调用方必须持有 imu_lock_（非 const：内部要用带节流的 WARN，const Clock 传不进宏）
+    bool nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms);
     double imu_offset_acc_ms_ = 0.0;
     int imu_offset_count_ = 0;
 
