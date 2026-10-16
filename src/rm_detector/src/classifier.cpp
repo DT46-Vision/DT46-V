@@ -3,7 +3,7 @@
 namespace DT46_VISION {
 
     NumberClassifier::NumberClassifier(const std::string& onnx_path,
-                                       cv::Size input_size)
+                                        cv::Size input_size)
         : input_size_(input_size)
     {
         net_ = cv::dnn::readNetFromONNX(onnx_path);

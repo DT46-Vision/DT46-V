@@ -30,8 +30,9 @@ public:
     /**
      * @brief 更新步 (Update) - 基于 4 维装甲板观测 [x, y, z, yaw]
      * @param measurement 装甲板在世界系下的 4 维观测值
+     * @return false 表示马氏距离过大，这帧观测被拒绝
      */
-    void update(const Eigen::Vector4d& measurement);
+    bool update(const Eigen::Vector4d& measurement);
 
     /**
      * @brief 软重置协方差 (应对装甲板跳变)

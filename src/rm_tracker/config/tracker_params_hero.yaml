@@ -40,7 +40,7 @@ rm_tracker:
     ekf_QR_q_yaw: 1.0           # 角加速度谱密度 (rad²/s³)
     ekf_QR_q_r: 0.015           # 半径游走谱密度 (m²/s)
 
-    ekf_QR_r_xyz_factor: 0.5   # Measurement Noise R: 位置因子
+    ekf_QR_r_xyz_factor: 0.5   # PnP位置噪声：距离百分比(0.2=>0.2%)，R=(factor*dist+5mm)^2
     ekf_QR_r_yaw: 0.002          # Measurement Noise R: 角度方差
 
     ekf_QR_stable_dist: 1.4

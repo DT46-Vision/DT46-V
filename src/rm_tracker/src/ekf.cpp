@@ -77,8 +77,8 @@ void ExtendedKalmanFilter::predict(double dt) {
     P_ = F_ * P_ * F_.transpose() + Q_;
 }
 
-void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
-    if (!is_initialized_) return;
+bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
+    if (!is_initialized_) return false;
 
     double xc  = X_(0);
     double yc  = X_(2);
@@ -92,30 +92,32 @@ void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     // 1. 动态构建观测雅可比矩阵 H (4x9)
     Eigen::Matrix<double, 4, 9> H = Eigen::Matrix<double, 4, 9>::Zero();
 
-    // Row 0: 对 x_m 的偏导
+    // 一块朝向相机的板，位置残差在 (车心, yaw, r) 上有零空间。
+    // 把残差分给 yaw 或 r，车心会被切向打飞；位置只改车心，yaw 只改朝向，r 保持到换板。
     H(0, 0) = 1.0;
-    H(0, 6) = r * s_yaw;
-    H(0, 8) = -c_yaw;
-
-    // Row 1: 对 y_m 的偏导
     H(1, 2) = 1.0;
-    H(1, 6) = -r * c_yaw;
-    H(1, 8) = -s_yaw;
-
-    // Row 2: 对 z_m 的偏导
     H(2, 4) = 1.0;
-
-    // Row 3: 对 yaw_m 的偏导
     H(3, 6) = 1.0;
 
-    // 2. 动态更新观测噪声 R
-    double obs_x = measurement(0), obs_y = measurement(1), obs_z = measurement(2);
-    double dist_h = std::hypot(obs_x, obs_y);
-    double base_noise = 0.05;
+    for (int i = 0; i < 8; ++i) {
+        P_(8, i) = P_(i, 8) = 0.0;
+    }
+    for (int i : {0, 1, 2, 3, 4, 5, 8}) {
+        P_(i, 6) = P_(6, i) = 0.0;
+        P_(i, 7) = P_(7, i) = 0.0;
+    }
 
-    R_(0,0) = std::abs(r_xyz_factor_ * obs_x) + base_noise;
-    R_(1,1) = std::abs(r_xyz_factor_ * obs_y) + base_noise;
-    R_(2,2) = std::abs(r_xyz_factor_ * obs_z) + base_noise;
+    // 2. 动态更新观测噪声 R
+    double obs_x = measurement(0), obs_y = measurement(1);
+    double dist_h = std::hypot(obs_x, obs_y);
+    // PnP 位置噪声按“距离百分比 + 固定底噪”建模；r_xyz_factor_ 解释为距离百分比（0.2 => 0.2%）。
+    // R 是方差(m^2)，各轴同方差，不能再用绝对坐标 obs_x/obs_y/obs_z 去算（会随目标位置漂移）。
+    double base_sigma = 0.005;
+    double sigma_xyz = r_xyz_factor_ * 0.01 * dist_h + base_sigma;
+
+    R_(0,0) = sigma_xyz * sigma_xyz;
+    R_(1,1) = sigma_xyz * sigma_xyz;
+    R_(2,2) = sigma_xyz * sigma_xyz;
     R_(1,0) = 0; R_(2,0) = 0; R_(3,0) = 0;
     R_(2,1) = 0; R_(3,1) = 0;
     R_(3,2) = 0;
@@ -144,7 +146,7 @@ void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     double mahalanobis_sq = (Y.transpose() * ldlt.solve(Y)).value();
     if (mahalanobis_sq > 30.0) {
         // 如果测量值离群严重，拒绝更新，直接信任当前的预测步
-        return;
+        return false;
     }
 
     // 6. 计算卡尔曼增益 K (9x4)
@@ -158,6 +160,7 @@ void ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
     Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
     P_ = I_KH * P_ * I_KH.transpose() + K * R_ * K.transpose();
+    return true;
 }
 
 void ExtendedKalmanFilter::smooth_reset_covariance() {

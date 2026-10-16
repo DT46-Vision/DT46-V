@@ -281,6 +281,7 @@ namespace DT46_VISION {
                 armors_debug_msg.header.stamp = sync_stamp; // 使用固定好的时间戳
                 armors_debug_msg.header.frame_id = armors_msg.header.frame_id;
 
+                pnp_->beginFrame();
                 if (!detection_error && !armors.empty()) {
                     had_detection_in_period = true;
                     last_detected_armors.clear();
@@ -291,11 +292,12 @@ namespace DT46_VISION {
                         armor_info.armor_id = armor.armor_id;
 
                         // 这里的 processArmorCorners 可能会耗时，需注意优化
-                        auto [dx, dy, dz, yaw] = pnp_->processArmorCorners(
+                        auto [dx, dy, dz, yaw, nx, ny, nz] = pnp_->processArmorCorners(
                             caminfo_ptr, use_geometric_center_, frame, armor, armor.armor_id);
 
                         armor_info.dx = dx; armor_info.dy = dy; armor_info.dz = dz;
                         armor_info.yaw = yaw;
+                        armor_info.nx = nx; armor_info.ny = ny; armor_info.nz = nz;
                         // armor_info.rz = rz;
                         last_detected_armors.push_back(armor_info); // 保证周期内状态同步，下面还要用当前信息打印在终端的
 

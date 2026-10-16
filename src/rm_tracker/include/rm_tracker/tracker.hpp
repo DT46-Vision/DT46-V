@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 
-// 提前声明 EKF 和 TF 工具类（我们之后会实现它们）
+// 提前声明 EKF 和 TF 工具类
 #include "ekf.hpp"
 #include "rm_tf_tools.hpp"
 
@@ -185,8 +185,10 @@ private:
     static constexpr double LUT_HEIGHT_MAX = 3.5;
     static constexpr double LUT_HEIGHT_STEP = 0.5;
     double ballistic_lut_[LUT_DIST_BINS][LUT_HEIGHT_BINS];
+    double tof_lut_[LUT_DIST_BINS][LUT_HEIGHT_BINS]; // 对应 (距离, 高度) 的子弹飞行时间 (s)
 
     inline double lut_lookup(double dist_h, double z) const;
+    inline double lut_lookup_tof(double dist_h, double z) const;
 
     // =============== 内部逻辑函数 ===============
     void try_init_tracker(std::vector<Armor>& armors);
@@ -201,6 +203,15 @@ private:
 
     Eigen::Vector3d get_armor_position_from_state(const Eigen::Matrix<double, 9, 1>& x) const;
     double orientation_to_yaw(double current_obs_yaw, double predicted_yaw) const;
+
+    // PnP 板 yaw 的镜像二义用位置消歧（见 tracker.cpp 实现处注释）
+    double disambiguate_armor_yaw(double obs_yaw, const Eigen::Vector3d& armor_pos,
+                                    double ref_yaw, double ref_x, double ref_y) const;
+
+    // 在 armor±r·u(yaw) 两个候选里定车心，避免自旋时心跑到板外侧
+    void resolve_center_from_armor(double xa, double ya, double r, double& yaw,
+                                    double& xc, double& yc,
+                                    bool has_prev, double prev_xc, double prev_yc) const;
 };
 
 } // namespace dt46_vision

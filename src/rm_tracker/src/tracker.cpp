@@ -17,6 +17,10 @@ Tracker::Tracker() {
     robot_list_.emplace_back(5, 135.0, 125.0, 0.24, 0.22);
     robot_list_.emplace_back(6, 230.0, 125.0, 0.3, 0.285);
     robot_list_.emplace_back(7, 135.0, 125.0, 0.23, 0.21);
+    // detector 对红板给 6/8/11、蓝板给 0/2/5；这里补上红方步兵/哨兵，几何取蓝方同类的值。
+    // 缺这两条时 init_ekf 拿不到表值，r_init 退到 0.26、another_r_ 用残值 —— 实测 id8 的 r 会漂到 0.40 clamp。
+    robot_list_.emplace_back(8, 135.0, 125.0, 0.30, 0.27);
+    robot_list_.emplace_back(11, 135.0, 125.0, 0.24, 0.22);
 
     build_ballistic_lut();
 }
@@ -30,6 +34,60 @@ Eigen::Vector3d Tracker::get_armor_position_from_state(const Eigen::Matrix<doubl
 double Tracker::orientation_to_yaw(double current_obs_yaw, double predicted_yaw) const {
     double diff = shortest_angular_distance(predicted_yaw, current_obs_yaw);
     return predicted_yaw + diff;
+}
+
+// 平面 PnP 的两个解关于视线镜像：实测 (yaw0+yaw1)/2 + 板方位角 在各数据集里是常数（std 2~7°），
+// 而两解本身差 20~70°。位置观测没有这个二义，所以用它挑分支；被选中的那个值仍保留 PnP 的低噪声
+// （镜像式里的板方位角 atan2(y,x) 精度约 1°）。带 15° 迟滞，避免在两者接近时来回抖。
+double Tracker::disambiguate_armor_yaw(double obs_yaw, const Eigen::Vector3d& armor_pos,
+                                       double ref_yaw, double ref_x, double ref_y) const {
+    const double yaw_a = orientation_to_yaw(obs_yaw, ref_yaw);
+    const double bearing = std::atan2(armor_pos(1), armor_pos(0)); // 相机(世界原点)->板 的方位角
+    const double yaw_b = 2.0 * bearing - yaw_a;                    // 绕视线的镜像解
+
+    const double dx = ref_x - armor_pos(0), dy = ref_y - armor_pos(1);
+    if (std::hypot(dx, dy) < 1e-3) return yaw_a;                   // 没参考心时不动
+
+    const double geom_yaw = std::atan2(dy, dx);                    // 板 -> 心 的几何方向
+    const double d_a = std::abs(shortest_angular_distance(geom_yaw, yaw_a));
+    const double d_b = std::abs(shortest_angular_distance(geom_yaw, yaw_b));
+    return (d_b + 15.0 * DEG2RAD < d_a) ? yaw_b : yaw_a;
+}
+
+void Tracker::resolve_center_from_armor(double xa, double ya, double r, double& yaw,
+                                        double& xc, double& yc,
+                                        bool has_prev, double prev_xc, double prev_yc) const {
+    // yaw 指向「板 → 心」；π 二义对应心在板的两侧，只能二选一
+    const double c1x = xa + r * std::cos(yaw);
+    const double c1y = ya + r * std::sin(yaw);
+    const double c2x = xa - r * std::cos(yaw);
+    const double c2y = ya - r * std::sin(yaw);
+
+    bool pick_c2 = false;
+    if (has_prev) {
+        const double d1 = std::hypot(c1x - prev_xc, c1y - prev_yc);
+        const double d2 = std::hypot(c2x - prev_xc, c2y - prev_yc);
+        // 贴近上一帧车心；两者差不多时选离相机更远的一侧（正对时心在板后）
+        if (d2 + 0.02 < d1) {
+            pick_c2 = true;
+        } else if (d1 + 0.02 < d2) {
+            pick_c2 = false;
+        } else {
+            pick_c2 = (c2x * c2x + c2y * c2y) > (c1x * c1x + c1y * c1y);
+        }
+    } else {
+        // 无先验：正对锁板时心应比板更远
+        pick_c2 = (c2x * c2x + c2y * c2y) > (c1x * c1x + c1y * c1y);
+    }
+
+    if (pick_c2) {
+        yaw = normalize_angle(yaw + M_PI);
+        xc = c2x;
+        yc = c2y;
+    } else {
+        xc = c1x;
+        yc = c1y;
+    }
 }
 
 void Tracker::try_init_tracker(std::vector<Armor>& armors) {
@@ -70,23 +128,8 @@ void Tracker::init_ekf(const Armor& armor) {
         }
     }
 
-    // ================== 新增：Yaw 翻转校验 ==================
-    double xc = xa + r_init * std::cos(last_yaw_);
-    double yc = ya + r_init * std::sin(last_yaw_);
-
-    double norm_a_sq = xa * xa + ya * ya;
-    double norm_c_sq = xc * xc + yc * yc;
-
-    // 如果装甲板比推算出的车体中心还要远，说明 Yaw 反了
-    if (norm_a_sq > norm_c_sq) {
-        // 翻转 Yaw 角 (加上 PI 并归一化)
-        last_yaw_ = normalize_angle(last_yaw_ + M_PI);
-
-        // 使用正确的 Yaw 重新计算中心点
-        xc = xa + r_init * std::cos(last_yaw_);
-        yc = ya + r_init * std::sin(last_yaw_);
-    }
-    // =======================================================
+    double xc = 0.0, yc = 0.0;
+    resolve_center_from_armor(xa, ya, r_init, last_yaw_, xc, yc, false, 0.0, 0.0);
 
     // 注意这里的尖括号不能丢
     Eigen::Matrix<double, 9, 1> init_x;
@@ -109,8 +152,9 @@ void Tracker::lock_target(const Armor& armor) {
 }
 
 void Tracker::handle_armor_jump(const Armor& current_armor) {
-    double yaw = orientation_to_yaw(current_armor.yaw, target_state_(6));
-    target_state_(6) = yaw;
+    // 换板同样先消镜像二义，否则心会被镜像解甩到视线另一侧
+    double yaw = disambiguate_armor_yaw(current_armor.yaw, current_armor.pos, target_state_(6),
+                                        target_state_(0), target_state_(2));
 
     // 1. 高度钳制
     double raw_dz = target_state_(4) - current_armor.pos(2);
@@ -118,31 +162,22 @@ void Tracker::handle_armor_jump(const Armor& current_armor) {
     target_state_(4) = current_armor.pos(2);
     target_state_(5) = 0.0; // 斩断 Z 轴错误速度积分
 
-    // 2. 速度衰减
+    // 2. 速度衰减（只衰减平移；角速度交给换板本身）
     target_state_(1) *= 0.8;
     target_state_(3) *= 0.8;
 
     // 3. 半径交换
     std::swap(target_state_(8), another_r_);
 
-    // 4. 【修复】：增加推算位置比对条件，防止无脑重置中心
-    Eigen::Vector3d current_p = current_armor.pos;
-    Eigen::Vector3d infer_p = get_armor_position_from_state(target_state_);
-
-    if ((current_p - infer_p).norm() > max_match_distance) {
-        double r = target_state_(8);
-        double test_xc = current_p(0) + r * std::cos(yaw);
-        double test_yc = current_p(1) + r * std::sin(yaw);
-
-        // 法向量反向校验
-        if ((current_p(0)*current_p(0) + current_p(1)*current_p(1)) > (test_xc*test_xc + test_yc*test_yc)) {
-            yaw += M_PI;
-            target_state_(6) = yaw;
-        }
-
-        target_state_(0) = current_p(0) + r * std::cos(yaw);
-        target_state_(2) = current_p(1) + r * std::sin(yaw);
-    }
+    // 4. 换板后用上一帧车心在两侧候选里锚定，避免心翻到板外再被积分甩飞
+    const double prev_xc = target_state_(0);
+    const double prev_yc = target_state_(2);
+    double xc = prev_xc, yc = prev_yc;
+    resolve_center_from_armor(current_armor.pos(0), current_armor.pos(1), target_state_(8),
+                              yaw, xc, yc, true, prev_xc, prev_yc);
+    target_state_(0) = xc;
+    target_state_(2) = yc;
+    target_state_(6) = yaw;
 
     ekf_.setState(target_state_);
     ekf_.smooth_reset_covariance();
@@ -160,35 +195,51 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     double yaw_diff = std::numeric_limits<double>::infinity();
 
     Eigen::Vector3d pred_armor_pos = get_armor_position_from_state(target_state_);
-    Eigen::Vector3d pred_center_pos(target_state_(0), target_state_(2), target_state_(4));
 
+    double best_match_yaw = 0.0;
     if (!armors.empty()) {
         for (const auto& armor : armors) {
             if (armor.id == tracked_id) {
                 double p_diff = (pred_armor_pos - armor.pos).norm();
                 if (p_diff < min_position_diff) {
                     min_position_diff = p_diff;
-                    yaw_diff = std::abs(shortest_angular_distance(target_state_(6), armor.yaw));
+                    // 先用位置消掉 PnP 板 yaw 的镜像二义，再算 yaw 差，避免镜像解触发"换板"
+                    best_match_yaw = disambiguate_armor_yaw(armor.yaw, armor.pos, target_state_(6),
+                                                            target_state_(0), target_state_(2));
+                    yaw_diff = std::abs(shortest_angular_distance(target_state_(6), best_match_yaw));
                     best_match = armor;
                 }
             }
         }
 
         if (best_match.has_value()) {
+            // 换板：观测要更靠近另一块预测板，而不是仅仅「离当前板超过匹配距离」。
+            // 车心到本车任意一块板都约等于 r，用车心距离当门会把一次位置噪声当成换板。
+            double nearest_other = std::numeric_limits<double>::infinity();
+            const double yaw = target_state_(6);
+            const double xc = target_state_(0), yc = target_state_(2), za = target_state_(4);
+            for (int i = 1; i < 4; ++i) {
+                const double armor_yaw = yaw - i * (M_PI / 2.0);
+                const double r = (i % 2 == 0) ? target_state_(8) : another_r_;
+                const double z = (i % 2 == 0) ? za : (za + dz_);
+                const Eigen::Vector3d other(xc - r * std::cos(armor_yaw),
+                                            yc - r * std::sin(armor_yaw), z);
+                nearest_other = std::min(nearest_other, (other - best_match->pos).norm());
+            }
+            const bool switched_plate = nearest_other + 0.05 < min_position_diff
+                                     && nearest_other < max_match_distance;
+
             if (min_position_diff < max_match_distance && yaw_diff < max_match_yaw_diff) {
-                // 完美匹配
-                matched = true;
-                double cont_yaw = orientation_to_yaw(best_match->yaw, target_state_(6));
+                double cont_yaw = best_match_yaw;
                 Eigen::Vector4d measurement(best_match->pos(0), best_match->pos(1), best_match->pos(2), cont_yaw);
-                ekf_.update(measurement); // 假设 ekf 接收 4 维观测
-                target_state_ = ekf_.getState();
-            } else if (yaw_diff > max_match_yaw_diff) {
-                // 装甲板跳变
-                if (jump_cooldown_ == 0 && (pred_center_pos - best_match->pos).norm() < 0.6) {
-                    handle_armor_jump(*best_match);
-                    jump_cooldown_ = jump_cooldown_max;
+                if (ekf_.update(measurement)) {
                     matched = true;
+                    target_state_ = ekf_.getState();
                 }
+            } else if (switched_plate && jump_cooldown_ == 0) {
+                handle_armor_jump(*best_match);
+                jump_cooldown_ = jump_cooldown_max;
+                matched = true;
             }
         }
     }
@@ -198,6 +249,14 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     target_state_(1) = std::clamp(target_state_(1), -15.0, 15.0);
     target_state_(3) = std::clamp(target_state_(3), -15.0, 15.0);
     target_state_(5) = std::clamp(target_state_(5), -2.0, 2.0);
+
+    // 滑行期只衰减线速度：掉帧时避免平移外推跑飞；v_yaw 保留给小陀螺换板
+    if (!matched) {
+        const double decay = std::exp(-dt / 0.2); // 时间常数 0.2s，帧率无关
+        target_state_(1) *= decay;
+        target_state_(3) *= decay;
+        target_state_(5) *= decay;
+    }
     ekf_.setState(target_state_);
 
     // 状态机流转
@@ -243,20 +302,24 @@ Eigen::Matrix<double, 9, 1> Tracker::predict_future_state() const {
     Eigen::Matrix<double, 9, 1> current_state = target_state_;
     if (bullet_speed < 1e-3) return current_state;
 
-    double xc = current_state(0), yc = current_state(2), za = current_state(4);
     double v_xc = current_state(1), v_yc = current_state(3), v_za = current_state(5);
     double v_yaw = current_state(7);
-    double r = current_state(8);
 
-    // 估算子弹飞行时间 + 系统发弹延迟
-    double center_dist = std::hypot(xc, yc, za);
-    double rough_dist = std::max(0.1, center_dist - r);
-    double t = (rough_dist / bullet_speed) + system_delay;
+    // 子弹飞行时间：用带阻力的 LUT 查表，避免 dist/v0 少算阻力。
+    // 用当前跟踪装甲板的实际位置（水平距离 + 相对高度），而不是 center_dist - r 的粗略下界。
+    Eigen::Vector3d armor_pos = get_armor_position_from_state(current_state);
+    double armor_dist_h = std::hypot(armor_pos(0), armor_pos(1));
+    double t_flight = (armor_dist_h <= LUT_DIST_MAX)
+                      ? lut_lookup_tof(armor_dist_h, armor_pos(2))
+                      : armor_dist_h / bullet_speed;
+    double t = t_flight + system_delay;
 
-    // 线性外推未来状态
+    // 线性外推未来状态。自旋时横向速度是板的切向残差，不拿去推车心
     Eigen::Matrix<double, 9, 1> future_state = current_state;
-    future_state(0) += v_xc * t;
-    future_state(2) += v_yc * t;
+    if (!spin_) {
+        future_state(0) += v_xc * t;
+        future_state(2) += v_yc * t;
+    }
     future_state(4) += v_za * t;
     future_state(6) += v_yaw * t;
 
@@ -292,62 +355,54 @@ std::vector<Armor> Tracker::find_all_armors(const Eigen::Matrix<double, 9, 1>& s
 std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state, double dt) {
     if (robot_armors.empty()) return std::nullopt;
 
-    std::optional<Armor> best_armor = std::nullopt;
     std::optional<Armor> target = std::nullopt;
-    double min_dist = std::numeric_limits<double>::infinity();
 
     double xc = state(0), yc = state(2);
     double yaw_center_to_cam = std::atan2(-yc, -xc);
 
-    // --- 时间累计小陀螺检测 (帧率无关) ---
+    // 进入和退出用不同门限：变速小陀螺转到慢的半圈不该把 SPIN 标志打掉
     double current_yaw_vel = ekf_.getState()(7);
-    if (std::abs(current_yaw_vel) > min_spinning_vel_) {
-        spin_enter_accum_ += dt;
-        spin_exit_accum_ = 0.0;
-        if (spin_enter_accum_ > spin_enter_time_) {
+    const double exit_vel = 0.5 * min_spinning_vel_;
+    if (!spin_) {
+        if (std::abs(current_yaw_vel) > min_spinning_vel_) {
+            spin_enter_accum_ += dt;
+            if (spin_enter_accum_ > spin_enter_time_) {
+                spin_enter_accum_ = 0.0;
+                spin_ = true;
+            }
+        } else {
             spin_enter_accum_ = 0.0;
-            spin_ = true;
+        }
+    } else if (std::abs(current_yaw_vel) < exit_vel) {
+        spin_exit_accum_ += dt;
+        if (spin_exit_accum_ > spin_exit_time_) {
+            spin_ = false;
+            spin_exit_accum_ = 0.0;
         }
     } else {
-        spin_enter_accum_ = 0.0;
-        if (spin_) {
-            spin_exit_accum_ += dt;
-            if (spin_exit_accum_ > spin_exit_time_) {
-                spin_ = false;
-                spin_exit_accum_ = 0.0;
-            }
-        }
+        spin_exit_accum_ = 0.0;
     }
 
     // --- 选板决策 ---
     if (spin_) {
-        // 小陀螺模式：基于角速度方向过滤出“正向转过来”的那一半板
-        std::vector<Armor> same_side;
+        // 选最朝向相机的那块预测板，击打点就用这块板的位置。
+        // 按 yaw 正负切一半会在过 0 / ±π 时换板，朝相机的圆点又会把车心误差原样反映到击打点上。
+        double min_angle_diff = std::numeric_limits<double>::infinity();
         for (auto& armor : robot_armors) {
-            double norm_yaw = normalize_angle(armor.yaw);
-            if ((current_yaw_vel >= 0 && norm_yaw <= 0) || (current_yaw_vel < 0 && norm_yaw > 0)) {
-                same_side.push_back(armor);
-            }
-        }
-
-        for (auto& armor : same_side) {
-            double dist = armor.pos.norm();
             double yaw_center_to_armor = std::atan2(armor.pos(1) - yc, armor.pos(0) - xc);
-            armor.angle_diff = std::abs(shortest_angular_distance(yaw_center_to_cam, yaw_center_to_armor));
-
-            if (dist < min_dist) {
-                best_armor = armor;
-                min_dist = dist;
+            double angle_diff = std::abs(shortest_angular_distance(yaw_center_to_cam, yaw_center_to_armor));
+            armor.angle_diff = angle_diff;
+            if (angle_diff < min_angle_diff - (3.0 * DEG2RAD)) {
+                min_angle_diff = angle_diff;
+                target = armor;
             }
         }
-        target = best_armor;
-
-        // 【极度关键】：选定后，强制用平滑的圆方程覆盖其物理位置，彻底消除 PnP 抖动！
         if (target.has_value()) {
-            double r = (target->index % 2 == 0) ? ekf_.getState()(8) : another_r_;
-            target->pos(0) = xc - std::cos(yaw_center_to_cam + M_PI) * r;
-            target->pos(1) = yc - std::sin(yaw_center_to_cam + M_PI) * r;
-            target->target_to_armor_dist = (best_armor->pos - target->pos).norm();
+            double r = (target->index % 2 == 0) ? state(8) : another_r_;
+            Eigen::Vector3d front(xc - std::cos(yaw_center_to_cam + M_PI) * r,
+                                  yc - std::sin(yaw_center_to_cam + M_PI) * r,
+                                  target->pos(2));
+            target->target_to_armor_dist = (target->pos - front).norm();
         }
     } else {
         // 正常模式：取距离最近的两块板，选和相机光心夹角最小的那块（最正对的）
@@ -368,6 +423,11 @@ std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, cons
                 target = armor;
             }
         }
+    }
+
+    // 距离统一用目标中心，而不是装甲板位置：目标旋转时装甲板距离会跟着 ±r 摆动
+    if (target.has_value()) {
+        target->dist = std::sqrt(xc * xc + yc * yc + state(4) * state(4));
     }
     return target;
 }
@@ -439,6 +499,7 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
 void Tracker::build_ballistic_lut() {
     const double g = 9.81;
     const double v_init = bullet_speed > 0 ? bullet_speed : 28.0;
+    const double sim_dt = 0.001; // 积分步长；比 5ms 细，保证飞行时间有 ms 级精度
 
     for (int i = 0; i < LUT_DIST_BINS; ++i) {
         for (int j = 0; j < LUT_HEIGHT_BINS; ++j) {
@@ -446,6 +507,7 @@ void Tracker::build_ballistic_lut() {
             double z_target = LUT_HEIGHT_MIN + j * LUT_HEIGHT_STEP;
 
             double pitch = std::atan2(z_target, dist_h);
+            double tof = 0.0;
 
             for (int iter = 0; iter < 5; ++iter) {
                 double sim_x = 0.0, sim_z = 0.0;
@@ -458,12 +520,13 @@ void Tracker::build_ballistic_lut() {
                     double a_x = -k_v2 * v * v_x;
                     double a_z = -g - k_v2 * v * v_z;
 
-                    sim_x += v_x * 0.005;
-                    sim_z += v_z * 0.005;
-                    v_x += a_x * 0.005;
-                    v_z += a_z * 0.005;
-                    t += 0.005;
+                    sim_x += v_x * sim_dt;
+                    sim_z += v_z * sim_dt;
+                    v_x += a_x * sim_dt;
+                    v_z += a_z * sim_dt;
+                    t += sim_dt;
                 }
+                tof = t;
 
                 double z_error = z_target - sim_z;
                 if (std::abs(z_error) < 0.005) break;
@@ -471,6 +534,7 @@ void Tracker::build_ballistic_lut() {
             }
 
             ballistic_lut_[i][j] = pitch;
+            tof_lut_[i][j] = tof;
         }
     }
 }
@@ -491,6 +555,24 @@ double Tracker::lut_lookup(double dist_h, double z) const {
          + fi * (1.0 - fj) * ballistic_lut_[i1][j0]
          + (1.0 - fi) * fj * ballistic_lut_[i0][j1]
          + fi * fj * ballistic_lut_[i1][j1];
+}
+
+double Tracker::lut_lookup_tof(double dist_h, double z) const {
+    double di = (dist_h - LUT_DIST_MIN) / LUT_DIST_STEP;
+    double dj = (z - LUT_HEIGHT_MIN) / LUT_HEIGHT_STEP;
+
+    int i0 = std::clamp(static_cast<int>(di), 0, LUT_DIST_BINS - 1);
+    int j0 = std::clamp(static_cast<int>(dj), 0, LUT_HEIGHT_BINS - 1);
+    int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
+    int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
+
+    double fi = di - i0;
+    double fj = dj - j0;
+
+    return (1.0 - fi) * (1.0 - fj) * tof_lut_[i0][j0]
+         + fi * (1.0 - fj) * tof_lut_[i1][j0]
+         + (1.0 - fi) * fj * tof_lut_[i0][j1]
+         + fi * fj * tof_lut_[i1][j1];
 }
 
 // -------------------------------------------------------------

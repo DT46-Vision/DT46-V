@@ -1,0 +1,11 @@
+build/
+install/
+log/
+**/*.so
+**/*.so.*
+**/*.onnx
+**/*.png
+**/*.pcd
+**/*.bag
+**/*.zip
+**/*.tar

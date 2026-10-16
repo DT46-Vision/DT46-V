@@ -70,7 +70,7 @@
 | `ekf_QR_q_xyz` | double | `2.5` | 位置过程噪声谱密度（越大越信任观测） |
 | `ekf_QR_q_yaw` | double | `15.0` | 角度过程噪声谱密度 |
 | `ekf_QR_q_r` | double | `0.05` | 半径过程噪声谱密度 |
-| `ekf_QR_r_xyz_factor` | double | `0.05` | 位置观测噪声系数 |
+| `ekf_QR_r_xyz_factor` | double | `0.05` | PnP 位置噪声：距离百分比（0.2 = 0.2%），`R = (factor*dist + 5mm)²` |
 | `ekf_QR_r_yaw` | double | `0.02` | 角度观测噪声方差 |
 | `ekf_QR_stable_dist` | double | `1.5` | 动态调整 Q/R 的参考距离（m） |
 | `radius_r_max` / `radius_r_min` | double | `0.4` / `0.12` | 车辆半径限幅（m） |

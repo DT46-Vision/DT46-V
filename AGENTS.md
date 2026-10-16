@@ -2,36 +2,11 @@
 
 RoboMaster vision/auto-aim system: ROS 2 Humble workspace (Ubuntu 22.04). C++ packages (`rm_detector`, `rm_tracker`), Python packages (`rm_serial`, `dm_imu`), camera drivers with vendored SDKs.
 
-## Build & run
+## 省额度
 
-- Source ROS first: `source /opt/ros/humble/setup.bash` (only needed once per shell).
-- Full build from repo root (use these exact flags; clangd relies on the exported compile_commands.json, see `.vscode/settings.json`):
-  ```bash
-  colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --symlink-install
-  source install/setup.bash
-  ```
-- Focused build: `colcon build --packages-select <pkg>`. `rm_interfaces` (custom msgs) must be built first whenever `build/`/`install/` are missing.
-- Both C++ packages compile with `-O3 -march=native` (see their CMakeLists) — builds are slow-ish.
-- `build/`, `install/`, `log/` are gitignored. Their current on-disk state is stale/partial (e.g. `build/rm_tracker` still has the old Python layout). If a package behaves oddly after edits, `rm -rf build install log` and rebuild.
-- No tests, no CI, no linters configured — nothing to run besides the build.
-
-## Naming gotchas
-
-- `src/rm_DT46/package.xml` declares `<name>rm_vision_bringup</name>`. Launch commands use `rm_vision_bringup`, never `rm_DT46`.
-- Launch entrypoints (in `src/rm_DT46/launch/`): `hik.launch.py` (sentry default), `mv.launch.py` (infantry), `sentry/hero/infantry.launch.py`, `*_nav.launch.py` (vision-only, no serial/IMU), `bag_record.launch.py` (rosbag replay). Each robot type loads its own config triplet, e.g. `detector_params_sentry.yaml` + `tracker_params_sentry.yaml` + `sentinel_camera_params.yaml`.
-- Current branch is `Tracker_to_C++`: `rm_tracker` has been ported from Python to C++ (core lib `tracker_core` + `rm_tracker_node` in `src/rm_tracker/{src,include}`). The root README still describes the Python tracker — treat it as stale; trust the source.
-- Detector loads `src/rm_detector/model/RM_Armor_CNN_sim.onnx` via OpenCV DNN (`cv::dnn::readNetFromONNX`, CUDA if available, CPU fallback) — README's "ONNXRuntime" claim is wrong.
-
-## Runtime prerequisites
-
-- `rm_serial` and `dm_imu` configs hardcode udev symlinks: `/dev/ttyPortMCU` (115200) and `/dev/ttyPortIMU` (921600). Without the udev rules (see README §3) nodes fail to open ports. Camera nodes need physical cameras.
-- Machine-specific hardcoded paths, don't trust them: launch files reference `~/DT46_V/Kielas_Vision.perspective` (rqt layout); `start.sh` hardcodes `WS_PATH=/home/kie-dt46/DT46_V` and `DISPLAY=:0`.
-
-## Conventions
-
-- `thoughts.md` (team rules): keep changes minimal, follow engineering standards, write clean reusable code.
-- Commit messages are short, in Chinese, typically "修改xxx" (fix/change X) — follow that style.
-- Camera SDKs (`hikSDK/`, `mvsdk/` inside the camera packages) are committed to git — no external SDK install required.
+- 检索限定单个包。不要打开 `hikSDK/`、`mvsdk/`、`build/`、`install/`、`*.so`、`*.onnx`。
+- 编译用 `colcon build --packages-select <pkg>`。用户没要求就不要全量编译或清空 `build/`。
+- 包名、launch、分机器人 yaml、串口和编译细节在 skill `dt46`。需要时再读那个文件，不要为了找路径扫整个仓库。
 
 ## coding rules
 - 1. 如果不确定，请询问而非猜测；当存在歧义时，不要默默选择；如果有更简单的方法，就直言不讳；指出不清楚的地方并寻求澄清。

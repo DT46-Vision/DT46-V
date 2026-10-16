@@ -1,6 +1,8 @@
 #include "rm_tracker/node.hpp"
 
 #include <cstdio>
+#include <cstdlib>
+#include <cstdint>
 
 using namespace std::chrono_literals;
 
@@ -129,7 +131,29 @@ void RmTrackerNode::imu_rpy_cb(const geometry_msgs::msg::Vector3Stamped::SharedP
     // 保护陀螺仪高频姿态写入时的线程安全
     std::lock_guard<std::mutex> lock(imu_lock_);
     imu_rpy_ = tf_.rotate_pose_axis(raw_rpy, rotation_rpy_);
+    imu_buffer_.push_back({msg->header.stamp, imu_rpy_});
+    while (imu_buffer_.size() > IMU_BUFFER_MAX) {
+        imu_buffer_.pop_front();
+    }
     imu_initialized_ = true;
+}
+
+// 取离图像时间戳最近的 IMU 样本；调用方必须持有 imu_lock_
+bool RmTrackerNode::nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms) const {
+    if (imu_buffer_.empty()) return false;
+
+    auto best = imu_buffer_.begin();
+    int64_t best_dt = std::llabs((best->stamp - stamp).nanoseconds());
+    for (auto it = imu_buffer_.begin(); it != imu_buffer_.end(); ++it) {
+        int64_t dt = std::llabs((it->stamp - stamp).nanoseconds());
+        if (dt < best_dt) {
+            best_dt = dt;
+            best = it;
+        }
+    }
+    rpy = best->rpy;
+    offset_ms = static_cast<double>((best->stamp - stamp).nanoseconds()) / 1e6;
+    return true;
 }
 
 void RmTrackerNode::camera_info_cb(const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
@@ -149,7 +173,9 @@ void RmTrackerNode::armors_cb(const rm_interfaces::msg::ArmorsMsg::SharedPtr msg
 
     TrackData data;
     data.msg = msg;
-    data.imu_rpy = imu_rpy_;
+    if (!nearest_imu(msg->header.stamp, data.imu_rpy, data.imu_stamp_offset_ms)) {
+        data.imu_rpy = imu_rpy_; // 缓存还没建立时退回最新一帧
+    }
 
     {
         std::lock_guard<std::mutex> lock(queue_lock_);
@@ -177,9 +203,6 @@ void RmTrackerNode::processing_worker() {
             track_queue_.pop();
         }
 
-        // 【补全1】获取云台的世界系 Yaw (角度)，供下面的循环使用
-        double gimbal_yaw_deg = data.imu_rpy(2);
-
         // 1. 将 ROS 自定义检测消息反序列化解析为我们的标准 Armor 结构体
         std::vector<Armor> raw_armors;
         // 预分配器
@@ -195,7 +218,8 @@ void RmTrackerNode::processing_worker() {
             Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);
             Eigen::Vector3d world_pos = tf_.cam_to_world(raw_pos, data.imu_rpy);
 
-            // 3. 角度对齐与转换 (Degree -> Radian)
+            // 角度对齐与转换 (Degree -> Radian)。PnP yaw 取反后再加云台 yaw。
+            double gimbal_yaw_deg = data.imu_rpy(2);
             double pnp_yaw_deg = -a.yaw;
             double world_yaw_deg = gimbal_yaw_deg + pnp_yaw_deg;
             double yaw_rad = world_yaw_deg * (M_PI / 180.0);
@@ -217,9 +241,12 @@ void RmTrackerNode::processing_worker() {
         double dt = (current_time - last_time).nanoseconds() / 1e9;
         last_time = current_time;
 
-        // 防抖保护：如果时间戳异常或停顿太久，限制 dt 范围
-        if (dt <= 0.001 || dt > 0.03) {
+        // 防抖保护：时间戳异常/零间隔用 10ms 兜底；真实帧间隔直接用，
+        // 只有断流超过 100ms（比如丢包、切场景）才截断，避免把 40ms 的真实间隔当成 10ms。
+        if (dt <= 0.001) {
             dt = 0.01;
+        } else if (dt > 0.1) {
+            dt = 0.1;
         }
 
 
@@ -229,6 +256,8 @@ void RmTrackerNode::processing_worker() {
         {
             std::lock_guard<std::mutex> lock(tracker_lock_);
             process_counter_++;
+            imu_offset_acc_ms_ += data.imu_stamp_offset_ms;
+            imu_offset_count_++;
 
             // 解包复合返回值并安全隔离底层
             auto track_result = tracker_.track(tf_, raw_armors, data.imu_rpy, dt);
@@ -286,10 +315,22 @@ void RmTrackerNode::processing_worker() {
                 RCLCPP_INFO(this->get_logger(), "%s", log.second.c_str());
             }
 
-            // 3. 打印当前云台解算状态
+            // 3. 打印当前云台解算状态；IMU offset = 图像时间戳与所选 IMU 样本的时间差
+            double imu_offset_ms = imu_offset_count_ > 0 ? imu_offset_acc_ms_ / imu_offset_count_ : 0.0;
+            imu_offset_acc_ms_ = 0.0;
+            imu_offset_count_ = 0;
+            int spin_flag = (render_snapshot_.has_value() && render_snapshot_->spin) ? 1 : 0;
+            double vyaw = render_snapshot_.has_value() ? render_snapshot_->ekf_yaw_vel : 0.0;
+            // 车心与半径打出来，方便在车上核对模型位置：ctr 到实测板的距离应≈r
+            double ctr_x = 0.0, ctr_y = 0.0, ctr_r = 0.0;
+            if (render_snapshot_.has_value()) {
+                ctr_x = render_snapshot_->target_state(0);
+                ctr_y = render_snapshot_->target_state(2);
+                ctr_r = render_snapshot_->target_state(8);
+            }
             RCLCPP_INFO(this->get_logger(),
-                "[Tracker] FPS: %.1f | Gimbal - yaw: %.2f, pitch: %.2f, fire: %d",
-                current_fps, gb_msg.yaw, gb_msg.pitch, gb_msg.can_fire);
+                "[Tracker] FPS: %.1f | IMU offset: %.2f ms | spin: %d vyaw: %.2f | ctr: (%.2f, %.2f) r: %.3f | Gimbal - yaw: %.2f, pitch: %.2f, fire: %d",
+                current_fps, imu_offset_ms, spin_flag, vyaw, ctr_x, ctr_y, ctr_r, gb_msg.yaw, gb_msg.pitch, gb_msg.can_fire);
         }
     }
 }

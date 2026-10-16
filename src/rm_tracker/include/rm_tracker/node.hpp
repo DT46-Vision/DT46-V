@@ -16,6 +16,8 @@
 #include <mutex>
 #include <thread>
 #include <queue>
+#include <deque>
+#include <cstddef>
 #include <chrono>
 
 #include "rm_tracker/tracker.hpp"
@@ -46,6 +48,7 @@ struct LogThrottler {
 struct TrackData {
     rm_interfaces::msg::ArmorsMsg::SharedPtr msg;
     Eigen::Vector3d imu_rpy;
+    double imu_stamp_offset_ms = 0.0; // 所选 IMU 样本与图像时间戳的差 (ms)
 };
 
 class RmTrackerNode : public rclcpp::Node {
@@ -76,6 +79,18 @@ private:
     Eigen::Vector3d imu_rpy_;
     Eigen::Vector3d rotation_rpy_;
     bool imu_initialized_ = false;
+
+    // IMU 时间对齐：缓存最近若干帧，按图像时间戳取最近样本
+    struct ImuSample {
+        rclcpp::Time stamp;
+        Eigen::Vector3d rpy;
+    };
+    std::deque<ImuSample> imu_buffer_;
+    static constexpr std::size_t IMU_BUFFER_MAX = 50;
+    // 调用方必须持有 imu_lock_
+    bool nearest_imu(const rclcpp::Time& stamp, Eigen::Vector3d& rpy, double& offset_ms) const;
+    double imu_offset_acc_ms_ = 0.0;
+    int imu_offset_count_ = 0;
 
     // 参数
     int target_color_;
