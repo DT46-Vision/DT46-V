@@ -1,5 +1,0 @@
-src/rm_vision_ros2_hik_camera/hikSDK/
-src/rm_vision_ros2_mindvision_camera/mvsdk/
-*.rviz
-*.perspective
-*.svg

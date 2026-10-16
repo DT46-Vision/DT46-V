@@ -102,3 +102,8 @@ MVS.deb
 
 .vscode/
 
+
+# Cursor 编辑器本地文件
+.cursor/
+.cursorignore
+.cursorindexingignore
