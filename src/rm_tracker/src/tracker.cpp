@@ -565,8 +565,11 @@ double Tracker::lut_lookup(double dist_h, double z) const {
     int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
     int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
 
-    double fi = di - i0;
-    double fj = dj - j0;
+    // 插值权重必须夹在 [0,1]：z 越界时 j0/j1 都被钳到同一格，但 fj 仍会线性外推
+    // （实测 v=32 时 z>+3.5m 会被静默钳位/外推，5m 水平距离处误差可达 −11.3°）。
+    // 距离侧虽然调用方限了 <=LUT_DIST_MAX，一并夹住更稳。
+    double fi = std::clamp(di - i0, 0.0, 1.0);
+    double fj = std::clamp(dj - j0, 0.0, 1.0);
 
     return (1.0 - fi) * (1.0 - fj) * ballistic_lut_[i0][j0]
          + fi * (1.0 - fj) * ballistic_lut_[i1][j0]
@@ -583,8 +586,11 @@ double Tracker::lut_lookup_tof(double dist_h, double z) const {
     int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
     int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
 
-    double fi = di - i0;
-    double fj = dj - j0;
+    // 插值权重必须夹在 [0,1]：z 越界时 j0/j1 都被钳到同一格，但 fj 仍会线性外推
+    // （实测 v=32 时 z>+3.5m 会被静默钳位/外推，5m 水平距离处误差可达 −11.3°）。
+    // 距离侧虽然调用方限了 <=LUT_DIST_MAX，一并夹住更稳。
+    double fi = std::clamp(di - i0, 0.0, 1.0);
+    double fj = std::clamp(dj - j0, 0.0, 1.0);
 
     return (1.0 - fi) * (1.0 - fj) * tof_lut_[i0][j0]
          + fi * (1.0 - fj) * tof_lut_[i1][j0]
