@@ -250,6 +250,23 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     target_state_(3) = std::clamp(target_state_(3), -15.0, 15.0);
     target_state_(5) = std::clamp(target_state_(5), -2.0, 2.0);
 
+    // 半径 r 不可观：单块板只约束「车心在半径 r 的圈上」，位置残差一旦自洽就不再携带 r 的信息，
+    // EKF 里的 r 会随机游走到 clamp（实测 id8 有 51% 采样贴死 0.40，而表值是 0.30/0.27）。
+    // 而 r 决定虚拟四板的圈半径、自旋瞄准点偏移和 target_to_armor_dist —— 位置偏就直接来自这里。
+    // 所以把 r 吸附到 robot_list_ 里该 id 的两个表值之一（保留 r1/r2 交替语义）。
+    for (const auto& r_cfg : robot_list_) {
+        if (r_cfg.id == tracked_id) {
+            if (std::abs(target_state_(8) - r_cfg.robot_r2) < std::abs(target_state_(8) - r_cfg.robot_r1)) {
+                target_state_(8) = r_cfg.robot_r2;
+                another_r_ = r_cfg.robot_r1;
+            } else {
+                target_state_(8) = r_cfg.robot_r1;
+                another_r_ = r_cfg.robot_r2;
+            }
+            break;
+        }
+    }
+
     // 滑行期只衰减线速度：掉帧时避免平移外推跑飞；v_yaw 保留给小陀螺换板
     if (!matched) {
         const double decay = std::exp(-dt / 0.2); // 时间常数 0.2s，帧率无关
