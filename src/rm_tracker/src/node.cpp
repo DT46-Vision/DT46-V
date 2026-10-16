@@ -209,8 +209,9 @@ void RmTrackerNode::processing_worker() {
         raw_armors.reserve(data.msg->armors.size());
 
         for (const auto& a : data.msg->armors) {
-            // 1. 颜色过滤：只保留目标敌人颜色的装甲板
-            // target_color_ == 0 表示要打红色 (id 1~5), target_color_ == 1 表示要打蓝色 (id 6+)
+            // 1. 颜色过滤：只保留目标敌人颜色的装甲板。
+            // 本仓库 detector 的约定是：红板 armor_id = 6/8/11，蓝板 = 0/2/5（见 rm_detector/src/detector.cpp: get_id()）
+            // 所以 target_color_ == 0(红) 收 id>=6，== 1(蓝) 收 id<6。别按裁判系统 1~5 红/6+ 蓝 的惯例去理解。
             if (target_color_ == 0 && a.armor_id < 6) continue;
             if (target_color_ == 1 && a.armor_id >= 6) continue;
 
