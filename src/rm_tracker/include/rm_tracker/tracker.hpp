@@ -154,6 +154,15 @@ public:
     // 【新增】：声明快照提取函数
     RenderSnapshot get_render_snapshot() const;
 
+    Eigen::Vector3d plate_position() const {
+        return Eigen::Vector3d(plate_(0), plate_(2), plate_(4));
+    }
+    Eigen::Vector3d plate_velocity() const {
+        return Eigen::Vector3d(plate_(1), plate_(3), plate_(5));
+    }
+    bool spinning() const { return spin_; }
+    const std::optional<Armor>& plate_measurement() const { return plate_meas_; }
+
     void build_ballistic_lut();
 
 private:
@@ -171,9 +180,24 @@ private:
     double another_r_ = 0.23;
     bool spin_ = false;
 
-    // 小陀螺状态机—时间累计 (帧率无关)
-    double spin_enter_accum_ = 0.0;
-    double spin_exit_accum_ = 0.0;
+    // 击打用的是这块板自己的位置和速度，不把板的位移写进车心。
+    // 状态 [x, vx, y, vy, z, vz]，世界系。
+    Eigen::Matrix<double, 6, 1> plate_ = Eigen::Matrix<double, 6, 1>::Zero();
+    // 提前量用这条慢速度。绕心转的分量在零点几秒内换方向，滤不进去；平移留得住。
+    Eigen::Vector3d lead_vel_ = Eigen::Vector3d::Zero();
+    bool plate_inited_ = false;
+    std::optional<Armor> plate_meas_;
+    double last_plate_yaw_ = 0.0;
+    int ekf_reject_streak_ = 0;
+
+    // 换板锁存：切向跳变同号连续两次置上，4s 没有再跳、板也不再快移才清。
+    // 正弦慢半圈里跳变间隔会超过 2s，短于这段会把标志清掉，然后按绕心速度提前。
+    int spin_jump_count_ = 0;
+    int last_jump_sign_ = 0;
+    double spin_quiet_ = 0.0;
+    static constexpr double kSpinQuiet = 4.0;
+    static constexpr double kJumpTangential = 0.12;
+    static constexpr double kSameRobot = 0.8;
 
     // 弹道查找表
     static constexpr int LUT_DIST_BINS = 25;
@@ -195,6 +219,14 @@ private:
     void lock_target(const Armor& armor);
     void init_ekf(const Armor& armor);
     void handle_armor_jump(const Armor& current_armor);
+    void reset_plate(const Armor& armor);
+    void update_plate(const std::vector<Armor>& armors, double dt,
+                      std::vector<std::pair<std::string, std::string>>& logs);
+    void update_lead_velocity(double dt);
+    void note_plate_jump(const Eigen::Vector3d& pred, const Eigen::Vector3d& meas,
+                         std::vector<std::pair<std::string, std::string>>& logs);
+    void spin_quiet_tick(double dt, bool jumped,
+                         std::vector<std::pair<std::string, std::string>>& logs);
 
     Eigen::Matrix<double, 9, 1> predict_future_state() const;
     std::vector<Armor> find_all_armors(const Eigen::Matrix<double, 9, 1>& state) const;

@@ -144,9 +144,146 @@ void Tracker::init_ekf(const Armor& armor) {
     target_state_ = init_x;
     dz_ = 0.0;
 }
+void Tracker::reset_plate(const Armor& armor) {
+    plate_.setZero();
+    plate_(0) = armor.pos(0);
+    plate_(2) = armor.pos(1);
+    plate_(4) = armor.pos(2);
+    plate_inited_ = true;
+    lead_vel_.setZero();
+    plate_meas_ = armor;
+    last_plate_yaw_ = armor.yaw;
+    spin_ = false;
+    spin_jump_count_ = 0;
+    last_jump_sign_ = 0;
+    spin_quiet_ = 0.0;
+    ekf_reject_streak_ = 0;
+}
+
+void Tracker::note_plate_jump(const Eigen::Vector3d& pred, const Eigen::Vector3d& meas,
+                              std::vector<std::pair<std::string, std::string>>& logs) {
+    // 跳变相对相机方位的左右符号。同号连续两次才当小陀螺，单次深度或误检不会置位。
+    const double cross = pred(0) * (meas(1) - pred(1)) - pred(1) * (meas(0) - pred(0));
+    const int sign = (cross > 0.0) ? 1 : (cross < 0.0) ? -1 : 0;
+    if (sign == 0) return;
+    if (sign == last_jump_sign_) {
+        spin_jump_count_++;
+    } else {
+        last_jump_sign_ = sign;
+        spin_jump_count_ = 1;
+    }
+    spin_quiet_ = 0.0;
+    if (spin_jump_count_ >= 2 && !spin_) {
+        spin_ = true;
+        logs.emplace_back("spin", "SPIN MODE ON (same-direction plate jump)");
+    }
+}
+
+void Tracker::spin_quiet_tick(double dt, bool jumped,
+                              std::vector<std::pair<std::string, std::string>>& logs) {
+    if (jumped) {
+        spin_quiet_ = 0.0;
+        return;
+    }
+    // 板沿切向一直在滑时没有新的跳变。这段仍是小陀螺，清掉标志后会按绕心速度提前。
+    if (spin_ && std::hypot(plate_(1), plate_(3)) > 1.5) {
+        spin_quiet_ = 0.0;
+        return;
+    }
+    spin_quiet_ += dt;
+    if (spin_quiet_ <= kSpinQuiet) return;
+    spin_jump_count_ = 0;
+    spin_quiet_ = 0.0;
+    if (spin_) {
+        spin_ = false;
+        logs.emplace_back("spin", "SPIN MODE OFF (no plate jump)");
+    }
+}
+
+void Tracker::update_lead_velocity(double dt) {
+    // 0.6s 能跟上持续平移，跟不上一块板绕车心滑过的那几百毫秒。
+    const double tau = 0.6;
+    const double a = dt / (tau + dt);
+    lead_vel_(0) += a * (plate_(1) - lead_vel_(0));
+    lead_vel_(1) += a * (plate_(3) - lead_vel_(1));
+    lead_vel_(2) += a * (plate_(5) - lead_vel_(2));
+}
+
+void Tracker::update_plate(const std::vector<Armor>& armors, double dt,
+                           std::vector<std::pair<std::string, std::string>>& logs) {
+    if (!plate_inited_) return;
+
+    plate_(0) += plate_(1) * dt;
+    plate_(2) += plate_(3) * dt;
+    plate_(4) += plate_(5) * dt;
+    const Eigen::Vector3d pred(plate_(0), plate_(2), plate_(4));
+
+    double best = std::numeric_limits<double>::infinity();
+    std::optional<Armor> match;
+    for (const auto& armor : armors) {
+        if (armor.id != tracked_id) continue;
+        const double dist = (pred - armor.pos).norm();
+        if (dist < best) {
+            best = dist;
+            match = armor;
+        }
+    }
+
+    const auto decay_velocity = [this, dt]() {
+        const double decay = std::exp(-dt / 0.2);
+        plate_(1) *= decay;
+        plate_(3) *= decay;
+        plate_(5) *= decay;
+    };
+
+    if (!match.has_value() || best > kSameRobot) {
+        decay_velocity();
+        update_lead_velocity(dt);
+        spin_quiet_tick(dt, false, logs);
+        plate_meas_.reset();
+        return;
+    }
+
+    const Eigen::Vector3d delta = match->pos - pred;
+    const double pred_norm = pred.norm();
+    double tangential = delta.norm();
+    if (pred_norm > 1e-3) {
+        const Eigen::Vector3d radial = pred / pred_norm;
+        tangential = (delta - radial * delta.dot(radial)).norm();
+    }
+
+    // 换板是切向跳，深度噪声沿视线。把跳变写进速度，提前量会飞出去。
+    const bool jumped = tangential > kJumpTangential;
+    if (jumped) {
+        plate_(0) = match->pos(0);
+        plate_(2) = match->pos(1);
+        plate_(4) = match->pos(2);
+        note_plate_jump(pred, match->pos, logs);
+    } else {
+        // 沿视线的深度毛刺可以到几十厘米，不该因此判丢失，也不该写进速度。
+        const double pos_gain = 0.55;
+        const double vel_gain = 6.0;
+        const double vel_cap = 0.05;
+        Eigen::Vector3d vel_delta = delta;
+        if (vel_delta.norm() > vel_cap) vel_delta *= vel_cap / vel_delta.norm();
+        plate_(0) += pos_gain * delta(0);
+        plate_(2) += pos_gain * delta(1);
+        plate_(4) += pos_gain * delta(2);
+        plate_(1) = std::clamp(plate_(1) + vel_gain * vel_delta(0), -15.0, 15.0);
+        plate_(3) = std::clamp(plate_(3) + vel_gain * vel_delta(1), -15.0, 15.0);
+        plate_(5) = std::clamp(plate_(5) + vel_gain * vel_delta(2), -2.0, 2.0);
+    }
+
+    plate_meas_ = *match;
+    last_plate_yaw_ = orientation_to_yaw(match->yaw, last_plate_yaw_);
+    update_lead_velocity(dt);
+    spin_quiet_tick(dt, jumped, logs);
+}
+
 void Tracker::lock_target(const Armor& armor) {
     tracked_id = armor.id;
     init_ekf(armor);
+    reset_plate(armor);
     tracker_state = TrackerState::DETECTING;
     detect_count_ = 1;
 }
@@ -186,10 +323,12 @@ void Tracker::handle_armor_jump(const Armor& current_armor) {
 void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<std::pair<std::string, std::string>>& logs) {
     if (jump_cooldown_ > 0) jump_cooldown_--;
 
+    update_plate(armors, dt, logs);
+
     ekf_.predict(dt);
     target_state_ = ekf_.getState();
 
-    bool matched = false;
+    bool ekf_matched = false;
     std::optional<Armor> best_match = std::nullopt;
     double min_position_diff = std::numeric_limits<double>::infinity();
     double yaw_diff = std::numeric_limits<double>::infinity();
@@ -233,25 +372,38 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
                 double cont_yaw = best_match_yaw;
                 Eigen::Vector4d measurement(best_match->pos(0), best_match->pos(1), best_match->pos(2), cont_yaw);
                 if (ekf_.update(measurement)) {
-                    matched = true;
+                    ekf_matched = true;
                     target_state_ = ekf_.getState();
                 }
             } else if (switched_plate && jump_cooldown_ == 0) {
                 handle_armor_jump(*best_match);
                 jump_cooldown_ = jump_cooldown_max;
-                matched = true;
+                ekf_matched = true;
             }
         }
     }
 
+    const bool radius_railed = target_state_(8) < radius_params.r_min || target_state_(8) > radius_params.r_max;
     // 钳制状态范围防发散
     target_state_(8) = std::clamp(target_state_(8), radius_params.r_min, radius_params.r_max);
     target_state_(1) = std::clamp(target_state_(1), -15.0, 15.0);
     target_state_(3) = std::clamp(target_state_(3), -15.0, 15.0);
     target_state_(5) = std::clamp(target_state_(5), -2.0, 2.0);
 
+    // 车心跟不上这块板时丢掉 9 维状态，用当前板重新初始化。板自己的速度留着继续瞄。
+    const bool plate_ok = plate_meas_.has_value();
+    if (plate_ok && (!ekf_matched || radius_railed)) {
+        if (++ekf_reject_streak_ >= 5) {
+            init_ekf(*plate_meas_);
+            ekf_reject_streak_ = 0;
+            logs.emplace_back("state", "EKF reset from plate");
+        }
+    } else if (ekf_matched) {
+        ekf_reject_streak_ = 0;
+    }
+
     // 滑行期只衰减线速度：掉帧时避免平移外推跑飞；v_yaw 保留给小陀螺换板
-    if (!matched) {
+    if (!ekf_matched) {
         const double decay = std::exp(-dt / 0.2); // 时间常数 0.2s，帧率无关
         target_state_(1) *= decay;
         target_state_(3) *= decay;
@@ -259,9 +411,9 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     }
     ekf_.setState(target_state_);
 
-    // 状态机流转
+    // 状态机跟板的关联走，不跟车心滤波。车心拒绝更新时检测还在，不该因此丢失。
     if (tracker_state == TrackerState::DETECTING) {
-        if (matched) {
+        if (plate_ok) {
             if (++detect_count_ > tracking_thres) {
                 tracker_state = TrackerState::TRACKING;
                 detect_count_ = 0;
@@ -274,7 +426,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
             }
         }
     } else if (tracker_state == TrackerState::TRACKING) {
-        if (!matched) {
+        if (!plate_ok) {
             tracker_state = TrackerState::TEMP_LOST;
             lost_count_ = 1;
             logs.emplace_back("state", "TRACKING -> TEMP_LOST");
@@ -282,7 +434,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
             lost_count_ = 0;
         }
     } else if (tracker_state == TrackerState::TEMP_LOST) {
-        if (!matched) {
+        if (!plate_ok) {
             if (++lost_count_ > lost_thres) {
                 tracker_state = TrackerState::LOST;
                 logs.emplace_back("state", "TEMP_LOST -> LOST (lost timeout)");
@@ -359,29 +511,7 @@ std::optional<Armor> Tracker::find_target(std::vector<Armor>& robot_armors, cons
 
     double xc = state(0), yc = state(2);
     double yaw_center_to_cam = std::atan2(-yc, -xc);
-
-    // 进入和退出用不同门限：变速小陀螺转到慢的半圈不该把 SPIN 标志打掉
-    double current_yaw_vel = ekf_.getState()(7);
-    const double exit_vel = 0.5 * min_spinning_vel_;
-    if (!spin_) {
-        if (std::abs(current_yaw_vel) > min_spinning_vel_) {
-            spin_enter_accum_ += dt;
-            if (spin_enter_accum_ > spin_enter_time_) {
-                spin_enter_accum_ = 0.0;
-                spin_ = true;
-            }
-        } else {
-            spin_enter_accum_ = 0.0;
-        }
-    } else if (std::abs(current_yaw_vel) < exit_vel) {
-        spin_exit_accum_ += dt;
-        if (spin_exit_accum_ > spin_exit_time_) {
-            spin_ = false;
-            spin_exit_accum_ = 0.0;
-        }
-    } else {
-        spin_exit_accum_ = 0.0;
-    }
+    (void)dt;
 
     // --- 选板决策 ---
     if (spin_) {
@@ -656,22 +786,25 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     // 【主流程重构】
     // ==========================================================
 
-    // 2. 时空转换与反迟滞预测
-    Eigen::Matrix<double, 9, 1> future_state = predict_future_state();
-    std::vector<Armor> robot_armors = find_all_armors(future_state);
-
-    // 3. 小陀螺决策选板
-    bool was_spin = spin_;
-    std::optional<Armor> target_cam = find_target(robot_armors, future_state, dt);
-    if (was_spin != spin_) {
-        logs.emplace_back("spin", spin_ ? "SPIN MODE ON (yaw_vel > threshold)" : "SPIN MODE OFF");
-    }
-    if (!target_cam.has_value()) {
+    // 击打点是这块板的位置加上它自己的速度。车心不参与瞄。
+    if (!plate_inited_) {
         return {gimbal_control, logs};
     }
+    const Eigen::Vector3d plate_pos(plate_(0), plate_(2), plate_(4));
+    const double dist_h = std::hypot(plate_pos(0), plate_pos(1));
+    const double t_flight = (dist_h <= LUT_DIST_MAX)
+                            ? lut_lookup_tof(dist_h, plate_pos(2))
+                            : dist_h / std::max(bullet_speed, 1e-3);
+    const double lead_t = t_flight + system_delay;
+    Eigen::Vector3d vel = lead_vel_;
+    // 小陀螺时慢速度里仍可能残留绕心分量，这段只打当前这块板。
+    if (spin_) vel.setZero();
+    const Eigen::Vector3d aim = plate_pos + vel * lead_t;
+    Armor target_cam(tracked_id, aim(0), aim(1), aim(2), last_plate_yaw_);
+    target_cam.target_to_armor_dist = 0.0;
 
     // 4. 转换至枪口系并打靶
-    std::optional<Armor> target_muzzle = world_to_muzzle(tf, target_cam.value(), cam_to_gun_pos, imu_rpy);
+    std::optional<Armor> target_muzzle = world_to_muzzle(tf, target_cam, cam_to_gun_pos, imu_rpy);
     if (!target_muzzle.has_value()) {
         return {gimbal_control, logs};
     }
@@ -680,7 +813,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
 
     // 5. 动态发弹许可
     // 注意：solve_ballistic 返回的是弧度，但 can_fire 期望的是角度
-    auto final_gimbal = can_fire(target_cam.value(), {yaw_cmd_rad * RAD2DEG, pitch_cmd_rad * RAD2DEG, isValid});
+    auto final_gimbal = can_fire(target_cam, {yaw_cmd_rad * RAD2DEG, pitch_cmd_rad * RAD2DEG, isValid});
 
     // 【新增】：将刚刚算出的局部变量，固化存入类成员缓存中，给快照提供数据！
     target_cam_cache_ = target_cam;
