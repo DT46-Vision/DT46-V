@@ -2,7 +2,7 @@
   ros__parameters:
     web_cam: False
     web_cam_url: "http://192.168.1.216:4747/video"
-    camera_index: 0
+    camera_index: 2
 
     # 编码格式: "MJPG" 或 "YUYV" or "NV12" or "RGB3"
     pixel_format: "MJPG"
