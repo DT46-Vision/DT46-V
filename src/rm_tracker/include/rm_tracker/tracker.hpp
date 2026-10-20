@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <deque>
 #include <optional>
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
@@ -183,7 +184,7 @@ private:
     // 击打用的是这块板自己的位置和速度，不把板的位移写进车心。
     // 状态 [x, vx, y, vy, z, vz]，世界系。
     Eigen::Matrix<double, 6, 1> plate_ = Eigen::Matrix<double, 6, 1>::Zero();
-    // 提前量用这条慢速度。绕心转的分量在零点几秒内换方向，滤不进去；平移留得住。
+    // 提前量用约 0.15s 的水平位移。0.4s 平均跟不上速度变化，飞到时会差出一块小装甲。
     Eigen::Vector3d lead_vel_ = Eigen::Vector3d::Zero();
     bool plate_inited_ = false;
     std::optional<Armor> plate_meas_;
@@ -195,6 +196,29 @@ private:
     int spin_jump_count_ = 0;
     int last_jump_sign_ = 0;
     double spin_quiet_ = 0.0;
+    double plate_move_speed_ = 0.0;
+    struct MoveSample {
+        double t;
+        Eigen::Vector3d pos;
+    };
+    std::deque<MoveSample> move_hist_;
+    struct XySample {
+        double t;
+        double x;
+        double y;
+    };
+    std::deque<XySample> center_hist_;
+    std::deque<XySample> plate_arc_;
+    bool spin_center_valid_ = false;
+    double spin_center_x_ = 0.0;
+    double spin_center_y_ = 0.0;
+    std::deque<XySample> fit_hist_;
+    // 同向换板间隔。相邻板差 90°，转速 = (π/2) / 间隔。
+    std::deque<double> spin_periods_;
+    double last_same_jump_clock_ = -1.0;
+    double move_clock_ = 0.0;
+    double last_jump_clock_ = -1.0;
+    static constexpr double kMoveWindow = 0.40;
     static constexpr double kSpinQuiet = 4.0;
     static constexpr double kJumpTangential = 0.12;
     static constexpr double kSameRobot = 0.8;
@@ -223,10 +247,17 @@ private:
     void update_plate(const std::vector<Armor>& armors, double dt,
                       std::vector<std::pair<std::string, std::string>>& logs);
     void update_lead_velocity(double dt);
+    void note_plate_motion(const Eigen::Vector3d& pos, double dt, bool jumped);
     void note_plate_jump(const Eigen::Vector3d& pred, const Eigen::Vector3d& meas,
                          std::vector<std::pair<std::string, std::string>>& logs);
     void spin_quiet_tick(double dt, bool jumped,
                          std::vector<std::pair<std::string, std::string>>& logs);
+    bool apply_armor_measurement(const Armor& armor);
+    void note_center_samples();
+    void note_plate_arc(double x, double y);
+    bool center_motion_is_slow() const;
+    void hold_center_when_stationary();
+    void apply_spin_period();
 
     Eigen::Matrix<double, 9, 1> predict_future_state() const;
     std::vector<Armor> find_all_armors(const Eigen::Matrix<double, 9, 1>& state) const;

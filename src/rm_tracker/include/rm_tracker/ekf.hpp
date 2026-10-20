@@ -28,8 +28,8 @@ public:
     void predict(double dt);
 
     /**
-     * @brief 更新步 (Update) - 基于 4 维装甲板观测 [x, y, z, yaw]
-     * @param measurement 装甲板在世界系下的 4 维观测值
+     * @brief 更新步。测量是当前这块装甲板 [xa, ya, za, yaw]
+     * @param measurement 世界系下装甲位置和连续 yaw
      * @return false 表示马氏距离过大，这帧观测被拒绝
      */
     bool update(const Eigen::Vector4d& measurement);

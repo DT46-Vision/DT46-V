@@ -328,9 +328,8 @@ namespace DT46_VISION{
 
         double distance = calculate_distance({static_cast<float>(light1.cx), static_cast<float>(light1.cy)}, {static_cast<float>(light2.cx), static_cast<float>(light2.cy)});
 
-        if ((distance > height * params.height_multiplier_min && distance < height * params.height_multiplier_max)
-            || (distance > height * 1.56f * params.height_multiplier_min && distance < height * 1.76f * params.height_multiplier_max)
-            ) {
+        // 比赛只剩小装甲。大装甲那档宽到 1.76 倍，会把相邻两块板的灯配成一块。
+        if (distance > height * params.height_multiplier_min && distance < height * params.height_multiplier_max) {
                 res = get_armor_result(light1, light2);
         }
         else{
@@ -357,25 +356,38 @@ namespace DT46_VISION{
         // 标记哪些灯条已经被使用过
         std::vector<bool> used(sorted_lights.size(), false);
 
-        // 全对遍历
+        // 右侧先看斜率。断开的灯条碎片和真灯几乎垂直，连线太陡或两灯倾角差太大就跳过，
+        // 再往右才是同一块板。已经平行的灯不再继续跳，避免把两块板连成叉。
+        const double slope_limit = std::abs(static_cast<double>(params.light_angle_max));
+        auto light_tilt_deg = [](const Light& light) {
+            return std::atan2(light.down.x - light.up.x, light.down.y - light.up.y) * 180.0 / CV_PI;
+        };
+        auto slopes_match = [&](const Light& a, const Light& b) {
+            const double tilt = std::abs(light_tilt_deg(a) - light_tilt_deg(b));
+            const double line = std::abs(std::atan2(static_cast<double>(b.cy - a.cy),
+                                                     static_cast<double>(b.cx - a.cx)) * 180.0 / CV_PI);
+            return tilt <= slope_limit && line <= slope_limit;
+        };
         for (size_t i = 0; i < sorted_lights.size(); i++) {
-            if (used[i]) continue; // 已被匹配就跳过
+            if (used[i]) continue;
 
-            for (size_t j = i + 1; j < sorted_lights.size(); j++) {
-                if (used[j]) continue;
-                if (sorted_lights[i].color != sorted_lights[j].color) continue;
-
-                NumberClassifier::Result res;
-                float height_multiplier;
-                std::tie(res, height_multiplier) = is_close(sorted_lights[i], sorted_lights[j]);
-
-                // 只要通过几何验证就是一个装甲板
-                if (res.class_id >= 0 && res.class_id < 3) {
-                    armors_found.emplace_back(height_multiplier, sorted_lights[i], sorted_lights[j], res, params.roi_crop, roi_rect);
-                    used[i] = used[j] = true; // 标记两个灯条已用
-                    break; // i 已经匹配成功，不再尝试别的 j
-                }
+            size_t j = i + 1;
+            while (j < sorted_lights.size() &&
+                   (used[j] ||
+                    sorted_lights[j].color != sorted_lights[i].color ||
+                    !slopes_match(sorted_lights[i], sorted_lights[j]))) {
+                j++;
             }
+            if (j >= sorted_lights.size() || used[j]) continue;
+
+            NumberClassifier::Result res;
+            float height_multiplier;
+            std::tie(res, height_multiplier) = is_close(sorted_lights[i], sorted_lights[j]);
+            if (res.class_id < 0 || res.class_id >= 3) continue;
+
+            armors_found.emplace_back(height_multiplier, sorted_lights[i], sorted_lights[j], res, params.roi_crop, roi_rect);
+            used[i] = true;
+            used[j] = true;
         }
 
         armors = armors_found;

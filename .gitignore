@@ -107,3 +107,10 @@ MVS.deb
 .cursor/
 .cursorignore
 .cursorindexingignore
+
+# Cursor 编辑器远程文件
+.cursorremote/
+
+# bag 文件
+.bags/
+*.db3

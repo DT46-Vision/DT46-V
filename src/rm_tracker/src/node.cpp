@@ -607,8 +607,8 @@ void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapsho
 
     put_text(row, "[" + text_spin + "]", font_large, color_spin, thick_bold); row++;
 
-    std::snprintf(buf, sizeof(buf), "Yaw Vel: %5.2f rad/s", ekf_yaw_vel);
-    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+    std::snprintf(buf, sizeof(buf), "Armor w: %5.2f rad/s", ekf_yaw_vel);
+    put_text(row, buf, font_normal, color_spin, thick_bold); row++;
 
     std::snprintf(buf, sizeof(buf), "Dist   : %5.2f m", dist);
     put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;

@@ -86,25 +86,18 @@ bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     double yaw = X_(6);
     double r   = X_(8);
 
-    double s_yaw = std::sin(yaw);
-    double c_yaw = std::cos(yaw);
-
-    // 1. 动态构建观测雅可比矩阵 H (4x9)
+    // 1. 观测是装甲板，不是车心。切向残差交给 yaw，径向才动车心。
+    //    半径用车型表的值，这帧不估计，所以清掉 r 的互协方差。
     Eigen::Matrix<double, 4, 9> H = Eigen::Matrix<double, 4, 9>::Zero();
-
-    // 一块朝向相机的板，位置残差在 (车心, yaw, r) 上有零空间。
-    // 把残差分给 yaw 或 r，车心会被切向打飞；位置只改车心，yaw 只改朝向，r 保持到换板。
     H(0, 0) = 1.0;
+    H(0, 6) = r * std::sin(yaw);
     H(1, 2) = 1.0;
+    H(1, 6) = -r * std::cos(yaw);
     H(2, 4) = 1.0;
     H(3, 6) = 1.0;
 
     for (int i = 0; i < 8; ++i) {
         P_(8, i) = P_(i, 8) = 0.0;
-    }
-    for (int i : {0, 1, 2, 3, 4, 5, 8}) {
-        P_(i, 6) = P_(6, i) = 0.0;
-        P_(i, 7) = P_(7, i) = 0.0;
     }
 
     // 2. 动态更新观测噪声 R
@@ -130,8 +123,8 @@ bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
         R_(3,3) = r_yaw_;
     }
 
-    // 3. 计算预计观测值 h(x) 与残差 Y
-    Eigen::Vector4d Z_pred(xc - r * c_yaw, yc - r * s_yaw, za, yaw);
+    // 3. 预测的是这块板的位置：车心减去半径方向
+    Eigen::Vector4d Z_pred(xc - r * std::cos(yaw), yc - r * std::sin(yaw), za, yaw);
     Eigen::Vector4d Y = measurement - Z_pred;
     Y(3) = normalizeAngle(Y(3)); // 核心：残差中的角度差必须被归一化！
 

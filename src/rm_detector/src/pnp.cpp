@@ -26,23 +26,14 @@ namespace DT46_VISION {
         // 定义灯条和装甲板的物理尺寸
         // 坐标系定义: X右, Y下, Z前 (物体平面)
         // 确保这里的顺序与 imagePoints (左上, 左下, 右上, 右下) 一一对应
-        if (object_size == 6 || object_size == 0) {
-            // 大装甲板 (225mm x 58mm) (修正了Y的半高为29)
-            return {
-                {-115.0f, -29.0f, 0.0f},  // 0: 左上
-                {-115.0f,  29.0f, 0.0f},  // 1: 左下
-                { 115.0f, -29.0f, 0.0f},  // 2: 右上
-                { 115.0f,  29.0f, 0.0f}   // 3: 右下
-            };
-        } else {
-            // 小装甲板 (135mm x 58mm)
-            return {
-                {-67.5f, -29.0f, 0.0f},  // 0: 左上
-                {-67.5f,  29.0f, 0.0f},  // 1: 左下
-                { 67.5f, -29.0f, 0.0f},  // 2: 右上
-                { 67.5f,  29.0f, 0.0f}   // 3: 右下
-            };
-        }
+        (void)object_size;
+        // 小装甲板 (135mm x 58mm)。编号 0/6 以前是大装甲，比赛已统一成小装甲。
+        return {
+            {-67.5f, -29.0f, 0.0f},  // 0: 左上
+            {-67.5f,  29.0f, 0.0f},  // 1: 左下
+            { 67.5f, -29.0f, 0.0f},  // 2: 右上
+            { 67.5f,  29.0f, 0.0f}   // 3: 右下
+        };
     }
 
     // 处理装甲板灯点坐标并返回 (dx, dy, dz)
@@ -107,7 +98,7 @@ namespace DT46_VISION {
         };
         const double fx = cameraMatrix.at<double>(0, 0);
         const double fy = cameraMatrix.at<double>(1, 1);
-        const double armor_width_mm  = (class_id == 6 || class_id == 0) ? 230.0 : 135.0;
+        const double armor_width_mm  = 135.0;
         const double armor_height_mm = 58.0;
         const double w_px = 0.5 * (px_dist(imagePoints[2], imagePoints[0]) +
                                    px_dist(imagePoints[3], imagePoints[1]));

@@ -40,10 +40,11 @@ namespace DT46_VISION {
         blob_ = cv::dnn::blobFromImage(bin_f_, 1.0 / 255.0, input_size_, cv::Scalar(), false, false, CV_32F);
 
         net_.setInput(blob_);
-        cv::Mat logits = net_.forward();
+        // 拉成一行，类别下标在 x 上。第 4 类是反例，由后面的 class_id >= 3 丢掉。
+        cv::Mat logits = net_.forward().reshape(1, 1);
 
         cv::Point classIdPoint;
-        double confidence;
+        double confidence = 0.0;
         cv::minMaxLoc(logits, nullptr, &confidence, nullptr, &classIdPoint);
 
         out.class_id = classIdPoint.x;
