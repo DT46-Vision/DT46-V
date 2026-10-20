@@ -20,12 +20,15 @@ namespace DT46_VISION {
         PNP(rclcpp::Logger logger) : logger_(logger) {}
 
         // 处理装甲板灯点坐标并返回 (dx, dy, dz)
+        // R_ext/t_ext: 静态外参(后相机系 -> 前相机系)，传空则不做变换(前相机)
         std::tuple<double, double, double, double> processArmorCorners(
         const sensor_msgs::msg::CameraInfo::SharedPtr& cam_info,
         bool use_geometric_center, // 是否用图像几何中心替代标定光心
         const cv::Mat& frame,
         const Armor& armor,
-        int class_id
+        int class_id,
+        const cv::Mat& R_ext = cv::Mat(),
+        const cv::Mat& t_ext = cv::Mat()
         );
 
     private:

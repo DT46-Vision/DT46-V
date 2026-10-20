@@ -21,6 +21,12 @@ def generate_launch_description():
         "detector_params_sentry.yaml",
     )
 
+    # ---------------- 后置 USB 相机（复用 usb_camera 包现成配置）----------------
+    rear_usb_params_file = os.path.join(
+        get_package_share_directory("usb_camera"), "config", "camera_params.yaml"
+    )
+    rear_usb_info_url = "package://usb_camera/config/camera_info.yaml"
+
     # ---------------- 装甲板追踪参数 ----------------
     tracker_params_sentry_file = os.path.join(
         get_package_share_directory("rm_tracker"),
@@ -50,6 +56,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 name="tracker_params_sentry_file",
                 default_value=tracker_params_sentry_file,
+            ),
+            DeclareLaunchArgument(
+                name="rear_usb_params_file", default_value=rear_usb_params_file
+            ),
+            DeclareLaunchArgument(
+                name="rear_usb_info_url", default_value=rear_usb_info_url
             ),
             DeclareLaunchArgument(
                 name="dm_imu_params_file", default_value=dm_imu_params_file
@@ -104,6 +116,24 @@ def generate_launch_description():
                             "use_sensor_data_qos"
                         ),
                     },
+                ],
+            ),
+            # ----------- 启动后置 USB 相机节点 -----------
+            # 节点名保持 usb_camera_node(与 camera_params.yaml 根键一致);
+            # 不用 namespace 而用 remap，话题挪到 /usb_camera/* 避免与前相机冲突
+            Node(
+                package="usb_camera",
+                executable="usb_camera_node",
+                name="usb_camera_node",
+                output="screen",
+                emulate_tty=True,
+                parameters=[
+                    LaunchConfiguration("rear_usb_params_file"),
+                    {"camera_info_url": LaunchConfiguration("rear_usb_info_url")},
+                ],
+                remappings=[
+                    ("image_raw", "/usb_camera/image_raw"),
+                    ("camera_info", "/usb_camera/camera_info"),
                 ],
             ),
             # ----------- 启动 rqt 并加载布局 -----------

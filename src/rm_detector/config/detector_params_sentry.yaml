@@ -27,3 +27,15 @@ rm_detector:
     # ---- 其他参数 ----
     use_geometric_center: true
     print_period_ms: 1000
+
+    # ---- 后置 USB 相机（仅检测有无目标，供云台转 yaw）----
+    enable_rear_camera: true
+    rear_image_topic: '/usb_camera/image_raw'
+    rear_camera_info_topic: '/usb_camera/camera_info'
+    rear_max_age_ms: 300        # 后帧超过此年龄视为失效，不参与兜底
+    front_max_gap_ms: 500       # 前帧断流超过此时长则直接用后帧; <=0 = 禁用
+
+    # 后相机 -> 前相机(云台) 静态外参: RPY(度) + 平移(mm)
+    # 光学系 Z前/X右/Y下; 后置相机绕垂直轴(Y)转180° => pitch=180
+    rear_ext_xyz_mm: [0.0, 0.0, 0.0]
+    rear_ext_rpy_deg: [0.0, 180.0, 0.0]

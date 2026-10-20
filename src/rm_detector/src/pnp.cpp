@@ -51,7 +51,9 @@ namespace DT46_VISION {
         bool use_geometric_center, // 是否用图像几何中心替代标定光心
         const cv::Mat& frame,
         const Armor& armor,
-        int class_id
+        int class_id,
+        const cv::Mat& R_ext,
+        const cv::Mat& t_ext
         ) {
         // 提取四个灯条端点
         std::vector<cv::Point2f> imagePoints = {
@@ -109,6 +111,16 @@ namespace DT46_VISION {
         // 4. 计算绝对 Yaw
         cv::Mat R;
         cv::Rodrigues(rvec, R);
+
+        // 后usb相机图像通过外参转化为前相机的坐标系
+        if (!R_ext.empty()) {
+            cv::Mat t = (cv::Mat_<double>(3, 1) << dx, dy, dz);
+            cv::Mat t_front = R_ext * t + t_ext;
+            dx = t_front.at<double>(0);
+            dy = t_front.at<double>(1);
+            dz = t_front.at<double>(2);
+            R = R_ext * R;
+        }
 
         double r13 = R.at<double>(0, 2);
         double r33 = R.at<double>(2, 2);

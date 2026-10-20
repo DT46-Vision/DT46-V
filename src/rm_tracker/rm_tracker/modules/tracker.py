@@ -187,8 +187,8 @@ class Tracker:
         将相机系坐标转换为惯性系(世界系)坐标
         保留您原来的 tf 接口逻辑
         """
-        normal_axis_xyz = tf.rotate_pos_axis(raw_xyz, [-90, 0, -90], 'xyz') # 相机系 -> IMU系 (假设 rotate_pos_axis 处理了外参旋转)
-        world_xyz = tf.rotate_pos_axis(normal_axis_xyz, imu_rpy, 'xyz')     # IMU系 -> 世界系 (根据陀螺仪 RPY)
+        normal_axis_xyz = tf.rotate_pos_axis(raw_xyz, [-90, 0, -90], 'xyz') # 相机系 -> IMU系 
+        world_xyz = tf.rotate_pos_axis(normal_axis_xyz, imu_rpy, 'xyz')     # IMU系 -> 世界系 
         return world_xyz
 
     def world_to_mount(self, tf, world_xyz, imu_rpy):
@@ -775,6 +775,13 @@ class Tracker:
 
         # 在相机坐标系下计算最终输出的角度增量
         delta_yaw = math.atan2(aim_point_cam[0], aim_point_cam[2])
+
+        # 目标在当前相机系后方(z<0, 后相机兜底场景): atan2(y, z) 对 z<0 会退化出 ±180° 的假 pitch,
+        # 此时只输出 yaw 掉头指令, pitch 保持不动, 并禁止开火(无弹道俯仰补偿, 打不准)
+        if aim_point_cam[2] < 0.0:
+            delta_yaw += cam_to_gun_rpy[2] * DEG2RAD
+            return [delta_yaw, 0.0, False]
+
         delta_pitch = math.atan2(aim_point_cam[1], aim_point_cam[2])
 
         # 加上机械外参补偿
