@@ -36,11 +36,14 @@ rm_tracker:
     lost_thres: 40 # 连续丢失帧数 (进入 LOST) - int
 
     # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
-    ekf_QR_q_xyz: 1.5 # 加速度谱密度 (m²/s³) — 越大越信任观测
-    ekf_QR_q_yaw: 1.0 # 角加速度谱密度 (rad²/s³)
-    ekf_QR_q_r: 0.015 # 半径游走谱密度 (m²/s)
+    # SPIN 下车心/板耦合强：q 略大、R 略小，避免预测锁死导致虚拟板乱飞（bag 扫参落地）
+    # 最终选定(2026-10-21)：q_xyz=4 / r_xyz_factor=1 / keep=0.30 + 双板/射线软融合；
+    # A/B/C 单卡与历史径向/合卡均未过门禁，见 bags/eval_spin_radial/RESULT.md
+    ekf_QR_q_xyz: 4.0 # 加速度谱密度 (m²/s³) — 越大越信任观测
+    ekf_QR_q_yaw: 2.0 # 角加速度谱密度 (rad²/s³)
+    ekf_QR_q_r: 0.02 # 半径游走谱密度 (m²/s)
 
-    ekf_QR_r_xyz_factor: 2.0 # PnP位置噪声：距离百分比(2.0=>2%)，R=(factor*dist+5mm)^2
+    ekf_QR_r_xyz_factor: 1.0 # PnP位置噪声：距离百分比(1.0=>1%)，R=(factor*dist+5mm)^2
     ekf_QR_r_yaw: 0.002 # Measurement Noise R: 角度方差
 
     ekf_QR_stable_dist: 1.4
@@ -50,6 +53,8 @@ rm_tracker:
     radius_r_min: 0.15 # 车辆最小半径 (m)
 
     system_delay: 0.1
+    # 云台额外滞后：只外推瞄准点，不参与选板/正对（对齐 FYT controller_delay）
+    controller_delay: 0.02
 
     # 反小陀螺 — 时间累计 (秒), 帧率无关
     min_spinning_vel: 0.7 # 角速度门限 (rad/s)

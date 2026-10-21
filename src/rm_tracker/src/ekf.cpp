@@ -156,6 +156,36 @@ bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     return true;
 }
 
+bool ExtendedKalmanFilter::update_center_xy(double xc_meas, double yc_meas, double sigma_m) {
+    if (!is_initialized_) return false;
+    if (!(sigma_m > 1e-4)) return false;
+
+    Eigen::Matrix<double, 2, 9> H = Eigen::Matrix<double, 2, 9>::Zero();
+    H(0, 0) = 1.0;
+    H(1, 2) = 1.0;
+
+    Eigen::Matrix2d Rm = Eigen::Matrix2d::Zero();
+    const double v = sigma_m * sigma_m;
+    Rm(0, 0) = v;
+    Rm(1, 1) = v;
+
+    const Eigen::Vector2d z(xc_meas, yc_meas);
+    const Eigen::Vector2d hx(X_(0), X_(2));
+    const Eigen::Matrix2d S = H * P_ * H.transpose() + Rm;
+    Eigen::Matrix2d S_inv;
+    bool invertible = false;
+    S.computeInverseWithCheck(S_inv, invertible);
+    if (!invertible) return false;
+
+    const Eigen::Matrix<double, 9, 2> K = P_ * H.transpose() * S_inv;
+    X_ += K * (z - hx);
+
+    const Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
+    const Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
+    P_ = I_KH * P_ * I_KH.transpose() + K * Rm * K.transpose();
+    return true;
+}
+
 void ExtendedKalmanFilter::smooth_reset_covariance() {
     // 适度放大位置和角度的方差，让滤波器在跳变后几帧稍微更信任观测
     P_(0, 0) += 0.05;

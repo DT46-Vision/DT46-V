@@ -111,6 +111,10 @@ MVS.deb
 # Cursor 编辑器远程文件
 .cursorremote/
 
-# bag 文件
+# bag / 回放数据（防提交）
 .bags/
+bags/**
+!bags/*.py
+!bags/RECORD_CHECKLIST.md
 *.db3
+*.mp4

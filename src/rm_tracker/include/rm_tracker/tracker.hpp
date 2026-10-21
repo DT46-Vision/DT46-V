@@ -131,6 +131,8 @@ public:
     RadiusParams radius_params;
 
     double system_delay = 0.1;
+    // 云台多出来的跟踪滞后；只加在瞄准点外推，不影响选板/正对判定（FYT controller_delay）。
+    double controller_delay_ = 0.02;
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
     double min_spinning_vel_ = 5.0;
@@ -207,21 +209,35 @@ private:
         double x;
         double y;
     };
-    std::deque<XySample> center_hist_;
+    // 仅双板解出的车心，用来判平移。
+    std::deque<XySample> obs_center_hist_;
     std::deque<XySample> plate_arc_;
     bool spin_center_valid_ = false;
     double spin_center_x_ = 0.0;
     double spin_center_y_ = 0.0;
+    // bag 扫参用：最近一帧双板解心相对车心的距离；无双板为 -1。
+    double last_dual_innov_ = -1.0;
     std::deque<XySample> fit_hist_;
     // 同向换板间隔。相邻板差 90°，转速 = (π/2) / 间隔。
     std::deque<double> spin_periods_;
     double last_same_jump_clock_ = -1.0;
     double move_clock_ = 0.0;
     double last_jump_clock_ = -1.0;
+    // 最近一次由换板周期算出的 v_yaw。周期窗暂时空时沿用。
+    double last_spin_vyaw_ = 0.0;
+    // SPIN 瞄法：false=跟板等正对；true=车心正前（平移小陀螺）。滞回防撕枪。
+    bool spin_aim_translate_ = false;
+    double spin_aim_mode_clock_ = 0.0;
+    int spin_front_plate_i_ = 0;
     static constexpr double kMoveWindow = 0.40;
     static constexpr double kSpinQuiet = 4.0;
     static constexpr double kJumpTangential = 0.12;
     static constexpr double kSameRobot = 0.8;
+    static constexpr double kSwitchThrRad = 15.0 * M_PI / 180.0;
+    static constexpr double kSwitchAdvMax = 0.2;
+    static constexpr double kLeaveBiasRad = 50.0 * M_PI / 180.0;
+    static constexpr double kAimEnterTrans = 0.25; // 判平移后多久切正前
+    static constexpr double kAimLeaveTrans = 0.40; // 判静止后多久切回跟板
 
     // 弹道查找表
     static constexpr int LUT_DIST_BINS = 25;
@@ -253,15 +269,21 @@ private:
     void spin_quiet_tick(double dt, bool jumped,
                          std::vector<std::pair<std::string, std::string>>& logs);
     bool apply_armor_measurement(const Armor& armor);
-    void note_center_samples();
     void note_plate_arc(double x, double y);
     bool center_motion_is_slow() const;
-    void hold_center_when_stationary();
+    void hold_center_when_stationary(const std::vector<Armor>& armors);
     void apply_spin_period();
+    void update_spin_aim_mode(double dt);
+    // 单板：板位 + r 解车心（yaw 二义消解）。失败返回 false。
+    bool center_from_one_armor(const Armor& armor, double r, double& xc, double& yc) const;
+    // 平移 SPIN：到达时刻选正对板（滞回 + 提前量）。
+    std::pair<int, double> select_spin_front_plate(double front_yaw, double yaw_arr, double v_yaw);
+    // FaterYU：装甲左右端点相对视线的角窗。delta_yaw 落在 (min,max) 内才允许打。
+    bool yaw_in_armor_edge_window(double x, double y, double armor_yaw, double armor_w,
+                                  double delta_yaw_rad, double shrink,
+                                  double* allow_min_rad = nullptr,
+                                  double* allow_max_rad = nullptr) const;
 
-    Eigen::Matrix<double, 9, 1> predict_future_state() const;
-    std::vector<Armor> find_all_armors(const Eigen::Matrix<double, 9, 1>& state) const;
-    std::optional<Armor> find_target(std::vector<Armor>& robot_armors, const Eigen::Matrix<double, 9, 1>& state, double dt);
     std::optional<Armor> world_to_muzzle(RmTF& tf, const Armor& target, const Eigen::Vector3d& offset_pos, const Eigen::Vector3d& imu_rpy);
 
     Eigen::Vector3d get_armor_position_from_state(const Eigen::Matrix<double, 9, 1>& x) const;

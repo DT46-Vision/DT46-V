@@ -59,6 +59,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
 
     // 2.9 加载弹道与射击参数
     tracker_.system_delay = this->declare_parameter("system_delay", 0.1);
+    tracker_.controller_delay_ = this->declare_parameter("controller_delay", 0.02);
     tracker_.k_v2 = this->declare_parameter("k_v2", 0.019);
     tracker_.shootable_dist = this->declare_parameter("shootable_dist", 3.0);
     tracker_.yaw_tolerance_deg = this->declare_parameter("yaw_tolerance_deg", 5.0);
@@ -464,67 +465,6 @@ void RmTrackerNode::draw_tracking_state(cv::Mat& draw, const RenderSnapshot& sna
         }
     }
 
-    if (snapshot.tracker_state == TrackerState::LOST) return;
-
-    int circle_r = std::max(2, static_cast<int>(5 * scale));
-    int marker_size = static_cast<int>(20 * scale);
-    int thick_1 = std::max(1, static_cast<int>(1 * scale));
-    int thick_2 = std::max(1, static_cast<int>(2 * scale));
-
-    double xc = snapshot.target_state(0), yc = snapshot.target_state(2), za = snapshot.target_state(4);
-    double yaw = snapshot.target_state(6);
-    double r1 = snapshot.target_state(8);
-    double r2 = snapshot.another_r;
-    double dz = snapshot.dz;
-
-    std::vector<cv::Point> virtual_armors_pts(4, cv::Point(-1, -1));
-
-    for (int i = 0; i < 4; ++i) {
-        double theta = yaw - i * (M_PI / 2.0);
-        double r = (i % 2 == 0) ? r1 : r2;
-        double z = (i % 2 == 0) ? za : (za + dz);
-
-        double ax = xc - r * std::cos(theta);
-        double ay = yc - r * std::sin(theta);
-
-        Eigen::Vector3d world_pos(ax, ay, z);
-        Eigen::Vector3d cam_pos = tf_.world_to_cam(world_pos, current_imu);
-        auto [uv, visible] = tf_.project_point(cam_pos);
-
-        if (visible) {
-            cv::Scalar color = (i == 0) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 255, 255);
-            cv::circle(draw, uv, circle_r, color, -1);
-            virtual_armors_pts[i] = uv;
-        }
-    }
-
-    Eigen::Vector3d center_world(xc, yc, za + dz / 2.0);
-    Eigen::Vector3d cam_c = tf_.world_to_cam(center_world, current_imu);
-    auto [uv_c, vis_c] = tf_.project_point(cam_c);
-
-    if (vis_c) {
-        cv::drawMarker(draw, uv_c, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, marker_size, thick_2);
-
-        cv::Scalar line_color(100, 100, 100);
-        if (virtual_armors_pts[0].x >= 0 && virtual_armors_pts[2].x >= 0) {
-            cv::line(draw, virtual_armors_pts[0], virtual_armors_pts[2], line_color, thick_1);
-        }
-        if (virtual_armors_pts[1].x >= 0 && virtual_armors_pts[3].x >= 0) {
-            cv::line(draw, virtual_armors_pts[1], virtual_armors_pts[3], line_color, thick_1);
-        }
-
-        double vx = snapshot.target_state(1), vy = snapshot.target_state(3);
-        double speed = std::sqrt(vx * vx + vy * vy);
-        if (speed > 0.1) {
-            Eigen::Vector3d end_world(xc + vx * 0.5, yc + vy * 0.5, za);
-            Eigen::Vector3d cam_end = tf_.world_to_cam(end_world, current_imu);
-            auto [uv_end, vis_end] = tf_.project_point(cam_end);
-
-            if (vis_end) {
-                cv::arrowedLine(draw, uv_c, uv_end, cv::Scalar(0, 0, 255), thick_2);
-            }
-        }
-    }
 }
 
 void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapshot) {

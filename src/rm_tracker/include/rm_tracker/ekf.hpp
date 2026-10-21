@@ -35,6 +35,12 @@ public:
     bool update(const Eigen::Vector4d& measurement);
 
     /**
+     * @brief 车心伪观测更新：射线/双板解出的 (xc,yc) 软融合进状态，不硬盖。
+     * @param sigma_m 观测标准差 (m)，双板可更小、单板射线更大
+     */
+    bool update_center_xy(double xc_meas, double yc_meas, double sigma_m);
+
+    /**
      * @brief 软重置协方差 (应对装甲板跳变)
      */
     void smooth_reset_covariance();
