@@ -66,6 +66,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 name="dm_imu_params_file", default_value=dm_imu_params_file
             ),
+            DeclareLaunchArgument(
+                                        name = "use_dm_imu", 
+                                        default_value = "False",
+                                        # default_value = "True",
+                                        description="是否启动dm_imu节点，False时/imu/rpy中的数据由导航方串口提供"
+                                    ),
             # ----------- 启动dm_imu节点 -----------
             Node(
                 package="dm_imu",
