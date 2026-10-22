@@ -478,6 +478,8 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
             tracker_.build_ballistic_lut(); // 确保弹速更新和重建 LUT 在一起
         } else if (name == "display") {
             display_ = param.as_bool();
+        } else if (name == "text_size") {
+            text_size_ = param.as_double();
         } else if (name == "nav_visual_display") {
             nav_visual_display_ = param.as_bool();
         }
