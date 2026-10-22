@@ -1,5 +1,17 @@
 # DT46-V 非 ROS 工程
 
+## C++ 运行层迁移（进行中）
+
+独立开发分支 `codex/cpp-migration` 已增加仓库根 CMake 入口，以及 `project/modules/vision/pipeline.hpp` 的 C++ 管线。它直接链接现有算法库，读取原 profile YAML/ONNX，提供参数原子更新、单调时间戳检查、复位、检测跟踪结果和调试图像。新代码使用 C++20；Windows 显式启用标准库数学常量兼容定义，使 MSVC 与 MinGW 的严格标准模式均能编译原算法。
+
+```powershell
+cmake --preset release -DOpenCV_DIR=<原生OpenCV目录> -DEIGEN3_INCLUDE_DIR=<Eigen包含目录>
+cmake --build --preset release --parallel 4
+ctest --preset release
+```
+
+运行测试时应将 OpenCV 动态库目录加入当前进程 PATH。当前两项 CTest 已通过：原有标定 PnP/光学旋转，以及 C++ 管线的空图处理、重复时间戳拒绝、复位和无效配置更新保留原上下文。尚未验证完整图像序列与旧管线的逐帧一致性；虚拟相机通信、独立调试窗口、实机串口/IMU 和其余工具仍待迁移。下文旧运行入口在替代功能完成前保留。
+
 本目录直接编译原 `rm_detector` 的灯条检测、ONNX 分类、PnP，以及 `rm_tracker` 的 EKF、目标选择和弹道 LUT。无需 ROS、WSL、相机 SDK、串口或 `colcon`。原 ROS 节点保留为可选通信适配层；本次未在 ROS 环境重新编译。
 
 DT46-V 是独立的视觉/自瞄工程，`standalone` 是它的非 ROS 运行方式，职责包括视觉算法、参数、日志和原有调试界面。sim_vision 是提供虚拟相机的仿真工程，不是自瞄的运行主体。跨工程职责、窗口关系及验收要求统一见[项目规范](../../README.md#项目规范工程边界与使用流程)。
