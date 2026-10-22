@@ -53,6 +53,4 @@ python DT46_V/standalone/build.py --work-dir outputs/native_aim --jobs 4
 
 ## 仿真接入
 
-仿真启动方式及验证结果由[工作区 README](../../README.md#dt46-v-与双相机)维护；`virtual_aim.py` 从 `StageCamera.read("onboard")` 采集 RGB，读取同一时刻自身光学姿态、标定和双光电门反馈，并转换角度误差驱动云台。
-
-执行端是理想角度控制，尚无 MCU/PID、执行器延迟或限速模型。自动开火需显式启用，且同时满足 `TRACKING` 与原 `can_fire`，短时丢失期间仅保持预测瞄准。当前验证限定自身底盘静止、敌车静止或巡逻；移动自身、陀螺目标及实机效果未验证。装甲反馈来自仿真接触代理，不能解释为实车命中率。
+仿真入口的运行方式、进程分工、车辆控制边界与验证结果统一由[工作区 README](../../README.md#dt46-v-与双相机)维护。
