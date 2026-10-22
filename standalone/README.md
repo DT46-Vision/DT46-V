@@ -10,7 +10,11 @@ cmake --build --preset release --parallel 4
 ctest --preset release
 ```
 
-运行测试时应将 OpenCV 动态库目录加入当前进程 PATH。当前两项 CTest 已通过：原有标定 PnP/光学旋转，以及 C++ 管线的空图处理、重复时间戳拒绝、复位和无效配置更新保留原上下文。尚未验证完整图像序列与旧管线的逐帧一致性；虚拟相机通信、独立调试窗口、实机串口/IMU 和其余工具仍待迁移。下文旧运行入口在替代功能完成前保留。
+运行测试时应将 OpenCV 动态库目录加入当前进程 PATH。当前三项 CTest 已通过：原有标定 PnP/光学旋转；C++ 管线的空图处理、重复时间戳拒绝、复位和无效配置更新保留原上下文；1280×1024 RGB 通信、认证和消息长度限制。尚未验证完整图像序列与旧管线的逐帧一致性；实机串口/IMU 和其余工具仍待迁移。
+
+原生运行入口为 `build/native/bin/dt46_vision.exe --camera-session <仿真会话JSON> --output <结果目录>`。默认后台识别；同目录另运行 `build/native/bin/dt46_vision.exe --show-debug` 打开当前任务的调试窗口，关闭窗口继续识别。`--close-debug` 关闭显示，`--save-debug` 保存当前图像与参数；`--debug-session` 可明确指定控制会话文件。默认会话位置为工程 `.cache/virtual_camera/session.json`，退出时仅清理自己创建的会话。仿真关闭后视觉通过连接关闭正常退出；超时或协议错误独立记录，不能当成正常退出。
+
+窗口使用固定 GLFW 3.4 所附 Nuklear C/C++ 界面，提供原始图、弹道图、跟踪图、检测中间图及数字裁剪等十种内容，四格选择、相机/检测/跟踪参数、JSON 保存加载和原 tracker 日志。灰度图在显示时转换为 RGB。参数更改使用原管线的原子重建，模拟物理输入只读；关闭/重开窗口不重建管线，窗口异常也不结束识别。结果为逐帧 `frames.jsonl`、`report.json` 和调试操作事件；保存包含图像、结果、参数及窗口截图。完整仿真联调结果由[工作区迁移说明](../../README.md#c-迁移进行中)维护。下文旧运行入口仍处于替换清理阶段。
 
 本目录直接编译原 `rm_detector` 的灯条检测、ONNX 分类、PnP，以及 `rm_tracker` 的 EKF、目标选择和弹道 LUT。无需 ROS、WSL、相机 SDK、串口或 `colcon`。原 ROS 节点保留为可选通信适配层；本次未在 ROS 环境重新编译。
 
