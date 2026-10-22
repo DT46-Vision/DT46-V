@@ -1,0 +1,5 @@
+R01 PASS: opposite tilts, 49 angle pairs, and steep connecting line
+R04 PASS: expiry, mode exit, insufficient samples, recovery, and stationary history
+R03 PASS: association to observation update, mirrored/unmirrored yaw, and +/-pi crossing
+R02 PASS: old counterexample, future facing plate, alternating radius/height, 2160 phases, translation, and fallback
+All four regression groups passed; ROS/camera/real-EKF integration remains unverified.
