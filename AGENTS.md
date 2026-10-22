@@ -1,6 +1,6 @@
 # AGENTS.md
 
-RoboMaster vision/auto-aim system: ROS 2 Humble workspace (Ubuntu 22.04). C++ packages (`rm_detector`, `rm_tracker`), Python packages (`rm_serial`, `dm_imu`), camera drivers with vendored SDKs.
+RoboMaster vision/auto-aim system: standalone C++20 applications and ROS 2 Humble workspace (Ubuntu 22.04). C++ packages (`rm_detector`, `rm_tracker`, `rm_serial`, `dm_imu`, `dt46_hardware`, `dt46_tools`), camera drivers with vendored SDKs. Native build and workflow: `standalone/README.md`. ROS/hardware validation remains separate from Windows native tests.
 
 ## 省额度
 

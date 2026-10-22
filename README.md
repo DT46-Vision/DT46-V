@@ -12,7 +12,7 @@
 ---
 
 ## 📖 项目简介
-本项目为 RoboMaster 视觉自瞄系统，基于 ROS 2 框架开发。系统实现了从底层硬件通信、图像采集，到基于深度学习的装甲板识别，再到三维空间高频追踪与动态弹道解算的完整闭环。系统充分利用了 C++ 的高效性与 Python 的快速迭代优势。
+本项目为 RoboMaster C++20 视觉自瞄系统，提供独立原生程序和 ROS 2 节点。硬件通信、图像采集、装甲板识别、三维追踪、弹道解算及调试显示均由 C++ 实现。独立程序的构建、虚拟相机接入及离线工具见 [standalone 说明](standalone/README.md)。ROS 节点与实机硬件尚未在本次 Windows 环境验证。
 
 ### 🧠 核心算法亮点
 * **EKF 状态估计（C++ / Eigen）**：构建了 9 维状态向量 `[xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r]`，引入马氏距离（Mahalanobis Distance）剔除 PnP 野值，保障高速运动下的状态收敛。
@@ -26,7 +26,7 @@
 
 1. **rm_detector (C++)** —— 装甲板检测与三维解算。传统视觉灯条提取 + CNN 数字分类（OpenCV DNN 加载 ONNX），输出相机系 PnP 坐标。节点名 `rm_detector`。
 2. **rm_tracker (C++)** —— 目标追踪、位姿预测与发弹决策。相机系 → 世界系坐标变换、EKF、反小陀螺状态机、弹道解算，下发云台控制指令。节点名 `rm_tracker`。
-3. **rm_serial & dm_imu (Python)** —— 硬件通信层。`dm_imu` 解析达妙 IMU 姿态（921600）；`rm_serial` 通过 CRC16 与下位机双向通讯（115200），转发目标颜色/弹速并下发云台解算结果。
+3. **rm_serial & dm_imu (C++)** —— 硬件通信层。`dm_imu` 解析达妙 IMU 姿态（921600）；`rm_serial` 通过 CRC16 与下位机双向通讯（115200），转发目标颜色/弹速并下发云台解算结果。
 4. **相机驱动层** —— 海康工业相机 (`hik_camera`)、迈德威视相机 (`mindvision_camera`)、USB/网络摄像头 (`usb_camera`)。
 5. **rm_interfaces** —— 自定义消息定义（`ArmorsMsg` / `GimbalControl` / `Decision` 等），其余各包都依赖它，必须最先编译。
 6. **rm_vision_bringup**（源码目录 `src/rm_DT46`）—— 只含 launch 的启动组合包，按兵种/场景把上述节点与参数文件组合起来。
@@ -43,6 +43,8 @@
 | `src/rm_vision_ros2_hik_camera` | `hik_camera` | `hik_camera` (`hik_camera_node`) | 海康相机驱动 | [README](src/rm_vision_ros2_hik_camera/README.md) |
 | `src/rm_vision_ros2_mindvision_camera` | `mindvision_camera` | `mv_camera` (`mindvision_camera_node`) | 迈德威视相机驱动 | [README](src/rm_vision_ros2_mindvision_camera/README.md) |
 | `src/rm_vision_ros2_usb_camera` | `usb_camera` | `usb_camera_node` | USB / 网络摄像头驱动 | [README](src/rm_vision_ros2_usb_camera/README.md) |
+| `src/dt46_hardware` | `dt46_hardware` | 无（共享库） | C++ 串口、CRC 与 IMU 协议 | [硬件说明](src/rm_serial/README.md) |
+| `src/dt46_tools` | `dt46_tools` | `record_images` / `calibrate_camera` / `make_sentry_variant` | 原生录制、标定和参数工具 | [工具说明](standalone/README.md) |
 | `src/rm_DT46` | `rm_vision_bringup` | 无（launch 包） | 场景启动组合 | [README](src/rm_DT46/README.md) |
 
 > ⚠️ 目录名与包名不一致的两个包：`src/rm_DT46` → `rm_vision_bringup`、`src/rm_vision_ros2_dm_imu` → `dm_imu`；`ros2 launch/run` 一律用**包名**。
@@ -93,17 +95,13 @@ rm_tracker ──/tracker/gimbal_control──▶ rm_serial ──串口 0x5A �
 ### 1. 环境依赖
 * **系统环境**: Ubuntu 22.04
 * **ROS 2 版本**: Humble
-* **Python 依赖库**（仅 `rm_serial` / `dm_imu` 需要）:
-  ```bash
-  sudo apt install python3-serial        # 或 pip install pyserial
-  ```
 * **C++ 依赖库**: OpenCV（含 `dnn` 模块，用于加载 ONNX）、Eigen3、cv_bridge
-  > `rm_tracker` 已由 Python 重写为 C++（Eigen 实现 EKF），不再依赖 numpy/numba；`rm_detector` 用 `cv::dnn::readNetFromONNX` 推理，**不需要 ONNXRuntime**。
+  > `rm_tracker` 使用 C++ / Eigen 实现 EKF；`rm_detector` 用 `cv::dnn::readNetFromONNX` 推理，**不需要 ONNXRuntime**。
 
 ### 2. 编译与运行
 克隆工作空间后，在根目录执行以下命令进行编译：
 ```bash
-# 生成 compile_commands.json 方便代码补全，并使用符号链接安装以加快 Python 节点调试
+# 生成 compile_commands.json 方便代码补全，并使用符号链接安装以便本地调试
 colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --symlink-install
 
 # 引入环境变量
@@ -153,9 +151,9 @@ sudo udevadm trigger
 建议在 `~/.bashrc` 中添加别名，实现一键拉起节点：
 ```bash
 # nano ~/.bashrc
-alias rmhiknav='ros2 launch rm_vision_bringup hik_nav.launch.py'
-alias rmhik='ros2 launch rm_vision_bringup hik.launch.py'
-alias rmmv='ros2 launch rm_vision_bringup mv.launch.py'
+alias rmhiknav='ros2 launch rm_vision_bringup hik_nav.launch.xml'
+alias rmhik='ros2 launch rm_vision_bringup hik.launch.xml'
+alias rmmv='ros2 launch rm_vision_bringup mv.launch.xml'
 ```
 
 ---
@@ -163,14 +161,14 @@ alias rmmv='ros2 launch rm_vision_bringup mv.launch.py'
 ### 5. 场景启动说明 (Launch Files)
 `rm_vision_bringup` 提供了多种启动脚本以适配不同兵种与测试场景：
 * **实车部署 (全节点启动)**:
-  * `ros2 launch rm_vision_bringup hik.launch.py`: 哨兵默认启动项 (海康相机 + 串口 + IMU + 检测 + 跟踪)。
-  * `ros2 launch rm_vision_bringup mv.launch.py`: 步兵默认启动项 (迈德威视相机 + 串口 + IMU + 检测 + 跟踪)。
+  * `ros2 launch rm_vision_bringup hik.launch.xml`: 哨兵默认启动项 (海康相机 + 串口 + IMU + 检测 + 跟踪)。
+  * `ros2 launch rm_vision_bringup mv.launch.xml`: 步兵默认启动项 (迈德威视相机 + 串口 + IMU + 检测 + 跟踪)。
 * **兵种专用 (参数写死，不接受命令行覆盖)**:
-  * `ros2 launch rm_vision_bringup hero.launch.py`: 英雄 (海康相机 + 英雄标定/算法参数)。
-  * `ros2 launch rm_vision_bringup sentry.launch.py`: 哨兵 (海康相机 + 哨兵标定/算法参数)。
-  * `ros2 launch rm_vision_bringup infantry.launch.py`: 步兵 (迈德威视相机 + 步兵参数)。
+  * `ros2 launch rm_vision_bringup hero.launch.xml`: 英雄 (海康相机 + 英雄标定/算法参数)。
+  * `ros2 launch rm_vision_bringup sentry.launch.xml`: 哨兵 (海康相机 + 哨兵标定/算法参数)。
+  * `ros2 launch rm_vision_bringup infantry.launch.xml`: 步兵 (迈德威视相机 + 步兵参数)。
 * **离线/视觉独立测试 (无串口通信)**:
-  * `hik_nav.launch.py` / `mv_nav.launch.py` / `usb_nav.launch.py`: 仅启动相机、IMU及视觉算法层，用于纯视觉定位或录制数据集。
-  * 注意 `mv_nav.launch.py` **不启动 IMU**，而 `rm_tracker` 没有 `/imu/rpy` 就不会追踪；纯视觉联调追踪请用 `hik_nav` 或 `usb_nav`。
+  * `hik_nav.launch.xml` / `mv_nav.launch.xml` / `usb_nav.launch.xml`: 仅启动相机、IMU及视觉算法层，用于纯视觉定位或录制数据集。
+  * 注意 `mv_nav.launch.xml` **不启动 IMU**，而 `rm_tracker` 没有 `/imu/rpy` 就不会追踪；纯视觉联调追踪请用 `hik_nav` 或 `usb_nav`。
 * **数据集回放**:
-  * `ros2 launch rm_vision_bringup bag_record.launch.py bag_file:=/path/to/bag`: 读取 rosbag 数据并跑通视觉流，便于算法调参。
+  * `ros2 launch rm_vision_bringup bag_record.launch.xml bag_file:=/path/to/bag`: 读取 rosbag 数据并跑通视觉流，便于算法调参。
