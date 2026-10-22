@@ -63,6 +63,8 @@ build/native/bin/dt46_vision.exe --save-debug
 
 帧元数据含 `time`、`K`、`D`、`optical`（4×4 相机到世界变换）、相机系 `muzzle_offset`、敌方 `color`、自身有效测速 `speed`、复位 `generation`、相机参数、帧编号和物理步编号。图像是 width×height×3 字节 RGB。分代变化清除历史，暂停不重复处理时间戳。
 
+可选 `appearance` 记录该帧的仿真画质、灯条和表面显示设置，原样保留在识别日志及调试截图元数据中，不参与识别决策。画质控制与视觉采样验收由 [sim_vision 画质说明](../../README.md#画质灯条与反光)维护。
+
 ## 离线回放、录像与标定
 
 仿真使用 `sim_sequence` 导出 PNG 与 `frames.jsonl`，DT46 独立读取：
