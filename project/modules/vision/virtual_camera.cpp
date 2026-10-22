@@ -12,8 +12,8 @@ Json VirtualCamera::request(const Json& request) {
     socket.send(request);const auto reply=socket.receive();
     if(reply.metadata.contains("error"))throw std::runtime_error(reply.metadata.at("error").get<std::string>());return reply.metadata;
 }
-std::optional<VirtualFrame> VirtualCamera::next(const Json& status) {
-    socket.send({{"op","next"},{"after",version},{"status",status}});auto reply=socket.receive();
+std::optional<VirtualFrame> VirtualCamera::next(const Json& status,const Json& result) {
+    socket.send({{"op","next"},{"after",version},{"status",status},{"result",result}});auto reply=socket.receive();
     if(reply.metadata.contains("error"))throw std::runtime_error(reply.metadata.at("error").get<std::string>());
     version=reply.metadata.at("version");auto frame=reply.metadata.at("frame");if(frame.is_null()){if(!reply.bytes.empty())throw std::runtime_error("Unexpected camera payload");return {};}
     const int width=frame.at("width"),height=frame.at("height");
@@ -24,6 +24,12 @@ std::optional<VirtualFrame> VirtualCamera::next(const Json& status) {
 }
 void VirtualCamera::configure(const Json& parameters){description["camera"]=request({{"op","configure_camera"},{"parameters",parameters}}).at("parameters");}
 void VirtualCamera::validate(const Json& parameters){request({{"op","validate_camera"},{"parameters",parameters}});}
+Json aim_feedback(const Json& result) {
+    if(result.is_null())return nullptr;
+    Json feedback={{"schema",1}};
+    for(const auto* key:{"frame_number","state_tick","reset_generation","simulation_time_s","camera","robot_id","state","tracked_id","aim"})feedback[key]=result.at(key);
+    return feedback;
+}
 Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
     const auto start=std::chrono::steady_clock::now();const auto& m=frame.metadata;
     cv::Matx33d k,rotation;cv::Vec<double,5> distortion;cv::Vec3d offset;

@@ -1058,6 +1058,7 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
 // =====================================================================
 std::tuple<std::vector<double>, std::vector<std::pair<std::string, std::string>>>
 Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vector3d& imu_rpy, double dt) {
+    aim_valid = false;
 
     // 【新增】：将原始观测数据存入缓存，供 UI 快照读取！
     debug_yaw_armors_cache_ = raw_armors;
@@ -1163,6 +1164,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     }
 
     auto [yaw_cmd_rad, pitch_cmd_rad, isValid] = solve_ballistic(tf, target_muzzle.value(), cam_to_gun_rpy, imu_rpy);
+    aim_valid = isValid && std::isfinite(yaw_cmd_rad) && std::isfinite(pitch_cmd_rad);
 
     // 5. 动态发弹许可
     // 注意：solve_ballistic 返回的是弧度，但 can_fire 期望的是角度

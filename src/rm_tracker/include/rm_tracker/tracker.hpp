@@ -146,6 +146,7 @@ public:
     TrackerState tracker_state;
     int tracked_id;
 
+    bool aim_valid = false;
 
     // 【新增】：专门用于存放当前帧解算结果，供 UI 快照读取
     std::optional<Armor> target_cam_cache_ = std::nullopt;

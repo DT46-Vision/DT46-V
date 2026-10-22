@@ -111,6 +111,7 @@ void AimPipeline::reset() {
     auto* replacement = create(settings_);
     if (context_) dt46_destroy(context_);
     context_ = replacement;
+    ++revision_;
 }
 void AimPipeline::configure(const Json& changes) {
     if (!changes.is_object()) throw std::invalid_argument("Configuration changes must be an object");
@@ -128,6 +129,7 @@ void AimPipeline::configure(const Json& changes) {
     if (context_) dt46_destroy(context_);
     context_ = replacement;
     settings_ = std::move(next);
+    ++revision_;
 }
 
 Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33d& k,
@@ -157,6 +159,8 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
     }
     return {{"simulation_time_s", timestamp}, {"state", states[result.state]}, {"tracked_id", result.tracked_id},
         {"can_fire", bool(result.can_fire)}, {"yaw_error_deg", result.yaw_error_deg}, {"pitch_error_deg", result.pitch_error_deg},
+        {"aim", {{"valid", bool(result.aim_valid)}, {"yaw_error_deg", result.yaw_command_deg},
+                 {"pitch_error_deg", result.pitch_command_deg}, {"can_fire", bool(result.can_fire)}}},
         {"position_camera_origin_world_axes_m", result.position}, {"velocity_world_axes_m_s", result.velocity},
         {"light_count", result.light_count}, {"observations", observations}, {"tracker_debug", Json::parse(dt46_snapshot(context_))},
         {"input", {{"K", matrix_json(k)}, {"D", distortion.val}, {"optical_rotation", matrix_json(optical_rotation)},

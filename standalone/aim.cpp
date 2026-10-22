@@ -247,6 +247,9 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         save_snapshot(pipeline, rotation, std::get<1>(tracked));
         const auto& command = std::get<0>(tracked);
         const double raw_yaw = command[0], raw_pitch = command[1];
+        result->aim_valid = pipeline.tracker.aim_valid;
+        result->yaw_command_deg = raw_yaw;
+        result->pitch_command_deg = raw_pitch;
         if (!pipeline.smooth_ready) {
             pipeline.smooth_yaw = raw_yaw; pipeline.smooth_pitch = raw_pitch;
         } else {

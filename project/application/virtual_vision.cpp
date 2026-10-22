@@ -59,7 +59,8 @@ public:
             while((o.duration<=0||elapsed()<o.duration)&&(!o.maximum_frames||frames<o.maximum_frames)) {
                 debug_commands();
                 auto frame=camera.next({{"frames",frames},{"debug_open",bool(debug)},{"context",context()},
-                    {"state",result.is_null()?"STARTING":result.at("state").get<std::string>()}});
+                    {"state",result.is_null()?"STARTING":result.at("state").get<std::string>()}},
+                    result_revision==pipeline.revision()?dt46::aim_feedback(result):Json(nullptr));
                 if(frame)process(*frame);else std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 const auto now=Clock::now();
                 if(debug&&now-last_draw>=std::chrono::milliseconds(33)) {
@@ -79,6 +80,7 @@ private:
     std::unique_ptr<dt46::VisionDebug> debug;std::ofstream log,events;
     std::unique_ptr<dt46::Recorder> recorder;
     std::uint64_t frames=0,generation=UINT64_MAX;double last_time=-1;
+    std::uint64_t result_revision=0;
     Json result=nullptr;Clock::time_point began=Clock::now(),last_draw{},last_images{};
     std::uintptr_t context()const{return reinterpret_cast<std::uintptr_t>(pipeline.context());}
     double elapsed()const{return std::chrono::duration<double>(Clock::now()-began).count();}
@@ -100,7 +102,7 @@ private:
         const auto next_generation=frame.metadata.at("generation").get<std::uint64_t>();
         if(next_generation!=generation){if(generation!=UINT64_MAX)pipeline.reset();generation=next_generation;last_time=-1;}
         const double timestamp=frame.metadata.at("time");if(timestamp<=last_time)return;
-        result=dt46::process_frame(pipeline,frame);last_time=timestamp;++frames;
+        result=dt46::process_frame(pipeline,frame);result_revision=pipeline.revision();last_time=timestamp;++frames;
         if(recorder&&recorder->due(timestamp,generation)){recorder->write(dt46::ballistic_image(dt46::tracking_image(frame.rgb,result),result));result["recorded"]=true;}
         log<<result.dump()<<'\n';
         if(!log)throw std::runtime_error("Cannot write vision frame log");

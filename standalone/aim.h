@@ -21,6 +21,9 @@ struct AimResult {
     int state;
     int tracked_id;
     int can_fire;
+    int aim_valid;
+    double yaw_command_deg;
+    double pitch_command_deg;
     double yaw_error_deg;
     double pitch_error_deg;
     double position[3];

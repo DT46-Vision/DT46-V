@@ -25,10 +25,12 @@ public:
     const Json& settings() const { return settings_; }
     double nominal_speed() const { return settings_.at("tracker").at("bullet_speed"); }
     const void* context() const { return context_; }
+    std::uint64_t revision() const { return revision_; }
 private:
     void* create(const Json& settings) const;
     std::filesystem::path root_;
     Json settings_;
     void* context_ = nullptr;
+    std::uint64_t revision_ = 0;
 };
 }
