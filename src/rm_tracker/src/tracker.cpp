@@ -268,7 +268,8 @@ bool Tracker::center_motion_is_slow() const {
         }
     }
     if (old == nullptr) return true;
-    return std::hypot(obs_center_hist_.back().x - old->x, obs_center_hist_.back().y - old->y) < 0.20;
+    // 0.28 m / 0.4 s：原地板噪声/换板伪影常到 0.15–0.25，过紧会误切正前瞄。
+    return std::hypot(obs_center_hist_.back().x - old->x, obs_center_hist_.back().y - old->y) < 0.28;
 }
 
 bool Tracker::center_from_one_armor(const Armor& armor, double r, double& xc, double& yc) const {
@@ -338,7 +339,18 @@ void Tracker::hold_center_when_stationary(const std::vector<Armor>& armors) {
         spin_center_valid_ = true;
     }
 
-    // 双板优先；原地也允许射线，但 σ 更大、步长更紧。不再硬钉死车心。
+    // 原地：匹配后已硬钉车心，这里只掐速度，别再让射线/软融合横拽。
+    if (!translating) {
+        target_state_(1) = 0.0;
+        target_state_(3) = 0.0;
+        target_state_(5) = 0.0;
+        spin_center_x_ = target_state_(0);
+        spin_center_y_ = target_state_(2);
+        ekf_.setState(target_state_);
+        return;
+    }
+
+    // 平移：双板优先，单板射线回退；软融合 + 步长盖。
     double raw_x = 0.0, raw_y = 0.0;
     bool have_raw = have_dual;
     if (have_dual) {
@@ -369,21 +381,17 @@ void Tracker::hold_center_when_stationary(const std::vector<Armor>& armors) {
 
     if (have_raw) {
         const double innov = std::hypot(raw_x - target_state_(0), raw_y - target_state_(2));
-        const double innov_gate = translating ? 0.28 : 0.22;
-        if (innov < innov_gate) {
+        if (innov < 0.28) {
             ekf_.setState(target_state_);
-            // 双板更准 → 更小 σ（更信观测）；射线噪声大。
-            const double sigma = have_dual ? (translating ? 0.035 : 0.03)
-                                          : (translating ? 0.07 : 0.06);
+            const double sigma = have_dual ? 0.035 : 0.07;
             if (ekf_.update_center_xy(raw_x, raw_y, sigma)) {
                 target_state_ = ekf_.getState();
             }
         }
     }
 
-    // 每帧相对锚点步长盖：拦换板尖刺，但仍允许观测把偏了的心纠回来。
     {
-        const double max_step = translating ? 0.04 : 0.025;
+        constexpr double max_step = 0.04;
         double dx = target_state_(0) - spin_center_x_;
         double dy = target_state_(2) - spin_center_y_;
         const double step = std::hypot(dx, dy);
@@ -401,18 +409,12 @@ void Tracker::hold_center_when_stationary(const std::vector<Armor>& armors) {
         fit_hist_.pop_front();
     }
 
-    if (translating) {
-        const double span = fit_hist_.back().t - fit_hist_.front().t;
-        const double moved = std::hypot(fit_hist_.back().x - fit_hist_.front().x,
-                                        fit_hist_.back().y - fit_hist_.front().y);
-        if (span >= 0.4 && moved >= 0.20) {
-            target_state_(1) = (fit_hist_.back().x - fit_hist_.front().x) / span;
-            target_state_(3) = (fit_hist_.back().y - fit_hist_.front().y) / span;
-            target_state_(5) = 0.0;
-        }
-    } else {
-        target_state_(1) = 0.0;
-        target_state_(3) = 0.0;
+    const double span = fit_hist_.back().t - fit_hist_.front().t;
+    const double moved = std::hypot(fit_hist_.back().x - fit_hist_.front().x,
+                                    fit_hist_.back().y - fit_hist_.front().y);
+    if (span >= 0.4 && moved >= 0.20) {
+        target_state_(1) = (fit_hist_.back().x - fit_hist_.front().x) / span;
+        target_state_(3) = (fit_hist_.back().y - fit_hist_.front().y) / span;
         target_state_(5) = 0.0;
     }
     ekf_.setState(target_state_);
@@ -726,15 +728,27 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
         }
     }
 
-    // SPIN：板更新切向噪声大，但 keep 太高会导致下一帧预测板偏离实测 → 匹配崩、乱飞。
-    // bag 扫参：keep0.60 match≈5%；keep0.30 match≈52%（const）。可用 RM_TRACKER_SPIN_KEEP 覆盖。
+    // SPIN：板更新切向残差会灌进 xc/yc → 车心横漂 → 误切正前瞄时红圈停在车外。
+    // 原地：硬钉 |心-板|=r（切向全丢）；平移：keep 混合，可用 RM_TRACKER_SPIN_KEEP 覆盖。
     if (spin_ && ekf_matched) {
-        double keep = center_motion_is_slow() ? 0.30 : 0.20;
-        if (const char* env_keep = std::getenv("RM_TRACKER_SPIN_KEEP")) {
-            keep = std::clamp(std::atof(env_keep), 0.0, 0.95);
+        if (center_motion_is_slow() && best_match.has_value()) {
+            const double r = std::clamp(target_state_(8), radius_params.r_min, radius_params.r_max);
+            double yaw_for_center = target_state_(6);
+            double xc = 0.0, yc = 0.0;
+            resolve_center_from_armor(best_match->pos(0), best_match->pos(1), r, yaw_for_center,
+                                      xc, yc, true, xc_before_armor, yc_before_armor);
+            target_state_(0) = xc;
+            target_state_(2) = yc;
+            target_state_(1) = 0.0;
+            target_state_(3) = 0.0;
+        } else {
+            double keep = 0.20;
+            if (const char* env_keep = std::getenv("RM_TRACKER_SPIN_KEEP")) {
+                keep = std::clamp(std::atof(env_keep), 0.0, 0.95);
+            }
+            target_state_(0) = keep * xc_before_armor + (1.0 - keep) * target_state_(0);
+            target_state_(2) = keep * yc_before_armor + (1.0 - keep) * target_state_(2);
         }
-        target_state_(0) = keep * xc_before_armor + (1.0 - keep) * target_state_(0);
-        target_state_(2) = keep * yc_before_armor + (1.0 - keep) * target_state_(2);
         ekf_.setState(target_state_);
     }
 

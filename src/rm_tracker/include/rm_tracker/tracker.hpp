@@ -236,8 +236,8 @@ private:
     static constexpr double kSwitchThrRad = 15.0 * M_PI / 180.0;
     static constexpr double kSwitchAdvMax = 0.2;
     static constexpr double kLeaveBiasRad = 50.0 * M_PI / 180.0;
-    static constexpr double kAimEnterTrans = 0.25; // 判平移后多久切正前
-    static constexpr double kAimLeaveTrans = 0.40; // 判静止后多久切回跟板
+    static constexpr double kAimEnterTrans = 0.45; // 判平移后多久切正前（偏慢，防原地误切）
+    static constexpr double kAimLeaveTrans = 0.30; // 判静止后多久切回跟板（偏快收回）
 
     // 弹道查找表
     static constexpr int LUT_DIST_BINS = 25;
