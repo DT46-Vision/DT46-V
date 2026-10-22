@@ -10,7 +10,9 @@ cmake --build --preset release --parallel 4
 ctest --preset release
 ```
 
-运行测试时应将 OpenCV 动态库目录加入当前进程 PATH。当前三项 CTest 已通过：原有标定 PnP/光学旋转；C++ 管线的空图处理、重复时间戳拒绝、复位和无效配置更新保留原上下文；1280×1024 RGB 通信、认证和消息长度限制。尚未验证完整图像序列与旧管线的逐帧一致性；实机串口/IMU 和其余工具仍待迁移。
+运行测试时应将 OpenCV 动态库目录加入当前进程 PATH。当前四项 CTest 已通过：原有标定 PnP/光学旋转；C++ 管线的空图处理、重复时间戳拒绝、复位和无效配置更新保留原上下文；1280×1024 RGB 通信、认证和消息长度限制；MCU/IMU 固定字节参考、CRC8/CRC16、所有分包位置、坏帧恢复与姿态转换。硬件协议参考由迁移前代码产生并固定保存，不依赖另一套运行实现。
+
+串口与 IMU 已改为 C++ ROS 适配，共用无 ROS 依赖的 `project/modules/hardware/`；各包和整车组合提供 XML 启动入口。协议和配置边界分别见 [rm_serial](../src/rm_serial/README.md)、[dm_imu](../src/rm_vision_ros2_dm_imu/README.md)。本机缺少 ROS 2 / WSL，尚未编译 ROS 节点，也未连接硬件；离线协议通过不等于实机通信通过。完整图像序列与旧管线逐帧一致性、其余工具仍待验证或迁移。
 
 原生运行入口为 `build/native/bin/dt46_vision.exe --camera-session <仿真会话JSON> --output <结果目录>`。默认后台识别；同目录另运行 `build/native/bin/dt46_vision.exe --show-debug` 打开当前任务的调试窗口，关闭窗口继续识别。`--close-debug` 关闭显示，`--save-debug` 保存当前图像与参数；`--debug-session` 可明确指定控制会话文件。默认会话位置为工程 `.cache/virtual_camera/session.json`，退出时仅清理自己创建的会话。仿真关闭后视觉通过连接关闭正常退出；超时或协议错误独立记录，不能当成正常退出。
 

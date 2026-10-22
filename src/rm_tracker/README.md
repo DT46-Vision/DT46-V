@@ -103,9 +103,9 @@ source install/setup.bash
 ### launch 启动
 
 ```bash
-ros2 launch rm_tracker tracker.launch.py
+ros2 launch rm_tracker tracker.launch.xml
 # 换参数文件
-ros2 launch rm_tracker tracker.launch.py tracker_params_file:=/abs/path/tracker_params_sentry.yaml
+ros2 launch rm_tracker tracker.launch.xml tracker_params_file:=/abs/path/tracker_params_sentry.yaml
 ```
 
 launch argument：
@@ -131,8 +131,8 @@ ros2 param set /rm_tracker display true       # 打开调试图
 
 ### 整机启动 / 单独验证
 
-- 整机：`ros2 launch rm_vision_bringup hik.launch.py`（哨兵）、`mv.launch.py`（步兵）、`hero.launch.py`（英雄）、`sentry.launch.py`。
-- 纯视觉（无串口）：`hik_nav.launch.py` / `mv_nav.launch.py` / `usb_nav.launch.py`；注意这些场景下 `/nav/decision` 不存在，`follow_decision` 必须为 false 才能按 YAML 里的颜色打。
+- 整机：`ros2 launch rm_vision_bringup hik.launch.xml`（哨兵）、`mv.launch.xml`（步兵）、`hero.launch.xml`（英雄）、`sentry.launch.xml`。
+- 纯视觉（无串口）：`hik_nav.launch.xml` / `mv_nav.launch.xml` / `usb_nav.launch.xml`；注意这些场景下 `/nav/decision` 不存在，`follow_decision` 必须为 false 才能按 YAML 里的颜色打。
 - 手动验证链路：`ros2 topic echo /detector/armors_info` → `ros2 topic echo /tracker/gimbal_control`。
 
 ## 依赖与前置条件
@@ -146,7 +146,7 @@ ros2 param set /rm_tracker display true       # 打开调试图
 
 ## 注意事项 / 已知问题
 
-1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期 Python 版本/帧计数版小陀螺），配置里留着会让人误以为可以调。当前小陀螺是**按时间**累计的（`spin_enter_time` / `spin_exit_time`）。
+1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期帧计数版小陀螺），配置里留着会让人误以为可以调。当前小陀螺是**按时间**累计的（`spin_enter_time` / `spin_exit_time`）。
 2. **不声明就改不动**：ROS 2 对未声明的参数只会当作 override 忽略，不会有任何报错或告警，排查参数问题时建议先 `ros2 param list /rm_tracker` 核对。
 3. **颜色过滤只在节点层做**：`Tracker::target_color` 成员在 `tracker.cpp` 里没有被使用，实际过滤发生在 `node.cpp` 的 `armors_cb`。
 4. **渲染依赖 `/camera_info`**：`res_img_cb` 在 `tf_.has_camera_info()` 为 false 时直接返回，表现为"开了 display 也没有图像"。

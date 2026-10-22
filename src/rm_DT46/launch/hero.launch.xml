@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="rm_serial" exec="rm_serial_node" name="rm_serial" output="screen">
+    <param from="$(find-pkg-share rm_serial)/config/rm_serial_params.yaml" />
+  </node>
+  <node pkg="dm_imu" exec="dm_imu_node" name="dm_imu" output="screen">
+    <param from="$(find-pkg-share dm_imu)/config/dm_imu_params.yaml" />
+  </node>
+  <include file="$(find-pkg-share hik_camera)/launch/hik_camera.launch.xml">
+    <arg name="params_file" value="$(find-pkg-share hik_camera)/config/hero_camera_params.yaml" />
+    <arg name="camera_info_url" value="package://hik_camera/config/hero_camera_info.yaml" />
+    <arg name="use_sensor_data_qos" value="false" />
+  </include>
+  <node pkg="rm_detector" exec="rm_detector_node" name="rm_detector" output="screen">
+    <param from="$(find-pkg-share rm_detector)/config/detector_params_hero.yaml" />
+  </node>
+  <node pkg="rm_tracker" exec="rm_tracker_node" name="rm_tracker" output="screen">
+    <param from="$(find-pkg-share rm_tracker)/config/tracker_params_hero.yaml" />
+  </node>
+  <node pkg="rqt_gui" exec="rqt_gui" name="rqt_gui" output="screen" args="--perspective-file '$(env HOME)/DT46_V/Kielas_Vision.perspective'" />
+</launch>

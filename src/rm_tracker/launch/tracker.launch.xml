@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="tracker_params_file" default="$(find-pkg-share rm_tracker)/config/tracker_params.yaml" />
+  <node pkg="rm_tracker" exec="rm_tracker_node" name="rm_tracker" output="screen">
+    <param from="$(var tracker_params_file)" />
+  </node>
+</launch>

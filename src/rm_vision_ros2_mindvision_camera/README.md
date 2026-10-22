@@ -4,7 +4,7 @@
 
 - 上游来源：本包是 [chenjunnn/ros2_mindvision_camera](https://github.com/chenjunnn/ros2_mindvision_camera)（作者 Chen Jun，MIT License）的副本；`package.xml` 的 `<url>`、`<author>`、`<maintainer>` 与 `LICENSE` 仍是上游内容。
 - 目录名与包名不同：目录是 `src/rm_vision_ros2_mindvision_camera/`，ROS 包名（`package.xml` 的 `<name>`）是 `mindvision_camera`，colcon / ros2 命令里必须用包名。
-- 下面内容按本仓库源码核对：`src/mv_camera_node.cpp`、`launch/mv_launch.py`、`config/camera_params.yaml`、`config/camera_info.yaml`、`CMakeLists.txt`、`package.xml`。与上游 README 冲突之处以源码为准。
+- 下面内容按本仓库源码核对：`src/mv_camera_node.cpp`、`launch/mv_launch.xml`、`config/camera_params.yaml`、`config/camera_info.yaml`、`CMakeLists.txt`、`package.xml`。与上游 README 冲突之处以源码为准。
 
 ## 节点
 
@@ -76,10 +76,10 @@ CMakeLists 使用 `ament_cmake_auto`，并且只支持 `x86_64` 与 `aarch64`，
 ### launch 启动
 
 ```bash
-ros2 launch mindvision_camera mv_launch.py
+ros2 launch mindvision_camera mv_launch.xml
 ```
 
-launch 目录下只有 `mv_launch.py` 一个文件，它暴露 3 个 launch argument：
+launch 目录下只有 `mv_launch.xml` 一个文件，它暴露 3 个 launch argument：
 
 | launch argument | 默认值 | 作用 |
 | --- | --- | --- |
@@ -90,14 +90,14 @@ launch 目录下只有 `mv_launch.py` 一个文件，它暴露 3 个 launch argu
 示例：
 
 ```bash
-ros2 launch mindvision_camera mv_launch.py use_sensor_data_qos:=true
-ros2 launch mindvision_camera mv_launch.py params_file:=/abs/path/my_params.yaml camera_info_url:=file:///abs/path/my_camera_info.yaml
+ros2 launch mindvision_camera mv_launch.xml use_sensor_data_qos:=true
+ros2 launch mindvision_camera mv_launch.xml params_file:=/abs/path/my_params.yaml camera_info_url:=file:///abs/path/my_camera_info.yaml
 ```
 
 ### 标定
 
 - 内参文件是 `config/camera_info.yaml`：`image_width: 1280`、`image_height: 1024`、`camera_name: mv_camera`、`distortion_model: plumb_bob`，以及 `camera_matrix` / `distortion_coefficients` / `rectification_matrix` / `projection_matrix`。节点启动时按 `camera_info_url` 读取它，之后每帧随图像发布到 `/camera_info`。
-- `package.xml` 把 `camera_calibration` 和 `python3-opencv` 列为 `exec_depend`，即标定工具链需要额外安装（`ros-humble-camera-calibration`）。
+- `package.xml` 声明 `ros2launch` 启动依赖；相机标定工具与驱动运行分开。
 - `camera_info_manager` 会创建一个 `set_camera_info` 服务，名字相对于节点命名空间，因此节点在根命名空间时是 `/set_camera_info`（实测：`/mv_camera` 节点下的服务名就是 `/set_camera_info`，既不带节点名前缀也不受 `camera_name` 参数影响）。而 ROS 2 的 `cameracalibrator` 默认查找 `camera/set_camera_info`（以及 `left_camera/`、`right_camera/`），启动时会等待该服务，找不到就打印 `Service not found`。要用标定器写回内参需要做 remap，例如 `--ros-args -r camera/set_camera_info:=/set_camera_info`，或用 `--no-service-check` 跳过检查、标定完把结果手写回 `config/camera_info.yaml`。
 - 标定结果文件长什么样可以直接对照现成的 `config/camera_info.yaml` 写入；节点不校验 `image_width` / `image_height` 是否等于相机实际输出（相机分辨率没有参数可设），分辨率不一致时下游拿到的内参就是错的。
 - 上游 README 提到标定结果会保存到 `/tmp/calibrationdata.tar.gz`，并给出教程链接 <https://navigation.ros.org/tutorials/docs/camera_calibration.html> 与 <http://wiki.ros.org/camera_calibration>（这是上游/ROS wiki 的说法，本仓库未核实）。
@@ -126,7 +126,7 @@ ros2 run mindvision_camera mindvision_camera_node --ros-args \
 
 - ROS 2 Humble（上游 README 只声明测试过 Ubuntu 22.04 + Humble）。
 - 构建依赖（`package.xml` 的 `<depend>`）：`rclcpp`、`rclcpp_components`、`sensor_msgs`、`image_transport`、`image_transport_plugins`、`camera_info_manager`；构建工具 `ament_cmake`（CMakeLists 实际用 `ament_cmake_auto`）。
-- 运行依赖：`camera_calibration`、`python3-opencv`（均为 `exec_depend`）。
+- 运行依赖见 `package.xml`；启动入口使用 `ros2launch`。
 - 测试：`BUILD_TESTING` 打开时会启用 `ament_lint_auto`（排除了 copyright、cpplint、uncrustify，另外对 `mvsdk/include` 三个头文件做了 cpplint EXCLUDE）。
 
 ## 注意事项 / 已知问题

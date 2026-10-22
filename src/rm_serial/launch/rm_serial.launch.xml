@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="rm_serial" exec="rm_serial_node" name="rm_serial" output="screen">
+    <param from="$(find-pkg-share rm_serial)/config/rm_serial_params.yaml" />
+  </node>
+</launch>

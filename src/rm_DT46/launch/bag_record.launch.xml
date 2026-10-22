@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="bag_file" default="$(env HOME)/ros2_img_msg_to_mp4/autoaim_data_bag" />
+  <arg name="detector_params_file" default="$(find-pkg-share rm_detector)/config/detector_params.yaml" />
+  <arg name="tracker_params_file" default="$(find-pkg-share rm_tracker)/config/tracker_params.yaml" />
+  <executable cmd="ros2 bag play '$(var bag_file)' --loop" output="screen" />
+  <node pkg="rm_detector" exec="rm_detector_node" name="rm_detector" output="screen">
+    <param from="$(var detector_params_file)" />
+  </node>
+  <node pkg="rqt_gui" exec="rqt_gui" name="rqt_gui" output="screen" args="--perspective-file 'Kielas_Vision.perspective'" />
+</launch>

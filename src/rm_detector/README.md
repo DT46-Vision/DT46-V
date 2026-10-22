@@ -108,11 +108,11 @@ source install/setup.bash
 ### launch 启动
 
 ```bash
-ros2 launch rm_detector detector.launch.py
+ros2 launch rm_detector detector.launch.xml
 ```
 
 - 该 launch 只启动 `rm_detector_node` 一个节点，参数文件固定为 `config/detector_params.yaml`，**没有暴露任何 launch argument**。
-- 要换参数文件（英雄/步兵/哨兵）请直接用整机 launch：`ros2 launch rm_vision_bringup hero.launch.py` 等，见 `rm_vision_bringup` 的 README。
+- 要换参数文件（英雄/步兵/哨兵）请直接用整机 launch：`ros2 launch rm_vision_bringup hero.launch.xml` 等，见 `rm_vision_bringup` 的 README。
 
 ### ros2 run
 
@@ -139,12 +139,12 @@ ros2 param set /rm_detector cls_model_file RM_Armor_CNN_sim.onnx  # 热重载模
 需要同时有图像和内参才有输出：
 
 ```bash
-ros2 launch usb_camera usb_camera.launch.py     # 或 hik_camera / mindvision_camera
-ros2 launch rm_detector detector.launch.py
+ros2 launch usb_camera usb_camera.launch.xml     # 或 hik_camera / mindvision_camera
+ros2 launch rm_detector detector.launch.xml
 ros2 topic echo /detector/armors_info
 ```
 
-整机场景下由 `rm_vision_bringup` 的 `*_nav.launch.py`（只跑视觉）或 `hik.launch.py` / `mv.launch.py`（含串口、IMU）负责组合。
+整机场景下由 `rm_vision_bringup` 的 `*_nav.launch.xml`（只跑视觉）或 `hik.launch.xml` / `mv.launch.xml`（含串口、IMU）负责组合。
 
 ## 依赖与前置条件
 

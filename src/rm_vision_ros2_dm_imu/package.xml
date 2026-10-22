@@ -2,21 +2,20 @@
 <package format="3">
   <name>dm_imu</name>
   <version>0.1.0</version>
-  <description>DM IMU driver (ROS 2 Humble, Python + pyserial)</description>
+  <description>Native DM IMU driver for ROS 2 Humble</description>
 
   <maintainer email="c1470759@outlook.com">Kielas</maintainer>
   <license>MIT</license>
 
-  <buildtool_depend>ament_python</buildtool_depend>
-
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-
-  <!-- 你可以选：apt 或 pip。若用 apt，就保留这行；若打算 pip 安装 pyserial，就把这行删掉改到 setup.py -->
-  <exec_depend>python3-serial</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>dt46_hardware</depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
