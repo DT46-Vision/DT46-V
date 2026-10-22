@@ -39,12 +39,12 @@
 
 1. **颜色过滤 + 坐标变换**（`node.cpp`）：`target_color == 0` 只保留 `armor_id >= 6`（红方），`== 1` 只保留 `armor_id < 6`（蓝方）。相机系坐标 `dx/dy/dz`（mm → m）经 `RmTF::cam_to_world()` 结合 IMU RPY 转到世界系；观测 yaw 取反后与云台 yaw 相加得到世界系绝对 yaw。
 2. **时间步长**：`dt` 由 `ArmorsMsg.header.stamp` 差分得到；`dt <= 1ms` 或 `> 30ms` 时强制为 10ms（防抖动）。
-3. **目标选择与跳变**（`tracker.cpp`）：`max_match_distance` 内做位置匹配、`max_match_yaw_diff` 内做角度匹配；超出角度阈值视为"装甲板跳变"，在 `jump_cooldown_max` 冷却期内只平滑重置协方差，不做错误关联。
+3. **目标选择与跳变**（`tracker.cpp`）：先用位置消歧观测 yaw，同一消歧结果用于角度匹配、换板和 EKF 更新。当前位置、角差分别通过 `max_match_distance` 和 `max_match_yaw_diff` 时直接更新；否则仅在观测更接近其他预测板、且换板冷却结束时处理跳变。
 4. **EKF**：9 维状态 `[xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r]`，观测为 4 维 `[x, y, z, yaw]`；Q/R 由 `ekf_QR_*` 参数在线计算，半径 `r` 用 `radius_r_min/max` 限幅。
 5. **状态机**：`LOST → DETECTING`（连续 `tracking_thres` 帧）`→ TRACKING → TEMP_LOST → LOST`（连续 `lost_thres` 帧）。状态切换会打印到终端。
-6. **反小陀螺**：|yaw 角速度| > `min_spinning_vel` 持续 `spin_enter_time` 秒进入 SPIN，低于门限持续 `spin_exit_time` 秒退出；SPIN 状态下按多装甲板拓扑推算下一块板的位置。
+6. **反小陀螺**：同向换板连续两次进入 SPIN；没有继续换板时，结合板运动速度计时退出。每次平移判断先淘汰距当前时刻超过 0.6 s 的双板车心样本；剩余样本跨度不足 0.4 s 时按原地处理，切换仍有滞回。SPIN 使用到达时刻的四板预测，在车心正前等板；判为平移时才外推车心，否则忽略残余线速度。
 7. **弹道解算**：`build_ballistic_lut()` 用 `bullet_speed` 与 `k_v2`（平方空气阻力 `a = -k·v²`）预建 25×15 查找表（距离 0.1–12 m 步长 0.5，高度 −3.5–3.5 m 步长 0.5），运行时按目标距离/高度查表得到 pitch 补偿；同时补偿 `system_delay`（弹丸飞行时间 + 系统延迟）与相机→枪口外参 `cam_to_gun_*`。
-8. **开火判定**：目标距离 ≤ `shootable_dist`，且 yaw/pitch 误差分别小于 `yaw_tolerance_deg` / `pitch_tolerance_deg`。
+8. **开火判定**：目标距离 ≤ `shootable_dist`，yaw 误差位于装甲左右边缘角窗内，pitch 误差通过动态门限。SPIN 额外检查所选装甲在弹丸到达时刻是否位于正对窗口；交替半径和板高随选板同步，车心不可用时关闭发弹许可。`controller_delay` 只影响瞄准点外推，不改变选板的到达时刻。
 
 ## 参数
 
