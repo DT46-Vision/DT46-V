@@ -696,6 +696,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
                                                             target_state_(0), target_state_(2));
                     yaw_diff = std::abs(shortest_angular_distance(target_state_(6), best_match_yaw));
                     best_match = armor;
+                    best_match->yaw = best_match_yaw;
                 }
             }
         }
