@@ -135,6 +135,7 @@ public:
     double controller_delay_ = 0.02;
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
+    double gravity = 9.81;
     double min_spinning_vel_ = 5.0;
     double spin_enter_time_ = 0.3;
     double spin_exit_time_ = 0.15;

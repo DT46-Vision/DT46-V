@@ -945,7 +945,7 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
 // 5.5 弹道查找表预计算与查询
 // =====================================================================
 void Tracker::build_ballistic_lut() {
-    const double g = 9.81;
+    const double g = gravity;
     const double v_init = bullet_speed > 0 ? bullet_speed : 28.0;
     const double sim_dt = 0.001; // 积分步长；比 5ms 细，保证飞行时间有 ms 级精度
 
@@ -1036,21 +1036,7 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
 
     if (dist_h < 0.2 || std::isnan(dist_h)) return {0.0, 0.0, false};
 
-    if (dist_h < 1.5) {
-        double pitch_rad = std::atan2(z, dist_h);
-        double z_aim = dist_h * std::tan(pitch_rad);
-        Eigen::Vector3d aim_point_world(x, y, z_aim);
-        Eigen::Vector3d aim_point_cam = tf.world_to_cam(aim_point_world, imu_rpy);
-
-        double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
-        double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
-
-        delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
-        delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
-
-        return {delta_yaw, delta_pitch, true};
-    }
-
+    // Near targets also need gravity/drag compensation; valid ranges start at 0.2 m.
     double pitch_rad = dist_h <= LUT_DIST_MAX ? lut_lookup(dist_h, z) : std::atan2(z, dist_h);
 
     double z_aim = dist_h * std::tan(pitch_rad);

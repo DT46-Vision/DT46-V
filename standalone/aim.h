@@ -30,6 +30,9 @@ struct AimResult {
 
 DT46_API const char* dt46_error();
 DT46_API int dt46_result_size();
+DT46_API const char* dt46_snapshot(void* context);
+DT46_API int dt46_debug_image(void* context, int kind, uint8_t* pixels, int capacity,
+                              int* width, int* height, int* channels);
 DT46_API void* dt46_create(const char* model, const char* parameters);
 DT46_API void dt46_destroy(void* context);
 DT46_API int dt46_process(void* context, const uint8_t* rgb, int width, int height,
