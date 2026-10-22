@@ -1,6 +1,8 @@
-# 无 ROS 自瞄核心
+# DT46-V 非 ROS 工程
 
 本目录直接编译原 `rm_detector` 的灯条检测、ONNX 分类、PnP，以及 `rm_tracker` 的 EKF、目标选择和弹道 LUT。无需 ROS、WSL、相机 SDK、串口或 `colcon`。原 ROS 节点保留为可选通信适配层；本次未在 ROS 环境重新编译。
+
+DT46-V 是独立的视觉/自瞄工程，`standalone` 是它的非 ROS 运行方式，职责包括视觉算法、参数、日志和原有调试界面。sim_vision 是提供虚拟相机的仿真工程，不是自瞄的运行主体。跨工程职责、窗口关系及验收要求统一见[项目规范](../../README.md#项目规范工程边界与使用流程)。
 
 ## 构建
 
@@ -51,6 +53,39 @@ python DT46_V/standalone/build.py --work-dir outputs/native_aim --jobs 4
 
 原相机 SDK、串口、IMU 驱动和 ROS topic/rqt 进程不进入原生依赖。它们在仿真中的输入/输出替代关系、模拟曝光及实际验证范围见[工作区说明](../../README.md#dt46-v-与双相机)；原 ROS launch、bag 回放和实机通信仍需各自环境，不作为本地运行前提。
 
-## 仿真接入
+## 虚拟相机与独立调试窗口
 
-仿真入口的运行方式、进程分工、车辆控制边界与验证结果统一由[工作区 README](../../README.md#dt46-v-与双相机)维护。
+[virtual_camera.py](virtual_camera.py) 是本工程的非 ROS 运行入口。从 **DT46_V 工程目录**运行：
+
+```powershell
+python -m standalone.virtual_camera --port <虚拟相机端口> --key <本机会话密钥> --work-dir <原生构建目录>
+```
+
+仿真驾驶入口默认启动这个独立进程，并提供该会话的相机端口和密钥；手动接入时使用同一组参数。`--work-dir` 缺省为本工程 `.cache/native`；当前仿真会话显式使用已有 `outputs/native_aim` 构建。可使用 `--profile infantry|sentry|hero` 选择原配置。本模块不导入仿真项目，不创建或控制车辆。
+
+此 Python 入口使用 NumPy、PyYAML、OpenCV Python、Pillow 和 Tk；不加载 ROS 或相机硬件 SDK。本机所需依赖已具备。
+
+识别默认后台运行，**调试窗口默认关闭**。想看正在运行的自瞄时，在 DT46_V 工程目录执行：
+
+```powershell
+python -m standalone.debug_window
+```
+
+[debug_window.py](debug_window.py) 通过本工程 `.cache/virtual_camera/session.json` 向已有自瞄任务请求显示；不会新建检测器或跟踪器。可使用 `--session` 指定其他运行实例的会话文件。关闭调试只销毁窗口；重新打开读取同一个 `AimPipeline` 的当前输出，保留跟踪状态。参数 Apply 才会按原接口明确重建上下文。
+
+[vision_debug.py](vision_debug.py) 维护 DT46-V 原有四格图像、预瞄、日志和参数显示；不含驾驶、暂停或场景操作。相机曝光等参数先通过虚拟相机接口验证，再请求仿真应用。原始 RGB、K/D、PnP 和 tracker 继续沿用本工程的正常视觉链路；不会为了显示另跑识别或从仿真读取目标真值。
+
+### 本机虚拟相机接口 v1
+
+当前使用 Python `multiprocessing.connection` 的本机回环连接与逐会话密钥，仅连接双方本机 Python 进程。仿真是相机数据提供者，DT46-V 是客户端。相机接口不携带车辆执行指令。
+
+| 请求 | 数据与作用 |
+|---|---|
+| `describe` | 读取版本 `protocol=1`、模拟相机参数及初始弹速/重力/阻力输入 |
+| `next(after, status)` | 获取序号大于 `after` 的最新帧，暂无新帧返回空；`status` 仅回报本进程识别/显示状态 |
+| `validate_camera(parameters)` | 验证模拟相机参数，不改变运行设置 |
+| `configure_camera(parameters)` | 请求应用有效的相机设置，返回生效参数 |
+
+每帧含 `image`（拥有独立内存的 uint8 RGB）、采样仿真秒 `time`、`K`（3×3）、`D`（五项）、`optical`（相机到世界的4×4变换）、相机系 `muzzle_offset`、敌方 `color`、有效测速 `speed`、`generation`、采样相机设置及帧/物理步编号。输入只使用图像与自身反馈；`generation` 变化时清除跟踪历史，暂停时不重复提交相同时间戳。处理核心的单位与坐标约定见上文输入输出表。
+
+逐帧结果在 `--output` 指定目录流式写入 `frames.jsonl`，另存首次原图及结束汇总。默认输出为本工程 `.cache/virtual_camera`；仿真会话可明确指定其输出位置。工程之间的职责和验收要求见[项目规范](../../README.md#项目规范工程边界与使用流程)，本次联合运行记录见[仿真接入说明](../../README.md#dt46-v-与双相机)。
