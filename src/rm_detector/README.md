@@ -1,5 +1,7 @@
 # rm_detector
 
+算法核可由 [standalone](../../standalone/README.md) 无 ROS 构建；`PNP` 接收普通 `CameraCalibration`，ROS 节点负责把 `CameraInfo` 转换为该结构，话题接口不变。
+
 装甲板检测与三维解算节点（C++ / ROS 2 Humble）。输入相机图像与内参，输出每帧装甲板在**相机系**下的坐标 `(dx, dy, dz)`（单位 mm）与相对偏航角 `yaw`（单位度）。
 
 灯条提取 → 双灯条配对 → 透视校正 + Otsu 二值化 → CNN 数字分类 → 颜色/类别映射出 `armor_id` → IPPE PnP 解算位姿。

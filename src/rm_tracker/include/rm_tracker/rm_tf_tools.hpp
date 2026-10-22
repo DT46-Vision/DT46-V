@@ -18,9 +18,13 @@ public:
     RmTF();
 
     /**
-     * @brief 设置相机内参，并强制构建“理想光心” (图像几何中心)
+     * @brief 设置相机内参；默认使用图像几何中心，false 保留标定光心
      */
-    void set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coeffs, int width = 640, int height = 480);
+    void set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coeffs, int width = 640, int height = 480,
+                         bool use_geometric_center = true);
+
+    // Virtual cameras provide their optical orientation directly, without an IMU mounting correction.
+    void set_optical_rotation(const Eigen::Matrix3d& rotation) { optical_rotation_ = rotation; }
 
     /**
      * @brief 叠加并转换 IMU 欧拉角姿态，包含初始偏航角的相对归一化
@@ -61,6 +65,7 @@ private:
     double cy_;
 
     std::optional<double> initial_yaw_;
+    std::optional<Eigen::Matrix3d> optical_rotation_;
 
     // 内部高频数学工具：欧拉角转旋转矩阵
     Eigen::Matrix3d euler_to_matrix(const Eigen::Vector3d& rpy_deg, const std::string& order) const;

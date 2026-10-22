@@ -7,7 +7,8 @@ RmTF::RmTF() : has_camera_info_(false), cx_(0.0), cy_(0.0), initial_yaw_(std::nu
     dist_coeffs_ = cv::Mat::zeros(1, 5, CV_64F);
 }
 
-void RmTF::set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coeffs, int width, int height) {
+void RmTF::set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coeffs, int width, int height,
+                         bool use_geometric_center) {
     // 深拷贝确保内存安全，并强制转换为双精度浮点数供后续计算使用
     camera_matrix.convertTo(camera_matrix_, CV_64F);
     dist_coeffs.convertTo(dist_coeffs_, CV_64F);
@@ -15,8 +16,8 @@ void RmTF::set_camera_info(const cv::Mat& camera_matrix, const cv::Mat& dist_coe
     // ==========================================
     // 核心修改：光心矫正 (Virtual Ideal Camera)
     // ==========================================
-    cx_ = width / 2.0;
-    cy_ = height / 2.0;
+    cx_ = use_geometric_center ? width / 2.0 : camera_matrix_.at<double>(0, 2);
+    cy_ = use_geometric_center ? height / 2.0 : camera_matrix_.at<double>(1, 2);
 
     camera_matrix_.at<double>(0, 2) = cx_;
     camera_matrix_.at<double>(1, 2) = cy_;
@@ -94,12 +95,14 @@ Eigen::Vector3d RmTF::rotate_pos_axis(const Eigen::Vector3d& raw_xyz, const Eige
 
 //  修复 2: 补全从 Python 翻译过来的坐标系互转函数
 Eigen::Vector3d RmTF::cam_to_world(const Eigen::Vector3d& raw_xyz, const Eigen::Vector3d& imu_rpy) {
+    if (optical_rotation_) return *optical_rotation_ * raw_xyz;
     Eigen::Vector3d cam_fix(-90.0, 0.0, -90.0);
     Eigen::Vector3d normal_axis_xyz = rotate_pos_axis(raw_xyz, cam_fix, "xyz");
     return rotate_pos_axis(normal_axis_xyz, imu_rpy, "xyz");
 }
 
 Eigen::Vector3d RmTF::world_to_cam(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy) {
+    if (optical_rotation_) return optical_rotation_->transpose() * world_xyz;
     Eigen::Vector3d inv_imu_rpy(-imu_rpy(2), -imu_rpy(1), -imu_rpy(0));
     Eigen::Vector3d normal_axis_xyz = rotate_pos_axis(world_xyz, inv_imu_rpy, "zyx");
     Eigen::Vector3d cam_inv_fix(90.0, 0.0, 90.0);

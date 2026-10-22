@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
 #include <stdexcept>
 #include <cmath>
 #include <sstream>

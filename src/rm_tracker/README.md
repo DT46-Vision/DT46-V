@@ -6,6 +6,8 @@
 
 代码分为两层：`tracker_core`（`tracker.cpp` / `ekf.cpp` / `rm_tf_tools.cpp`，纯算法）与 `rm_tracker_node`（`node.cpp`，ROS 通信、线程、渲染）。
 
+无 ROS 接入见 [standalone](../../standalone/README.md)。`RmTF` 可接收直接光学旋转，并通过 `set_camera_info(..., false)` 保留标定主点；原 ROS 调用保持原默认行为。
+
 ## 节点与可执行文件
 
 | 节点名（ROS 图中的名字） | 可执行文件 | 作用 |
@@ -38,7 +40,7 @@
 ## 数据流与算法
 
 1. **颜色过滤 + 坐标变换**（`node.cpp`）：`target_color == 0` 只保留 `armor_id >= 6`（红方），`== 1` 只保留 `armor_id < 6`（蓝方）。相机系坐标 `dx/dy/dz`（mm → m）经 `RmTF::cam_to_world()` 结合 IMU RPY 转到世界系；观测 yaw 取反后与云台 yaw 相加得到世界系绝对 yaw。
-2. **时间步长**：`dt` 由 `ArmorsMsg.header.stamp` 差分得到；`dt <= 1ms` 或 `> 30ms` 时强制为 10ms（防抖动）。
+2. **时间步长**：`dt` 由 `ArmorsMsg.header.stamp` 差分得到；`dt <= 1ms` 时使用 10ms，`dt > 100ms` 时截断到 100ms，其余使用实际间隔。
 3. **目标选择与跳变**（`tracker.cpp`）：`max_match_distance` 内做位置匹配、`max_match_yaw_diff` 内做角度匹配；超出角度阈值视为"装甲板跳变"，在 `jump_cooldown_max` 冷却期内只平滑重置协方差，不做错误关联。
 4. **EKF**：9 维状态 `[xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r]`，观测为 4 维 `[x, y, z, yaw]`；Q/R 由 `ekf_QR_*` 参数在线计算，半径 `r` 用 `radius_r_min/max` 限幅。
 5. **状态机**：`LOST → DETECTING`（连续 `tracking_thres` 帧）`→ TRACKING → TEMP_LOST → LOST`（连续 `lost_thres` 帧）。状态切换会打印到终端。

@@ -1,0 +1,194 @@
+#include "aim.h"
+#include "rm_detector/detector.hpp"
+#include "rm_detector/pnp.hpp"
+#include "rm_tracker/tracker.hpp"
+#include <algorithm>
+#include <memory>
+#include <stdexcept>
+
+namespace {
+thread_local std::string last_error;
+
+double parameter(const cv::FileNode& node, const char* key, double fallback) {
+    return node[key].empty() ? fallback : static_cast<double>(node[key]);
+}
+
+void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config) {
+#define PARAM(member, name) tracker.member = parameter(config, name, tracker.member)
+    PARAM(max_match_distance, "max_match_distance");
+    tracker.max_match_yaw_diff = parameter(config, "max_match_yaw_diff", 57.0) * dt46_vision::DEG2RAD;
+    PARAM(jump_cooldown_max, "jump_cooldown_max");
+    PARAM(tracking_thres, "tracking_thres");
+    PARAM(lost_thres, "lost_thres");
+    PARAM(dist_tol, "dist_tol");
+    PARAM(ekf_QR_params.q_xyz, "ekf_QR_q_xyz");
+    PARAM(ekf_QR_params.q_yaw, "ekf_QR_q_yaw");
+    PARAM(ekf_QR_params.q_r, "ekf_QR_q_r");
+    PARAM(ekf_QR_params.r_xyz_factor, "ekf_QR_r_xyz_factor");
+    PARAM(ekf_QR_params.r_yaw, "ekf_QR_r_yaw");
+    PARAM(ekf_QR_params.stable_dist, "ekf_QR_stable_dist");
+    PARAM(radius_params.r_min, "radius_r_min");
+    PARAM(radius_params.r_max, "radius_r_max");
+    PARAM(system_delay, "system_delay");
+    PARAM(controller_delay_, "controller_delay");
+    PARAM(bullet_speed, "bullet_speed");
+    PARAM(k_v2, "k_v2");
+    PARAM(shootable_dist, "shootable_dist");
+    PARAM(yaw_tolerance_deg, "yaw_tolerance_deg");
+    PARAM(pitch_tolerance_deg, "pitch_tolerance_deg");
+    PARAM(min_spinning_vel_, "min_spinning_vel");
+    PARAM(spin_enter_time_, "spin_enter_time");
+    PARAM(spin_exit_time_, "spin_exit_time");
+#undef PARAM
+    tracker.cam_to_gun_rpy << parameter(config, "cam_to_gun_rpy_r", 0.0),
+                              parameter(config, "cam_to_gun_rpy_p", 0.0),
+                              parameter(config, "cam_to_gun_rpy_y", 0.0);
+    tracker.build_ballistic_lut();
+}
+
+struct Pipeline {
+    std::unique_ptr<DT46_VISION::ArmorDetector> detector;
+    DT46_VISION::PNP pnp;
+    DT46_VISION::CameraCalibration calibration{};
+    dt46_vision::Tracker tracker;
+    dt46_vision::RmTF transform;
+    double previous_time = -1.0;
+    int previous_color = -1;
+    double smooth_yaw = 0.0, smooth_pitch = 0.0;
+    bool smooth_ready = false;
+    cv::Mat bgr;
+
+    Pipeline(const char* model, const char* parameters) {
+        cv::setNumThreads(1);
+        cv::FileStorage config(parameters, cv::FileStorage::READ | cv::FileStorage::MEMORY |
+                                           cv::FileStorage::FORMAT_JSON);
+        const auto source = config["detector"];
+        DT46_VISION::Params p{};
+#define PARAM(member, fallback) p.member = parameter(source, #member, fallback)
+        PARAM(light_area_min, 5); PARAM(light_h_w_ratio, 2.0);
+        PARAM(light_angle_min, -35); PARAM(light_angle_max, 35);
+        PARAM(light_red_ratio, 1.0); PARAM(light_blue_ratio, 1.0);
+        PARAM(height_rate_tol, 1.8);
+        PARAM(height_multiplier_min, 1.0); PARAM(height_multiplier_max, 3.0);
+        PARAM(row_stretch, 2.22); PARAM(col_stretch, 0.7);
+        PARAM(roi_crop, 0); PARAM(roi_scale, 0.4);
+#undef PARAM
+        detector = std::make_unique<DT46_VISION::ArmorDetector>(
+            2, false, parameter(source, "binary_val", 120), p);
+        detector->set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(model));
+        configure_tracker(tracker, config["tracker"]);
+    }
+};
+
+void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
+             const Eigen::Matrix3d& rotation, std::vector<dt46_vision::Armor>& armors) {
+    pipeline.pnp.beginFrame();
+    const auto detected = pipeline.detector->detect_armors(frame);
+    if (detected.size() > 64) throw std::runtime_error("More than 64 armor candidates");
+    result.light_count = static_cast<int>(pipeline.detector->lights.size());
+    for (const auto& armor : detected) {
+        auto [x, y, z, yaw, nx, ny, nz] = pipeline.pnp.processArmorCorners(
+            &pipeline.calibration, false, frame, armor, armor.armor_id);
+        if (!(z > 0.0) || !std::isfinite(x+y+z+yaw)) continue;
+        auto& output = result.observations[result.count++];
+        output.id = armor.armor_id;
+        output.confidence = armor.res.confidence;
+        output.position_camera_mm[0] = x;
+        output.position_camera_mm[1] = y;
+        output.position_camera_mm[2] = z;
+        output.yaw_deg = yaw;
+        const cv::Point2f corners[] = {armor.light1_up, armor.light1_down,
+                                      armor.light2_up, armor.light2_down};
+        for (int i=0; i<4; ++i) {
+            output.corners[2*i] = corners[i].x;
+            output.corners[2*i+1] = corners[i].y;
+        }
+        const Eigen::Vector3d world = rotation * Eigen::Vector3d(x, y, z) / 1000.0;
+        const double heading = std::atan2(rotation(1, 2), rotation(0, 2));
+        const double world_yaw = dt46_vision::normalize_angle(heading - yaw*dt46_vision::DEG2RAD);
+        armors.emplace_back(armor.armor_id, world.x(), world.y(), world.z(), world_yaw);
+    }
+}
+} // namespace
+
+const char* dt46_error() { return last_error.c_str(); }
+int dt46_result_size() { return sizeof(AimResult); }
+
+void* dt46_create(const char* model, const char* parameters) {
+    try {
+        last_error.clear();
+        return new Pipeline(model, parameters);
+    } catch (const std::exception& error) {
+        last_error = error.what();
+        return nullptr;
+    }
+}
+
+void dt46_destroy(void* context) { delete static_cast<Pipeline*>(context); }
+
+int dt46_process(void* context, const uint8_t* rgb, int width, int height,
+                 double timestamp, const double* k, const double* d,
+                 const double* optical_rotation, const double* muzzle_offset,
+                 int target_color, double measured_speed, AimResult* result) {
+    try {
+        last_error.clear();
+        auto& pipeline = *static_cast<Pipeline*>(context);
+        if (!(timestamp > pipeline.previous_time)) throw std::invalid_argument("Frame timestamps must increase");
+        *result = AimResult{};
+        if (pipeline.previous_color != target_color) {
+            pipeline.tracker.tracker_state = dt46_vision::TrackerState::LOST;
+            pipeline.previous_color = target_color;
+            pipeline.smooth_ready = false;
+        }
+        pipeline.tracker.target_color = target_color;
+        pipeline.detector->update_detect_color(target_color);
+        if (measured_speed > 10.0 && std::abs(measured_speed-pipeline.tracker.bullet_speed) > 1e-6) {
+            pipeline.tracker.bullet_speed = measured_speed;
+            pipeline.tracker.build_ballistic_lut();
+        }
+        DT46_VISION::CameraCalibration calibration;
+        std::copy(k, k+9, calibration.k.begin());
+        calibration.d.assign(d, d+5);
+        if (calibration.k != pipeline.calibration.k || calibration.d != pipeline.calibration.d) {
+            pipeline.pnp = DT46_VISION::PNP{};
+            pipeline.calibration = calibration;
+            pipeline.transform.set_camera_info(cv::Mat(3, 3, CV_64F, const_cast<double*>(k)),
+                cv::Mat(1, 5, CV_64F, const_cast<double*>(d)), width, height, false);
+        }
+        Eigen::Matrix3d rotation;
+        for (int row=0; row<3; ++row)
+            for (int col=0; col<3; ++col) rotation(row, col) = optical_rotation[3*row+col];
+        pipeline.transform.set_optical_rotation(rotation);
+        pipeline.tracker.cam_to_gun_pos = Eigen::Vector3d(muzzle_offset[0], muzzle_offset[1], muzzle_offset[2]);
+        cv::Mat source(height, width, CV_8UC3, const_cast<uint8_t*>(rgb));
+        cv::cvtColor(source, pipeline.bgr, cv::COLOR_RGB2BGR);
+        std::vector<dt46_vision::Armor> armors;
+        observe(pipeline, *result, pipeline.bgr, rotation, armors);
+        double dt = pipeline.previous_time < 0.0 ? 0.01 : timestamp-pipeline.previous_time;
+        pipeline.previous_time = timestamp;
+        if (dt <= 0.001) dt = 0.01;
+        else dt = std::min(dt, 0.1);
+        const auto tracked = pipeline.tracker.track(pipeline.transform, armors, Eigen::Vector3d::Zero(), dt);
+        const auto& command = std::get<0>(tracked);
+        const double raw_yaw = command[0], raw_pitch = command[1];
+        if (!pipeline.smooth_ready) {
+            pipeline.smooth_yaw = raw_yaw; pipeline.smooth_pitch = raw_pitch;
+        } else {
+            pipeline.smooth_yaw = 0.25*raw_yaw + 0.75*pipeline.smooth_yaw;
+            pipeline.smooth_pitch = 0.25*raw_pitch + 0.75*pipeline.smooth_pitch;
+        }
+        result->can_fire = command[2] != 0.0;
+        pipeline.smooth_ready = result->can_fire;
+        result->yaw_error_deg = pipeline.smooth_yaw;
+        result->pitch_error_deg = pipeline.smooth_pitch;
+        result->state = static_cast<int>(pipeline.tracker.tracker_state);
+        result->tracked_id = result->state ? pipeline.tracker.tracked_id : -1;
+        const auto position = pipeline.tracker.plate_position();
+        const auto velocity = pipeline.tracker.plate_velocity();
+        for (int i=0; i<3; ++i) { result->position[i]=position[i]; result->velocity[i]=velocity[i]; }
+        return 0;
+    } catch (const std::exception& error) {
+        last_error = error.what();
+        return -1;
+    }
+}

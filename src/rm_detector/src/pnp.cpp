@@ -7,7 +7,7 @@ namespace DT46_VISION {
         curr_plates_.clear();
     }
 
-    void PNP::parseCameraInfo(const sensor_msgs::msg::CameraInfo::SharedPtr& msg) {
+    void PNP::parseCameraInfo(const CameraCalibration* msg) {
         if (msg == nullptr || has_cached_caminfo_) return;
 
         cached_K_ = (cv::Mat_<double>(3, 3) <<
@@ -15,8 +15,7 @@ namespace DT46_VISION {
             msg->k[3], msg->k[4], msg->k[5],
             msg->k[6], msg->k[7], msg->k[8]);
 
-        cached_D_ = (cv::Mat_<double>(1, 5) <<
-            msg->d[0], msg->d[1], msg->d[2], msg->d[3], msg->d[4]);
+        cached_D_ = cv::Mat(msg->d).reshape(1, 1).clone();
 
         has_cached_caminfo_ = true;
     }
@@ -38,7 +37,7 @@ namespace DT46_VISION {
 
     // 处理装甲板灯点坐标并返回 (dx, dy, dz)
     std::tuple<double, double, double, double, double, double, double> PNP::processArmorCorners(
-        const sensor_msgs::msg::CameraInfo::SharedPtr& cam_info,
+        const CameraCalibration* cam_info,
         bool use_geometric_center, // 是否用图像几何中心替代标定光心
         const cv::Mat& frame,
         const Armor& armor,
@@ -53,13 +52,17 @@ namespace DT46_VISION {
         };
 
         if (imagePoints.size() != 4) {
-            RCLCPP_ERROR(logger_, "装甲板灯点数量无效: %zu，预期为4", imagePoints.size());
+            std::cerr << "Invalid armor corner count: " << imagePoints.size() << '\n';
             return {0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0};
         }
 
         // 获取相机参数
         cv::Mat cameraMatrix, distCoeffs;
         parseCameraInfo(cam_info);
+
+        if (!has_cached_caminfo_) {
+            return {0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0};
+        }
 
         if (has_cached_caminfo_) {
             cameraMatrix = cached_K_;
@@ -86,7 +89,7 @@ namespace DT46_VISION {
                                        false, cv::SOLVEPNP_IPPE);
 
         if (nsol <= 0 || rvecs.empty() || tvecs.empty()) {
-            RCLCPP_WARN(logger_, "solvePnPGeneric失败，无法估计位姿");
+            std::cerr << "solvePnPGeneric failed\n";
             return {0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0};
         }
 
