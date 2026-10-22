@@ -256,7 +256,11 @@ void Tracker::note_plate_arc(double x, double y) {
     }
 }
 
-bool Tracker::center_motion_is_slow() const {
+bool Tracker::center_motion_is_slow() {
+    // 单板持续可见时也要淘汰旧双板，不能让过期的平移判断维持瞄准模式。
+    while (!obs_center_hist_.empty() && move_clock_ - obs_center_hist_.front().t > 0.6) {
+        obs_center_hist_.pop_front();
+    }
     // 无双板观测时默认当原地：宁可跟慢平移，也不要让板噪声把车心判成在走。
     if (obs_center_hist_.size() < 2) return true;
     const double newest = obs_center_hist_.back().t;
@@ -325,9 +329,6 @@ void Tracker::hold_center_when_stationary(const std::vector<Armor>& armors) {
             have_dual = true;
             last_dual_innov_ = std::hypot(dual_x - target_state_(0), dual_y - target_state_(2));
             obs_center_hist_.push_back({move_clock_, dual_x, dual_y});
-            while (!obs_center_hist_.empty() && move_clock_ - obs_center_hist_.front().t > 0.6) {
-                obs_center_hist_.pop_front();
-            }
         }
     }
 
@@ -426,7 +427,7 @@ void Tracker::update_spin_aim_mode(double dt) {
         spin_aim_mode_clock_ = 0.0;
         return;
     }
-    // 无双板时 center_motion_is_slow==true → 保持/切回跟板，避免噪声误切正前。
+    // 双板观测不足或过期时不外推车心平移，避免旧速度继续拉动瞄准点。
     const bool want_trans = !center_motion_is_slow();
     if (want_trans == spin_aim_translate_) {
         spin_aim_mode_clock_ = 0.0;

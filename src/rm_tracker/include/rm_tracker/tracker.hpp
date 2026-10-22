@@ -270,7 +270,7 @@ private:
                          std::vector<std::pair<std::string, std::string>>& logs);
     bool apply_armor_measurement(const Armor& armor);
     void note_plate_arc(double x, double y);
-    bool center_motion_is_slow() const;
+    bool center_motion_is_slow();
     void hold_center_when_stationary(const std::vector<Armor>& armors);
     void apply_spin_period();
     void update_spin_aim_mode(double dt);
