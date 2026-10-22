@@ -98,9 +98,8 @@ ros2 launch mindvision_camera mv_launch.xml params_file:=/abs/path/my_params.yam
 
 - 内参文件是 `config/camera_info.yaml`：`image_width: 1280`、`image_height: 1024`、`camera_name: mv_camera`、`distortion_model: plumb_bob`，以及 `camera_matrix` / `distortion_coefficients` / `rectification_matrix` / `projection_matrix`。节点启动时按 `camera_info_url` 读取它，之后每帧随图像发布到 `/camera_info`。
 - `package.xml` 声明 `ros2launch` 启动依赖；相机标定工具与驱动运行分开。
-- `camera_info_manager` 会创建一个 `set_camera_info` 服务，名字相对于节点命名空间，因此节点在根命名空间时是 `/set_camera_info`（实测：`/mv_camera` 节点下的服务名就是 `/set_camera_info`，既不带节点名前缀也不受 `camera_name` 参数影响）。而 ROS 2 的 `cameracalibrator` 默认查找 `camera/set_camera_info`（以及 `left_camera/`、`right_camera/`），启动时会等待该服务，找不到就打印 `Service not found`。要用标定器写回内参需要做 remap，例如 `--ros-args -r camera/set_camera_info:=/set_camera_info`，或用 `--no-service-check` 跳过检查、标定完把结果手写回 `config/camera_info.yaml`。
+- `camera_info_manager` 提供 `/set_camera_info`；本项目使用 C++ 采集与标定工具，见[标定工具](../../standalone/README.md#离线回放录像与标定)。工具输出 YAML，不自动写回驱动。
 - 标定结果文件长什么样可以直接对照现成的 `config/camera_info.yaml` 写入；节点不校验 `image_width` / `image_height` 是否等于相机实际输出（相机分辨率没有参数可设），分辨率不一致时下游拿到的内参就是错的。
-- 上游 README 提到标定结果会保存到 `/tmp/calibrationdata.tar.gz`，并给出教程链接 <https://navigation.ros.org/tutorials/docs/camera_calibration.html> 与 <http://wiki.ros.org/camera_calibration>（这是上游/ROS wiki 的说法，本仓库未核实）。
 
 ### 直接 ros2 run
 

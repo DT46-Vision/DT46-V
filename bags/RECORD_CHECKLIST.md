@@ -60,7 +60,7 @@ CPU 检测请 `--rate 0.15~0.25`；有 CUDA 可接近 1×。
 2. `/tracker/tracking_state_img`：绿十字是否钉正前、换板是否肉眼抖动
 3. `/tracker/gimbal_control`：`can_fire` 占空比、yaw 步进是否炸
 
-可把回放产物放到 `bags/test_<branch>/`（两路 mp4 + 含 gimbal/armors 的 data bag），便于对比调参。
+录像与参数变体使用[原生工具](../standalone/README.md#离线回放录像与标定)。可把回放产物放到 `bags/test_<branch>/`（两路 mp4 + 含 gimbal/armors 的 data bag），便于对比调参。
 
 ## 6. 和现有素材的关系
 

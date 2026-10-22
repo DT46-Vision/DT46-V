@@ -85,19 +85,7 @@ launch 暴露的可配置参数：**没有**。`launch/usb_camera.launch.xml` �
 - 标定文件是 `config/camera_info.yaml`，字段是 camera_info_manager / camera_calibration_parsers 的标准格式：`image_width` 640、`image_height` 480、`camera_name` `usb_camera`、`camera_matrix`、`distortion_model` `plumb_bob`、5 个 `distortion_coefficients`、`rectification_matrix`、`projection_matrix`。当前值对应 640x480（fx≈443.21、fy≈442.92、cx≈311.89、cy≈224.69）。
 - 加载流程：构造函数里把 `camera_name` / `camera_info_url` 交给 `camera_info_manager::CameraInfoManager`，若 URL 非空就调用 `loadCameraInfo()`：成功打 INFO「加载相机标定文件: ...」，失败只打 WARN 且**不退出**——这种情况下每帧发布的仍是 camera_info_manager 的默认（未标定）CameraInfo，注意别把这种消息当有效内参用。
 - 分辨率改了（`frame_width/height`）就要重新标定：现有 yaml 是 640x480 的，代码默认却是 1920x1080。
-- 重新标定用 ROS 2 自带的 `camera_calibration`（不是本包依赖，需自行安装）：
-
-```bash
-# 终端 1：正常启动驱动，提供 /image_raw 与 /usb_camera_node/set_camera_info
-ros2 launch usb_camera usb_camera.launch.xml
-
-# 终端 2：需要图形界面；--size/--square 按你的标定板填写
-ros2 run camera_calibration cameracalibrator.py --size 8x6 --square 0.025 \
-  image:=/image_raw camera:=/usb_camera_node
-```
-
-  其中 `image:=/image_raw` 是把标定器订阅的 `image` 重映射到本包话题，`camera:=/usb_camera_node` 是把标定器调用的 `camera/set_camera_info` 重映射到本节点提供的服务。
-- 标定器界面上点 SAVE 后，Humble 版 `camera_calibration` 会把结果打包写到 `/tmp/calibrationdata.tar.gz`（这是该工具自身的行为）；把里面的 `ost.yaml` 按上面同样的字段格式覆盖本包 `config/camera_info.yaml`，再 `colcon build` + 重启节点即可。
+- 本项目使用 C++ 工具采集棋盘图片并输出标准 YAML，操作见[标定工具](../../standalone/README.md#离线回放录像与标定)。检查结果后更新本包配置、重新安装并重启节点。
 
 ### 直接 ros2 run
 

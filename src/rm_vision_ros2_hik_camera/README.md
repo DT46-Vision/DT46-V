@@ -106,15 +106,8 @@ ros2 component load /ComponentManager hik_camera hik_camera::HikCameraNode \
 
 ### 标定
 
-节点通过 `camera_info_manager` 提供 `/set_camera_info`，`camera_calibration` 已在 `package.xml` 里作为 `exec_depend`：
+节点通过 `camera_info_manager` 提供 `/set_camera_info`。本项目使用 C++ 采集与标定工具，操作见[标定工具](../../standalone/README.md#离线回放录像与标定)。工具输出 YAML，不自动调用服务或覆盖驱动配置。
 
-```bash
-ros2 run camera_calibration cameracalibrator --size 8x6 --square 0.025 \
-  --ros-args -r image:=/image_raw -r camera:=/
-```
-
-- `cameracalibrator` 订阅相对话题 `image`，并创建 `camera/set_camera_info` 服务客户端；本节点的话题是 `/image_raw`、服务是 `/set_camera_info`，所以用 `-r image:=/image_raw -r camera:=/` 对齐即可（服务名对齐后能通过它启动时的 service check；也可以用 `--no-service-check` 跳过检查）。
-- 标定完成后 SAVE 会调用 `/set_camera_info`，由 `camera_info_manager` 写回 `camera_info_url`。默认的 `package://hik_camera/config/camera_info.yaml` 指向包内文件，标定时建议改用 `file://` 路径保存（此建议未实测）。
 - 包内已有标定文件：`config/camera_info.yaml`（`camera_name: hik_camera`）、`config/hero_camera_info.yaml`（`hero_hik_camera`）、`config/sentinel_camera_info.yaml`（`sentinel_hik_camera`），三者的 `image_width/height` 都是 1440×1080。文件里的 `camera_name` 要与 `camera_name` 参数一致。
 
 ## 依赖与前置条件
