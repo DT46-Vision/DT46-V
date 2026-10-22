@@ -127,21 +127,21 @@ def generate_launch_description():
             # ----------- 启动后置 USB 相机节点 -----------
             # 节点名保持 usb_camera_node(与 camera_params.yaml 根键一致);
             # 不用 namespace 而用 remap，话题挪到 /usb_camera/* 避免与前相机冲突
-            Node(
-                package="usb_camera",
-                executable="usb_camera_node",
-                name="usb_camera_node",
-                output="screen",
-                emulate_tty=True,
-                parameters=[
-                    LaunchConfiguration("rear_usb_params_file"),
-                    {"camera_info_url": LaunchConfiguration("rear_usb_info_url")},
-                ],
-                remappings=[
-                    ("image_raw", "/usb_camera/image_raw"),
-                    ("camera_info", "/usb_camera/camera_info"),
-                ],
-            ),
+            # Node(
+            #     package="usb_camera",
+            #     executable="usb_camera_node",
+            #     name="usb_camera_node",
+            #     output="screen",
+            #     emulate_tty=True,
+            #     parameters=[
+            #         LaunchConfiguration("rear_usb_params_file"),
+            #         {"camera_info_url": LaunchConfiguration("rear_usb_info_url")},
+            #     ],
+            #     remappings=[
+            #         ("image_raw", "/usb_camera/image_raw"),
+            #         ("camera_info", "/usb_camera/camera_info"),
+            #     ],
+            # ),
             # ----------- 启动 rqt 并加载布局 -----------
             Node(
                 package="rqt_gui",

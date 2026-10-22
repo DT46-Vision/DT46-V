@@ -3,68 +3,74 @@ rm_tracker:
     # ------------------------ NODE -----------------------
     log_throttle_ms: 1000
 
-    follow_decision: true    # 是否跟随决策节点的颜色选择
+    follow_decision: true # 是否跟随决策节点的颜色选择
 
     # 陀螺仪到相机 (IMU -> Cam) 旋转标定
     rotation_rpy_r: 0.0
     rotation_rpy_p: 0.0
     rotation_rpy_y: -180.0
 
-    show_rpy: false             # 是否打印 IMU 调试信息
+    show_rpy: false # 是否打印 IMU 调试信息
     debug: false
-    display_fps_limit: true 
-    display: false           # 是否显示 OpenCV 调试图像
-    text_size: 2.0             # 显示文字大小
-    nav_visual_display: false  # 是否发布 /tracker/enemy_nav_img 导航可视化图像
+    display_fps_limit: true
+    display: false # 是否显示 OpenCV 调试图像
+    nav_visual_display: false # 是否发布 /tracker/enemy_nav_img 导航可视化图像
 
     # ----------------------- TRACKER ---------------------
-    target_color: 1             # 0: RED, 1: BLUE (当前要打的敌人颜色)
+    target_color: 1 # 0: RED, 1: BLUE (当前要打的敌人颜色)
 
     # [外参] 相机 -> 枪口 (Camera to Gun) (x:右, y:下, z:前)
     # 注意：单位是米 (m) 和 弧度 (rad)
-    cam_to_gun_pos_x: 0.0       # 你的代码默认是 10.0，建议改为实际测量值，例如 0.0
-    cam_to_gun_pos_y: 0.125     # 假设相机在枪管上方 12cm
+    cam_to_gun_pos_x: 0.0
+    cam_to_gun_pos_y: 0.125
     cam_to_gun_pos_z: 0.0
     cam_to_gun_rpy_r: 0.0
     cam_to_gun_rpy_p: 0.1
     cam_to_gun_rpy_y: 1.3
 
     # [逻辑与阈值]
-    dist_tol: 0.10              # 预处理：两块板距离容差 (m)
-    max_match_distance: 0.2     # 匹配：最大距离阈值 (m)
-    max_match_yaw_diff: 57.0     # 匹配：判定跳变的 Yaw 差值 (deg)
+    dist_tol: 0.10 # 预处理：两块板距离容差 (m)
+    max_match_distance: 0.3 # 匹配：最大距离阈值 (m)
+    max_match_yaw_diff: 57.0 # 匹配：判定跳变的 Yaw 差值 (deg)
     jump_cooldown_max: 20
-    tracking_thres: 5           # 连续检测帧数 (进入 TRACKING) - int
-    lost_thres: 20              # 连续丢失帧数 (进入 LOST) - int
+    tracking_thres: 5 # 连续检测帧数 (进入 TRACKING) - int
+    lost_thres: 40 # 连续丢失帧数 (进入 LOST) - int
 
-    # [EKF Q/R 参数] - 参考此前代码中的调优值
-    ekf_QR_q_xyz: 200.0          # Process Noise Q: 位置/速度
-    ekf_QR_q_yaw: 150.0         # Process Noise Q: 偏航角
-    ekf_QR_q_r: 0.5           # Process Noise Q: 半径 (给大一点允许快速变径)
+    # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
+    # SPIN 下车心/板耦合强：q 略大、R 略小，避免预测锁死导致虚拟板乱飞（bag 扫参落地）
+    # 最终选定(2026-10-21)：q_xyz=4 / r_xyz_factor=1 / keep=0.30 + 双板/射线软融合；
+    # A/B/C 单卡与历史径向/合卡均未过门禁，见 bags/eval_spin_radial/RESULT.md
+    ekf_QR_q_xyz: 4.0 # 加速度谱密度 (m²/s³) — 越大越信任观测
+    ekf_QR_q_yaw: 2.0 # 角加速度谱密度 (rad²/s³)
+    ekf_QR_q_r: 0.02 # 半径游走谱密度 (m²/s)
 
-    ekf_QR_r_xyz_factor: 0.5   # Measurement Noise R: 位置因子
-    ekf_QR_r_yaw: 0.002          # Measurement Noise R: 角度方差
+    ekf_QR_r_xyz_factor: 1.0 # PnP位置噪声：距离百分比(1.0=>1%)，R=(factor*dist+5mm)^2
+    ekf_QR_r_yaw: 0.002 # Measurement Noise R: 角度方差
 
     ekf_QR_stable_dist: 1.4
 
     # [车辆物理参数]
-    radius_r_max: 0.4              # 车辆最大半径 (m)
-    radius_r_min: 0.15              # 车辆最小半径 (m)
+    radius_r_max: 0.4 # 车辆最大半径 (m)
+    radius_r_min: 0.15 # 车辆最小半径 (m)
 
     system_delay: 0.01
+    # 云台额外滞后：只外推瞄准点，不参与选板/正对（对齐 FYT controller_delay）
+    controller_delay: 0.02
 
-    # 反小陀螺
-    max_spinning_frame: 10
-    spinning_frame_lost: 5
-    min_spinning_vel: 1.0
+    # 反小陀螺 — 时间累计 (秒), 帧率无关
+    min_spinning_vel: 0.7 # 角速度门限 (rad/s)
+    spin_enter_time: 0.3 # 进入小陀螺判定所需累计时间 (s)
+    spin_exit_time: 0.15 # 退出小陀螺判定所需累计时间 (s)
+
+    k_v2: 0.019 # 平方空气阻力系数
 
     # [发射参数]
-    bullet_speed: 25.0            # 弹速 (m/s)
-    k_v2: 0.019              # 平方阻力系数
+    bullet_speed: 25.0 # 弹速 (m/s)
 
     # 发弹角度阈值
     shootable_dist: 10.0
     distance_decress_ratio: 0.60
-    yaw_tolerance_deg: 10.0     # 允许发射的 yaw 角度阈值
-    pitch_tolerance_deg: 10.0   # 允许发射的 pitch 角度阈值
+    yaw_tolerance_deg: 10.0 # 允许发射的 yaw 角度阈值
+    pitch_tolerance_deg: 10.0 # 允许发射的 pitch 角度阈值
 
+    text_size: 2.0

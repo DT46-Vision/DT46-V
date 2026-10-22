@@ -1,0 +1,211 @@
+#include "rm_tracker/ekf.hpp"
+
+namespace dt46_vision {
+
+ExtendedKalmanFilter::ExtendedKalmanFilter() : is_initialized_(false) {
+    X_.setZero();
+    P_.setIdentity();
+    F_.setIdentity(); // 恒定模型基座，后续只更新含 dt 的非对角线元素
+    Q_.setZero();
+    R_.setZero();
+
+    // 给定初始安全参数
+    s2qxyz_ = 2.5;
+    s2qyaw_ = 15.0;
+    s2qr_   = 0.05;
+    r_xyz_factor_ = 0.05;
+    r_yaw_ = 0.02;
+    stable_dist_ = 1.5;
+}
+
+void ExtendedKalmanFilter::init(const Eigen::Matrix<double, 9, 1>& init_x, const Eigen::Matrix<double, 9, 9>& init_p) {
+    X_ = init_x;
+    P_ = init_p;
+    X_(6) = normalizeAngle(X_(6));
+    is_initialized_ = true;
+}
+
+void ExtendedKalmanFilter::init_QR(double q_xyz, double q_yaw, double q_r, double r_xyz_factor, double r_yaw, double stable_dist) {
+    s2qxyz_ = q_xyz;
+    s2qyaw_ = q_yaw;
+    s2qr_   = q_r;
+    r_xyz_factor_ = r_xyz_factor;
+    r_yaw_ = r_yaw;
+    stable_dist_ = stable_dist;
+}
+
+void ExtendedKalmanFilter::predict(double dt) {
+    if (!is_initialized_) return;
+
+    // 1. 更新状态转移矩阵 F (只更新动态部分)
+    F_(0, 1) = dt; // x  += vx * dt
+    F_(2, 3) = dt; // y  += vy * dt
+    F_(4, 5) = dt; // z  += vz * dt
+    F_(6, 7) = dt; // yaw+= vyaw * dt
+
+    // 2. 连续白噪声离散化构建过程噪声矩阵 Q
+    //    标准 CV 模型: Q_pos = q * dt³/3, Q_cross = q * dt²/2, Q_vel = q * dt
+    double t2 = dt * dt;
+    double t3 = t2 * dt;
+
+    double q_xyz_x  = (t3 / 3.0) * s2qxyz_;
+    double q_xyz_vx = (t2 / 2.0) * s2qxyz_;
+    double q_xyz_vv = dt * s2qxyz_;
+
+    Q_(0,0) = q_xyz_x; Q_(0,1) = q_xyz_vx;
+    Q_(1,0) = q_xyz_vx; Q_(1,1) = q_xyz_vv;
+    Q_(2,2) = q_xyz_x; Q_(2,3) = q_xyz_vx;
+    Q_(3,2) = q_xyz_vx; Q_(3,3) = q_xyz_vv;
+    Q_(4,4) = q_xyz_x; Q_(4,5) = q_xyz_vx;
+    Q_(5,4) = q_xyz_vx; Q_(5,5) = q_xyz_vv;
+
+    double q_yaw_x  = (t3 / 3.0) * s2qyaw_;
+    double q_yaw_vx = (t2 / 2.0) * s2qyaw_;
+    double q_yaw_vv = dt * s2qyaw_;
+
+    Q_(6,6) = q_yaw_x; Q_(6,7) = q_yaw_vx;
+    Q_(7,6) = q_yaw_vx; Q_(7,7) = q_yaw_vv;
+
+    Q_(8,8) = dt * s2qr_;
+
+    // 3. 状态传播：F_ 仅有4个非对角非零元素，直接标量操作替代稠密矩阵乘法
+    X_(0) += X_(1) * dt;
+    X_(2) += X_(3) * dt;
+    X_(4) += X_(5) * dt;
+    X_(6) += X_(7) * dt;
+    X_(6) = normalizeAngle(X_(6));
+    P_ = F_ * P_ * F_.transpose() + Q_;
+}
+
+bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
+    if (!is_initialized_) return false;
+
+    double xc  = X_(0);
+    double yc  = X_(2);
+    double za  = X_(4);
+    double yaw = X_(6);
+    double r   = X_(8);
+
+    // 1. 观测是装甲板，不是车心。切向残差交给 yaw，径向才动车心。
+    //    半径用车型表的值，这帧不估计，所以清掉 r 的互协方差。
+    Eigen::Matrix<double, 4, 9> H = Eigen::Matrix<double, 4, 9>::Zero();
+    H(0, 0) = 1.0;
+    H(0, 6) = r * std::sin(yaw);
+    H(1, 2) = 1.0;
+    H(1, 6) = -r * std::cos(yaw);
+    H(2, 4) = 1.0;
+    H(3, 6) = 1.0;
+
+    for (int i = 0; i < 8; ++i) {
+        P_(8, i) = P_(i, 8) = 0.0;
+    }
+
+    // 2. 动态更新观测噪声 R
+    double obs_x = measurement(0), obs_y = measurement(1);
+    double dist_h = std::hypot(obs_x, obs_y);
+    // PnP 位置噪声按“距离百分比 + 固定底噪”建模；r_xyz_factor_ 解释为距离百分比（0.2 => 0.2%）。
+    // R 是方差(m^2)，各轴同方差，不能再用绝对坐标 obs_x/obs_y/obs_z 去算（会随目标位置漂移）。
+    double base_sigma = 0.005;
+    double sigma_xyz = r_xyz_factor_ * 0.01 * dist_h + base_sigma;
+
+    R_(0,0) = sigma_xyz * sigma_xyz;
+    R_(1,1) = sigma_xyz * sigma_xyz;
+    R_(2,2) = sigma_xyz * sigma_xyz;
+    R_(1,0) = 0; R_(2,0) = 0; R_(3,0) = 0;
+    R_(2,1) = 0; R_(3,1) = 0;
+    R_(3,2) = 0;
+
+    // 远距离 Yaw 角信任降级
+    if (dist_h > stable_dist_) {
+        double dynamic_r_yaw = r_yaw_ * std::pow(dist_h / 1.5, 2.0);
+        R_(3,3) = std::min(dynamic_r_yaw, 10.0);
+    } else {
+        R_(3,3) = r_yaw_;
+    }
+
+    // 3. 预测的是这块板的位置：车心减去半径方向
+    Eigen::Vector4d Z_pred(xc - r * std::cos(yaw), yc - r * std::sin(yaw), za, yaw);
+    Eigen::Vector4d Y = measurement - Z_pred;
+    Y(3) = normalizeAngle(Y(3)); // 核心：残差中的角度差必须被归一化！
+
+    // 4. 计算残差协方差 S (Innovation Covariance)
+    Eigen::Matrix<double, 4, 4> S = H * P_ * H.transpose() + R_;
+
+    // 使用 LDLT 分解代替直接求逆（优化）
+    Eigen::LDLT<Eigen::Matrix<double, 4, 4>> ldlt(S);
+    Eigen::Matrix<double, 4, 4> S_inv = ldlt.solve(Eigen::Matrix<double, 4, 4>::Identity());
+
+    // 5. 【马氏距离野值剔除】自由度为 4 的卡方分布
+    double mahalanobis_sq = (Y.transpose() * ldlt.solve(Y)).value();
+    if (mahalanobis_sq > 30.0) {
+        // 如果测量值离群严重，拒绝更新，直接信任当前的预测步
+        return false;
+    }
+
+    // 6. 计算卡尔曼增益 K (9x4)
+    Eigen::Matrix<double, 9, 4> K = P_ * H.transpose() * S_inv;
+
+    // 7. 更新后验状态 X
+    X_ = X_ + K * Y;
+    X_(6) = normalizeAngle(X_(6));
+
+    // 8. Joseph 形式更新协方差 P (保证数值稳定性和正定性)
+    Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
+    Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
+    P_ = I_KH * P_ * I_KH.transpose() + K * R_ * K.transpose();
+    return true;
+}
+
+bool ExtendedKalmanFilter::update_center_xy(double xc_meas, double yc_meas, double sigma_m) {
+    if (!is_initialized_) return false;
+    if (!(sigma_m > 1e-4)) return false;
+
+    Eigen::Matrix<double, 2, 9> H = Eigen::Matrix<double, 2, 9>::Zero();
+    H(0, 0) = 1.0;
+    H(1, 2) = 1.0;
+
+    Eigen::Matrix2d Rm = Eigen::Matrix2d::Zero();
+    const double v = sigma_m * sigma_m;
+    Rm(0, 0) = v;
+    Rm(1, 1) = v;
+
+    const Eigen::Vector2d z(xc_meas, yc_meas);
+    const Eigen::Vector2d hx(X_(0), X_(2));
+    const Eigen::Matrix2d S = H * P_ * H.transpose() + Rm;
+    Eigen::Matrix2d S_inv;
+    bool invertible = false;
+    S.computeInverseWithCheck(S_inv, invertible);
+    if (!invertible) return false;
+
+    const Eigen::Matrix<double, 9, 2> K = P_ * H.transpose() * S_inv;
+    X_ += K * (z - hx);
+
+    const Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
+    const Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
+    P_ = I_KH * P_ * I_KH.transpose() + K * Rm * K.transpose();
+    return true;
+}
+
+void ExtendedKalmanFilter::smooth_reset_covariance() {
+    // 适度放大位置和角度的方差，让滤波器在跳变后几帧稍微更信任观测
+    P_(0, 0) += 0.05;
+    P_(2, 2) += 0.05;
+    P_(4, 4) += 0.05;
+    P_(6, 6) += 0.2;
+    P_(8, 8) += 0.01;
+}
+
+void ExtendedKalmanFilter::setState(const Eigen::Matrix<double, 9, 1>& state) {
+    X_ = state;
+    X_(6) = normalizeAngle(X_(6));
+}
+
+Eigen::Matrix<double, 9, 1> ExtendedKalmanFilter::getState() const {
+    return X_;
+}
+
+Eigen::Matrix<double, 9, 9> ExtendedKalmanFilter::getCovariance() const {
+    return P_;
+}
+
+} // namespace dt46_vision
