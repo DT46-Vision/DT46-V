@@ -10,13 +10,14 @@ namespace {
 const std::set<std::string> detector_parameters = {
     "light_area_min", "light_h_w_ratio", "light_angle_min", "light_angle_max", "light_red_ratio", "light_blue_ratio",
     "height_rate_tol", "height_multiplier_min", "height_multiplier_max", "row_stretch", "col_stretch", "roi_crop",
-    "roi_scale", "binary_val", "display_mode"};
+    "roi_scale", "binary_val", "display_mode", "detect_color", "print_period_ms"};
 const std::set<std::string> tracker_parameters = {
     "max_match_distance", "max_match_yaw_diff", "jump_cooldown_max", "tracking_thres", "lost_thres", "dist_tol",
     "ekf_QR_q_xyz", "ekf_QR_q_yaw", "ekf_QR_q_r", "ekf_QR_r_xyz_factor", "ekf_QR_r_yaw", "ekf_QR_stable_dist",
     "radius_r_min", "radius_r_max", "system_delay", "controller_delay", "bullet_speed", "k_v2", "gravity", "shootable_dist",
     "yaw_tolerance_deg", "pitch_tolerance_deg", "min_spinning_vel", "spin_enter_time", "spin_exit_time",
-    "cam_to_gun_rpy_r", "cam_to_gun_rpy_p", "cam_to_gun_rpy_y"};
+    "cam_to_gun_rpy_r", "cam_to_gun_rpy_p", "cam_to_gun_rpy_y", "target_color", "follow_decision",
+    "display", "display_fps_limit", "text_size"};
 const std::vector<std::string> debug_images = {"result", "crop_img", "bin_img", "img_armor", "img_armor_processed", "img_debug", "gray"};
 Json node_json(const cv::FileNode& node) {
     if (node.isMap()) {
@@ -61,6 +62,14 @@ void validate_settings(const Json& settings) {
     }
     for (const char* key : {"system_delay", "controller_delay", "spin_enter_time", "spin_exit_time"})
         if (number(t.at(key)) < 0) throw std::invalid_argument(std::string(key)+" must be nonnegative");
+    for (const auto* group : {&d, &t}) for (const char* key : {"roi_crop", "display_mode", "follow_decision", "display", "display_fps_limit"})
+        if (group->contains(key) && number(group->at(key)) != 0 && number(group->at(key)) != 1)
+            throw std::invalid_argument(std::string(key)+" must be boolean");
+    const double color=number(d.at("detect_color")), target=number(t.at("target_color")), period=number(d.at("print_period_ms"));
+    if (color < -1 || color > 2 || color != std::floor(color) || (target != 0 && target != 1))
+        throw std::invalid_argument("Invalid detector/tracker color");
+    if (period < 1 || period != std::floor(period) || number(t.at("text_size")) <= 0 || number(t.at("text_size")) > 10)
+        throw std::invalid_argument("Invalid log period/text size");
 }
 template<int Rows, int Cols> Json matrix_json(const cv::Matx<double, Rows, Cols>& matrix) {
     Json result = Json::array();
@@ -93,6 +102,14 @@ AimPipeline::AimPipeline(std::filesystem::path root, const std::string& profile,
     for (const auto& name : detector_parameters) if (detector.contains(name)) settings_["detector"][name] = detector.at(name);
     for (const auto& name : tracker_parameters) if (tracker.contains(name)) settings_["tracker"][name] = tracker.at(name);
     settings_["detector"]["display_mode"] = debug;
+    // -1 retains the native adapter's existing decision-color filtering.
+    settings_["detector"]["detect_color"] = -1;
+    settings_["detector"]["print_period_ms"] = detector.value("print_period_ms",1000);
+    settings_["tracker"]["display"] = debug;
+    settings_["tracker"]["display_fps_limit"] = tracker.value("display_fps_limit",true);
+    settings_["tracker"]["text_size"] = tracker.value("text_size",1.0);
+    settings_["tracker"]["follow_decision"] = true;
+    settings_["tracker"]["target_color"] = tracker.value("target_color",0);
     reset();
 }
 
@@ -144,6 +161,10 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
     for (double value : optical_rotation.val) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite optical rotation");
     for (double value : muzzle_offset.val) if (!std::isfinite(value)) throw std::invalid_argument("Nonfinite muzzle offset");
     const cv::Mat contiguous = rgb.isContinuous() ? rgb : rgb.clone();
+    const auto& tracker=settings_.at("tracker");
+    const auto number=[](const Json& v){return v.is_boolean()?double(v.get<bool>()):v.get<double>();};
+    if (!number(tracker.at("follow_decision"))) target_color=int(number(tracker.at("target_color")));
+    const int configured_color=int(number(settings_.at("detector").at("detect_color")));
     AimResult result{};
     if (dt46_process(context_, contiguous.data, rgb.cols, rgb.rows, timestamp, k.val, distortion.val,
                      optical_rotation.val, muzzle_offset.val, target_color, measured_speed, &result)) throw native_error();
@@ -164,7 +185,8 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
         {"position_camera_origin_world_axes_m", result.position}, {"velocity_world_axes_m_s", result.velocity},
         {"light_count", result.light_count}, {"observations", observations}, {"tracker_debug", Json::parse(dt46_snapshot(context_))},
         {"input", {{"K", matrix_json(k)}, {"D", distortion.val}, {"optical_rotation", matrix_json(optical_rotation)},
-                    {"muzzle_offset_camera_m", muzzle_offset.val}}}};
+                    {"muzzle_offset_camera_m", muzzle_offset.val}, {"target_color",target_color},
+                    {"detect_color",configured_color < 0 ? target_color : configured_color}}}};
 }
 cv::Mat AimPipeline::debug_image(const std::string& name) const {
     const auto found = std::find(debug_images.begin(), debug_images.end(), name);

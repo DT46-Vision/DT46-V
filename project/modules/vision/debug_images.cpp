@@ -20,17 +20,17 @@ std::optional<cv::Point> project(const Json& point,const Json& result) {
 }
 std::string number(double value,int precision=2){std::ostringstream output;output<<std::fixed<<std::setprecision(precision)<<value;return output.str();}
 }
-cv::Mat tracking_image(const cv::Mat& rgb,const Json& result) {
+cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
     cv::Mat output=rgb.clone();
     for(const auto& armor:result.at("observations")) {
         std::vector<cv::Point> corners;for(int i:{0,1,3,2})corners.emplace_back(int(std::nearbyint(armor.at("corners_px").at(i).at(0).get<double>())),int(std::nearbyint(armor.at("corners_px").at(i).at(1).get<double>())));
         cv::polylines(output,corners,true,cv::Scalar(255,220,0),2);
     }
     for(const auto& armor:result.at("tracker_debug").at("yaw_armors"))if(auto point=project(armor.at("position_camera_m"),result))
-        cv::putText(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,cv::FONT_HERSHEY_SIMPLEX,.55,cv::Scalar(255,0,255),2);
+        cv::putText(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,cv::FONT_HERSHEY_SIMPLEX,.55*text_size,cv::Scalar(255,0,255),2);
     return output;
 }
-cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result) {
+cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result,double text_size) {
     cv::Mat output=rgb.clone();cv::drawMarker(output,{output.cols/2,output.rows/2},{255,0,255},cv::MARKER_CROSS,40,2);const auto& debug=result.at("tracker_debug");
     for(const char* key:{"target_camera_m","muzzle_target_camera_m"})if(debug.contains(key))if(auto point=project(debug.at(key),result)) {
         if(std::string(key)=="target_camera_m")cv::circle(output,*point,18,{255,0,0},2);else cv::drawMarker(output,*point,{0,255,0},cv::MARKER_CROSS,25,2);
@@ -41,8 +41,8 @@ cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result) {
         "Diff: "+number(debug.value("target_angle_diff_deg",0.),1)+" deg","Pitch: "+number(debug.at("gimbal_control").at(1))+" deg",
         "Yaw: "+number(debug.at("gimbal_control").at(0))+" deg","P/Y Tol: "+number(debug.at("pitch_tolerance_deg"))+" / "+number(debug.at("yaw_tolerance_deg"))+" deg",
         "Bullet Speed: "+number(debug.at("bullet_speed_m_s"))+" m/s",fire?"FIRE ENABLE":"HOLD FIRE"};
-    for(std::size_t row=0;row<lines.size();++row){const cv::Point point(18,28+26*int(row));const auto color=row==lines.size()-1&&fire?cv::Scalar(0,255,0):cv::Scalar(255,255,255);
-        cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6,{0,0,0},3);cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6,color,1);}
+    for(std::size_t row=0;row<lines.size();++row){const cv::Point point(18,int((28+26*int(row))*text_size));const auto color=row==lines.size()-1&&fire?cv::Scalar(0,255,0):cv::Scalar(255,255,255);
+        cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6*text_size,{0,0,0},3);cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6*text_size,color,1);}
     return output;
 }
 cv::Mat observer_image(const cv::Mat& rgb,const Json& result,const cv::Matx44d& optical,const cv::Matx33d& k,const cv::Vec<double,5>& d) {

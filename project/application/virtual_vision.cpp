@@ -81,7 +81,7 @@ private:
     std::unique_ptr<dt46::Recorder> recorder;
     std::uint64_t frames=0,generation=UINT64_MAX;double last_time=-1;
     std::uint64_t result_revision=0;
-    Json result=nullptr;Clock::time_point began=Clock::now(),last_draw{},last_images{};
+    Json result=nullptr;Clock::time_point began=Clock::now(),last_draw{},last_images{},last_fps=began;std::uint64_t fps_frames=0;
     std::uintptr_t context()const{return reinterpret_cast<std::uintptr_t>(pipeline.context());}
     double elapsed()const{return std::chrono::duration<double>(Clock::now()-began).count();}
     void event(const std::string& operation,const std::string& error="") {
@@ -103,10 +103,18 @@ private:
         if(next_generation!=generation){if(generation!=UINT64_MAX)pipeline.reset();generation=next_generation;last_time=-1;}
         const double timestamp=frame.metadata.at("time");if(timestamp<=last_time)return;
         result=dt46::process_frame(pipeline,frame);result_revision=pipeline.revision();last_time=timestamp;++frames;
-        if(recorder&&recorder->due(timestamp,generation)){recorder->write(dt46::ballistic_image(dt46::tracking_image(frame.rgb,result),result));result["recorded"]=true;}
+        const auto& display=pipeline.settings().at("tracker");
+        const auto enabled=[](const Json& value){return value.is_boolean()?value.get<bool>():value.get<double>()!=0;};
+        if(recorder&&enabled(display.at("display"))&&recorder->due(timestamp,generation)){
+            const double size=display.at("text_size");recorder->write(dt46::ballistic_image(dt46::tracking_image(frame.rgb,result,size),result,size));result["recorded"]=true;
+        }
         log<<result.dump()<<'\n';
         if(!log)throw std::runtime_error("Cannot write vision frame log");
-        const auto now=Clock::now();if(debug&&now-last_images>=std::chrono::milliseconds(33)) {
+        const auto now=Clock::now();const double seconds=std::chrono::duration<double>(now-last_fps).count();
+        if(seconds*1000>=pipeline.settings().at("detector").at("print_period_ms").get<double>()){
+            std::cout<<"[vision] processed FPS="<<(frames-fps_frames)/seconds<<'\n';last_fps=now;fps_frames=frames;
+        }
+        if(debug&&(!enabled(display.at("display_fps_limit"))||now-last_images>=std::chrono::milliseconds(33))) {
             try{debug->update(frame,result);}catch(const std::exception& e){event("window_error",e.what());close_debug();}last_images=now;
         }
     }

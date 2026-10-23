@@ -32,7 +32,21 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
-调试窗口提供四格选择：原始 RGB、跟踪、弹道、result、crop_img、bin_img、img_armor、img_armor_processed、img_debug、gray；灰度图显示前转为 RGB。窗口包含相机、检测器、追踪器参数和 tracker 日志，可应用、保存、加载 JSON，保存当前图像与窗口截图。参数 Apply 明确重建上下文；失败保留原上下文。显示异常只关闭显示。
+调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/detector/img_armor_processed`、`/detector/bin_img`；仍可切换原始 RGB、tracking_state_img、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
+
+右侧仍分相机、检测器、追踪器三页，包含 tracker 日志、参数应用/保存/加载 JSON、保存当前图像与窗口截图。布尔参数使用复选框；检测器 `cls_model_file` 可编辑字符串，JSON 沿用顶层 `model` 字段，模型相对 `src/rm_detector/model` 解析。Apply 重建上下文，失败保留原上下文；不会写回源 YAML。图像查看选项仅在当前窗口有效，不随参数 JSON 保存。显示异常只关闭显示。
+
+| 原 rqt / 节点功能 | 原生实现与适配边界 |
+|---|---|
+| MindVision 曝光、增益、RGB、AE/AWB、饱和度、gamma | 使用相机服务的同名控制；成像近似与开销边界见 [仿真相机说明](../../README.md#仿真时序与采图) |
+| `flip_image` | 相机客户端在识别前翻转上下和左右，即旋转 180°；原图和所有叠加图使用翻转后的输入。与原驱动 `CameraFlipFrameBuffer(...,3)` 一致，保留 K/D，默认关闭；SDK 标志依据为 [CameraApi.h 的原始接口注释](https://github.com/MinSungjae/mindvision_gige_ros/blob/master/include/mindvision_ros/CameraApi.h#L4077-L4087)（上游镜像） |
+| 检测器灯条/装甲/ROI/阈值/模型/显示参数 | 对接原检测器；`detect_color` 支持 0 红、1 蓝、2 两色，另以 -1 保持原生默认的目标颜色跟随；`print_period_ms` 控制原生会话处理 FPS 的终端日志周期，不代表独立 detector/tracker 线程速率 |
+| tracker EKF、匹配、半径、延迟、弹道、旋转阈值 | 使用现有核心参数；`target_color` 支持红/蓝，默认 `follow_decision=true` 从仿真反馈取色，关闭后使用手动值 |
+| `display` / `display_fps_limit` / `text_size` | 控制跟踪和弹道图生成、约 30 Hz 的调试图更新限制、文字缩放；关闭 `display` 停止这两路图和其录像，识别继续。解除刷新限制会增加图像生成开销，窗口仍按约 30 Hz 绘制 |
+| 相机名称/标定地址、枪口位置、IMU 安装修正 | 原生相机标识、K/D、光学姿态和枪口偏移由采样反馈提供；面板说明来源并显示当前枪口偏移。`rotation_rpy_*` 是 ROS 的 IMU 适配参数，不再次叠加；`use_geometric_center` 固定为 false，保留标定主点 |
+| ROS QoS、图像点击发布、节点选择 | 由原生相机会话和三页参数分类适配；不伪造 ROS 参数服务器或点击话题。原保存布局未启用点击发布；其他未启用的 rqt 插件不构成本页基准 |
+
+参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。`ctest --preset release` 的 5 项原生测试通过，覆盖颜色过滤、手动/决策颜色切换、非法模型/参数保留上下文、翻转像素及标定不变。Windows [操作流程](../../outputs/cpp_migration/workflow_46304/checks.json)通过同一上下文开关调试及自瞄/发弹门控；[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)通过翻转与跟踪图关闭/恢复、快照 JSON 回读和持续处理新帧，并保存网格效果截图。这些本机证据不纳入 Git；复现时运行本页构建/CTest 命令和 sim_vision 的 Windows 操作流程，界面文件检查使用输出目录默认 `vision_parameters.json`，分别打开/关闭 `flip_image`、`tracker.display` 后 Apply、保存并重新加载。ROS rqt 本体未在本机运行验证。
 
 ## 管线接口与坐标
 

@@ -55,6 +55,7 @@ struct Pipeline {
     dt46_vision::RmTF transform;
     double previous_time = -1.0;
     int previous_color = -1;
+    int detect_color = -1;
     double smooth_yaw = 0.0, smooth_pitch = 0.0;
     bool smooth_ready = false;
     cv::Mat bgr;
@@ -78,6 +79,7 @@ struct Pipeline {
         detector = std::make_unique<DT46_VISION::ArmorDetector>(
             2, parameter(source, "display_mode", 0), parameter(source, "binary_val", 120), p);
         detector->set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(model));
+        detect_color = int(parameter(source,"detect_color",-1));
         configure_tracker(tracker, config["tracker"]);
     }
 };
@@ -216,7 +218,7 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
             pipeline.smooth_ready = false;
         }
         pipeline.tracker.target_color = target_color;
-        pipeline.detector->update_detect_color(target_color);
+        pipeline.detector->update_detect_color(pipeline.detect_color < 0 ? target_color : pipeline.detect_color);
         if (measured_speed > 10.0 && std::abs(measured_speed-pipeline.tracker.bullet_speed) > 0.1) {
             pipeline.tracker.bullet_speed = measured_speed;
             pipeline.tracker.build_ballistic_lut();
