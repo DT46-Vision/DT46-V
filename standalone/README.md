@@ -2,7 +2,7 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
-当前个人工作分支为 `codex/sim-vision-work`，原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。此分支汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。该分支当前仅保存在本地，未设置上游；远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
+当前个人工作分支为 `codex/sim-vision-work`，跟踪同名 `origin/codex/sim-vision-work`，原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。此分支汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 
 此次汇集的验证及分支检查见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)。
 
