@@ -225,7 +225,7 @@ private:
     double last_jump_clock_ = -1.0;
     // 最近一次由换板周期算出的 v_yaw。周期窗暂时空时沿用。
     double last_spin_vyaw_ = 0.0;
-    // SPIN 瞄法：false=跟板等正对；true=车心正前（平移小陀螺）。滞回防撕枪。
+    // SPIN 在车心正前等板：false=原地；true=外推车心平移。滞回防撕枪。
     bool spin_aim_translate_ = false;
     double spin_aim_mode_clock_ = 0.0;
     int spin_front_plate_i_ = 0;
@@ -270,7 +270,7 @@ private:
                          std::vector<std::pair<std::string, std::string>>& logs);
     bool apply_armor_measurement(const Armor& armor);
     void note_plate_arc(double x, double y);
-    bool center_motion_is_slow() const;
+    bool center_motion_is_slow();
     void hold_center_when_stationary(const std::vector<Armor>& armors);
     void apply_spin_period();
     void update_spin_aim_mode(double dt);

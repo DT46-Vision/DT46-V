@@ -37,7 +37,7 @@
 
 1. `process()`：灰度 → 固定阈值二值化（`binary_val`）；`roi_crop: true` 时先按 `roi_scale` 取图像中心区域，后续只在 ROI 上处理。
 2. `find_lights()`：轮廓面积 ≥ `light_area_min`、minAreaRect 的 高/宽 ≥ `light_h_w_ratio`、角度在 `[light_angle_min, light_angle_max]` 内；再沿灯条中心线采样最多 10 个像素做红蓝判决。
-3. `is_armor()`：灯条两两配对（颜色必须相同、高度比 < `height_rate_tol`、中心距/平均高 落在 `[height_multiplier_min, height_multiplier_max]` 或备选系数的 1.56/1.76 倍区间内），按中心 x 排序后贪心配对，每条灯条只用一次。
+3. `is_armor()`：按中心 x 排序，选择右侧首个同色且灯条夹角、中心连线角通过限制的候选，再检查高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内。灯条夹角按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒；每条灯条只用一次。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。
 5. `Armor::get_id()`：颜色 + `class_id` 映射成 `armor_id`（见下表）；`is_armor()` 只接受 `class_id ∈ {0,1,2}`。
 6. `PNP::processArmorCorners()`：`cv::solvePnP(..., cv::SOLVEPNP_IPPE)`，用 `armor_id` 选择装甲板物理尺寸，输出 `dx/dy/dz`（mm）和 `yaw`（deg）。
