@@ -41,6 +41,7 @@ Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
         {"camera_ms",m.value("camera_ms",0.)},{"processing_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count()},
         {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")}});
     if(m.contains("appearance"))result["appearance"]=m.at("appearance");
+    for(const char* key:{"camera_settings_version","sampling_target_hz","sampling_effective_limit_hz"})if(m.contains(key))result[key]=m.at(key);
     result["input"]["optical_transform"]=m.at("optical");return result;
 }
 }

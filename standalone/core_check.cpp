@@ -24,6 +24,23 @@ int main() {
     const double error = cv::norm(cv::Vec3d(x,y,z)-position);
     if (!std::isfinite(error) || error > 2.0)
         throw std::runtime_error("PnP failed with source K/D and an off-centre principal point");
+    DT46_VISION::CameraCalibration source{{1075.77876,0,649.75819,0,1075.95573,525.30871,0,0,1},
+                                         {-0.454786,0.179046,-0.001430,-0.000463,0}};
+    cv::Mat source_k(3,3,CV_64F,source.k.data());
+    for(const auto& target:std::vector<cv::Vec3d>{{0,0,2300},{800,300,2300},{-800,-300,2300},{1100,-550,2300}}) {
+        cv::projectPoints(object,cv::Vec3d(.05,-.12,.02),target,source_k,cv::Mat(source.d),image);
+        armor.light1_up=image[0];armor.light1_down=image[1];armor.light2_up=image[2];armor.light2_down=image[3];
+        double errors[2];
+        for(int ignore=0;ignore<2;++ignore) {
+            auto current=source;if(ignore)current.d.assign(5,0);
+            DT46_VISION::PNP solver;solver.beginFrame();
+            const auto [px,py,pz,ry,ax,ay,az]=solver.processArmorCorners(&current,false,cv::Mat::zeros(1024,1280,CV_8UC3),armor,5);
+            errors[ignore]=cv::norm(cv::Vec3d(px,py,pz)-target);
+        }
+        std::cout<<"distortion_check target_mm="<<target<<" compensated_mm="<<errors[0]<<" ignored_mm="<<errors[1]<<std::endl;
+        if(!std::isfinite(errors[0])||(std::abs(target[0])>700&&errors[0]>=errors[1]*.1))
+            throw std::runtime_error("Original PnP distortion compensation failed the centre/periphery control");
+    }
     dt46_vision::RmTF tf;
     tf.set_camera_info(k, d, 1280, 1024, false);
     if (std::get<0>(tf.project_point(Eigen::Vector3d(0,0,2))) != cv::Point2i(612,493))

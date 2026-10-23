@@ -52,6 +52,8 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开；每次 track 先清除，提前退出不会沿用旧值。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
+图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，PnP 则把原始像素和 K/D 传给 `solvePnPGeneric`，在几何求解中补偿畸变。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
+
 `debug_image()` 返回独立内存的 RGB 或灰度图；须启用显示参数，无当前图像时返回空。跟踪和弹道图由 [debug_images.cpp](../project/modules/vision/debug_images.cpp) 按原快照绘制。红圈为含飞行时间/系统延迟的预测目标，绿十字为枪口相对目标，紫十字为原图像中心。绿十字不是弹道落点；HUD Pitch/Yaw 沿用原 tracker 指令，顶层结果角误差沿用 EMA 输出。投影使用完整 K/D。
 
 ## 本机相机接口 v1
@@ -65,7 +67,7 @@ build/native/bin/dt46_vision.exe --save-debug
 | `validate_camera(parameters)` | 只验证相机参数 |
 | `configure_camera(parameters)` | 请求应用相机参数 |
 
-帧元数据含 `time`、`K`、`D`、`optical`（4×4 相机到世界变换）、相机系 `muzzle_offset`、敌方 `color`、自身有效测速 `speed`、复位 `generation`、相机参数、帧编号和物理步编号。图像是 width×height×3 字节 RGB。分代变化清除历史，暂停不重复处理时间戳。
+帧元数据含 `time`、`K`、`D`、`optical`（4×4 相机到世界变换）、相机系 `muzzle_offset`、敌方 `color`、自身有效测速 `speed`、复位 `generation`、相机参数、帧编号和物理步编号。可选 `camera_settings_version`、`sampling_target_hz`、`sampling_effective_limit_hz` 由适配层原样写入日志；相机配置成功后只接收对应新版本图像。图像是 width×height×3 字节 RGB。分代变化清除历史，暂停不重复处理时间戳。
 
 `result` 为 `null` 或 `{schema:1, frame_number, state_tick, reset_generation, simulation_time_s, camera, robot_id, state, tracked_id, aim}`；具体构造入口为 [aim_feedback](../project/modules/vision/virtual_camera.cpp)。启动、上下文重建或无结果时发 `null`。旧客户端缺省该字段仍可读图，但不会提供自瞄许可。服务端要求结果与本连接最后交付帧的身份、代号、采样时间完全一致，使用服务端保留的原帧姿态，不接受客户端另传的姿态；重复帧不刷新许可，错误反馈、空结果、相机配置变更和断开清除缓存。
 
