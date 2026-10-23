@@ -90,6 +90,7 @@ struct VisionDebug::Impl {
     void load() {
         const auto path=choose_file(false,output/"vision_parameters.json");if(path.empty())return;
         std::ifstream input(path);if(!input)throw std::runtime_error("Cannot open parameters");const auto values=Json::parse(input);if(!values.is_object())throw std::invalid_argument("Parameters must be an object");
+        if(values.contains("camera"))camera.validate(values.at("camera"));
         for(auto& [group,entries]:fields)for(auto& [key,buffer]:entries)if(!physics_input(group,key)) {
             const bool model=key=="cls_model_file"&&values.contains("model");
             if(!model&&(!values.contains(group)||!values.at(group).contains(key)))continue;
@@ -157,7 +158,7 @@ struct VisionDebug::Impl {
                     }else nk_edit_string_zero_terminated(ui,NK_EDIT_FIELD,buffer.data(),int(buffer.size()),key=="cls_model_file"?nk_filter_default:nk_filter_float);
                 }
                 const auto note=[&](const std::string& text){nk_layout_row_dynamic(ui,42,1);nk_label_wrap(ui,text.c_str());};
-                if(tab==0){note("flip_image: 180 deg before vision; calibration unchanged (same as driver)");note("camera_name / camera_info_url: frame camera and K/D; use_sensor_data_qos: ROS only");}
+                if(tab==0){note("View rotation changes display only; vision uses the original camera image");note("camera_name / camera_info_url: frame camera and K/D; use_sensor_data_qos: ROS only");}
                 if(tab==1){note("detect_color: -1 follow target, 0 red, 1 blue, 2 both");note("use_geometric_center: false (frame calibration)");note("print_period_ms: native processing FPS log interval");}
                 if(tab==2){note("target_color: 0 red / 1 blue; follow_decision uses simulation feedback");
                     if(!last_result.is_null())note("cam_to_gun_pos [m], feedback: "+last_result.at("input").at("muzzle_offset_camera_m").dump());

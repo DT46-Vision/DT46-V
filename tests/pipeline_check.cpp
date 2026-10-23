@@ -1,22 +1,26 @@
 #include "modules/vision/virtual_camera.hpp"
 #include <opencv2/imgproc.hpp>
+#include <algorithm>
 #include <future>
 #include <iostream>
 #include <stdexcept>
 
 namespace {
-void camera_flip_check() {
+void camera_raw_frame_check() {
     using dt46::Json;using dt46::wire::Socket;
     std::uint16_t port=0;auto listener=Socket::listen(port);
-    const Json calibration={{100,0,1},{0,100,1},{0,0,1}};
+    const Json frame_info={{"width",2},{"height",2},{"color_order","RGB"},
+        {"K",{{100,0,.7},{0,105,.3},{0,0,1}}},{"D",{-.1,.02,.003,-.004,0}},
+        {"optical",{{0,0,1,1},{-1,0,0,2},{0,-1,0,3},{0,0,0,1}}},{"muzzle_offset",{.03,-.04,.05}}};
+    const std::vector<std::uint8_t> pixels={1,2,3,4,5,6,7,8,9,10,11,12};
     auto server=std::async(std::launch::async,[&]{
         auto socket=listener.accept();socket.receive();socket.send({{"protocol",1}});
         Json parameters={{"exposure_time",2500}};int version=0;
         try{while(true){const auto request=socket.receive().metadata;const auto op=request.at("op");
             if(op=="describe")socket.send({{"protocol",1},{"camera",parameters}});
-            else if(op=="next")socket.send({{"version",++version},{"frame",{{"width",2},{"height",2},{"color_order","RGB"},{"K",calibration}}}},std::vector<std::uint8_t>{1,2,3,4,5,6,7,8,9,10,11,12});
+            else if(op=="next")socket.send({{"version",++version},{"frame",frame_info}},pixels);
             else{
-                if(request.at("parameters").contains("flip_image"))throw std::runtime_error("Client flip leaked to sensor service");
+                if(request.at("parameters").contains("flip_image"))throw std::runtime_error("Removed flip parameter reached sensor service");
                 if(op=="configure_camera")parameters.update(request.at("parameters"));
                 socket.send({{"parameters",parameters}});
             }
@@ -24,13 +28,16 @@ void camera_flip_check() {
     });
     {
         dt46::VirtualCamera camera({{"port",port},{"key","test"}});
-        camera.configure({{"flip_image",true},{"exposure_time",1250}});const auto flipped=camera.next(Json::object());
-        if(!flipped||flipped->rgb.at<cv::Vec3b>(0,0)!=cv::Vec3b(10,11,12)||flipped->metadata.at("K")!=calibration||camera.description.at("camera").at("exposure_time")!=1250)
-            throw std::runtime_error("Camera flip changed calibration or failed to rotate RGB");
-        bool rejected=false;try{camera.configure({{"flip_image",2}});}catch(const std::invalid_argument&){rejected=true;}
-        if(!rejected||!camera.description.at("camera").at("flip_image").get<bool>())throw std::runtime_error("Invalid flip changed settings");
-        camera.configure({{"flip_image",false}});const auto raw=camera.next(Json::object());
-        if(!raw||raw->rgb.at<cv::Vec3b>(0,0)!=cv::Vec3b(1,2,3))throw std::runtime_error("Camera flip did not turn off");
+        if(camera.description.at("camera").contains("flip_image"))throw std::runtime_error("Removed flip control is still advertised");
+        camera.configure({{"exposure_time",1250}});const auto configured=camera.description;
+        if(configured.at("camera").at("exposure_time")!=1250)throw std::runtime_error("Camera exposure configuration failed");
+        for(const Json& flip:Json::array({true,false,1,0})) {
+            bool rejected=false;try{camera.configure({{"flip_image",flip},{"exposure_time",9999}});}catch(const std::invalid_argument&){rejected=true;}
+            if(!rejected||camera.description!=configured)throw std::runtime_error("Legacy flip configuration was accepted or changed settings");
+        }
+        const auto raw=camera.next(Json::object());
+        if(!raw||raw->metadata!=frame_info||!std::equal(pixels.begin(),pixels.end(),raw->rgb.data))
+            throw std::runtime_error("Raw camera pixels or geometry metadata changed");
     }
     server.get();
 }
@@ -76,8 +83,8 @@ int main(int argc, char** argv) {
             rejected=false;try{pipeline.configure(invalid);}catch(const std::exception&){rejected=true;}
             if(!rejected||pipeline.context()!=configured||pipeline.revision()!=configured_revision)throw std::runtime_error("Invalid model/display/color replaced context");
         }
-        camera_flip_check();
-        std::cout << "Native configuration, colors, camera flip, monotonic timestamps and reset passed\n";
+        camera_raw_frame_check();
+        std::cout << "Native configuration, colors, raw camera geometry, retired flip rejection, monotonic timestamps and reset passed\n";
         return 0;
     } catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
 }

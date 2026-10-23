@@ -14,6 +14,8 @@ Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真�
 
 Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
 
+2026-10-23 交接访谈确认：平台大改期间以本节原 tracker 为默认基线。PR3 和 `codex/sim-vision-tracker-changes@032dfb1` 保留为后续优化计划，待平台大改完成后再开始算法优化；本次不切换默认 tracker。快照的算法与适配层差异记录在该分支的 `standalone/README.md`，后续比较需先统一输入与验收条件。
+
 ## 构建
 
 需要 CMake 3.24+、Ninja、C++20 编译器，以及 OpenCV 4.12、Eigen 3.4。可使用现有原生安装，或通过 CMake 准备固定版本依赖：
@@ -49,14 +51,16 @@ build/native/bin/dt46_vision.exe --save-debug
 | 原 rqt / 节点功能 | 原生实现与适配边界 |
 |---|---|
 | MindVision 曝光、增益、RGB、AE/AWB、饱和度、gamma | 使用相机服务的同名控制；成像近似与开销边界见 [仿真相机说明](../../README.md#仿真时序与采图) |
-| `flip_image` | 相机客户端在识别前翻转上下和左右，即旋转 180°；原图和所有叠加图使用翻转后的输入。与原驱动 `CameraFlipFrameBuffer(...,3)` 一致，保留 K/D，默认关闭；SDK 标志依据为 [CameraApi.h 的原始接口注释](https://github.com/MinSungjae/mindvision_gige_ros/blob/master/include/mindvision_ros/CameraApi.h#L4077-L4087)（上游镜像） |
+| 图像旋转 | 工作分支仅保留各调试画面的显示旋转；算法始终接收原图及对应 K/D、光学姿态和枪口偏移。识别前旋转整图的 `flip_image` 已移至 `codex/camera-input-flip-experiment`（保留点 `bd98ec6`），该分支保留了翻图后坐标未同步的已知问题，仅供后续研究。相机面板和新结果元数据不再提供该选项；CLI 参数文件及调试窗口 Load 均拒绝包含 `camera.flip_image` 的旧配置，包括 false/0，需删除该键后重新加载。ROS 实机驱动的同名功能未改动。 |
 | 检测器灯条/装甲/ROI/阈值/模型/显示参数 | 对接原检测器；`detect_color` 支持 0 红、1 蓝、2 两色，另以 -1 保持原生默认的目标颜色跟随；`print_period_ms` 控制原生会话处理 FPS 的终端日志周期，不代表独立 detector/tracker 线程速率 |
 | tracker EKF、匹配、半径、延迟、弹道、旋转阈值 | 使用原始核心参数；`target_color` 支持红/蓝，默认 `follow_decision=true` 从仿真反馈取色，关闭后使用手动值；送入 tracker 前按原 ROS 节点过滤颜色，即使检测页选择两色也不追踪非目标颜色 |
 | `display` / `display_fps_limit` / `text_size` | 控制跟踪和弹道图生成、约 30 Hz 的调试图更新限制、文字缩放；关闭 `display` 停止这两路图和其录像，识别继续。解除刷新限制会增加图像生成开销，窗口仍按约 30 Hz 绘制 |
 | 相机名称/标定地址、枪口位置、IMU 安装修正 | 原生相机标识、K/D、光学姿态和枪口偏移由采样反馈提供；面板说明来源并显示当前枪口偏移。`rotation_rpy_*` 是 ROS 的 IMU 适配参数，不再次叠加；`use_geometric_center` 固定为 false，保留标定主点 |
 | ROS QoS、图像点击发布、节点选择 | 由原生相机会话和三页参数分类适配；不伪造 ROS 参数服务器或点击话题。原保存布局未启用点击发布；其他未启用的 rqt 插件不构成本页基准 |
 
-参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。当前原生测试和 Windows 操作流程见[本次审查](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前的[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)通过翻转与跟踪图关闭/恢复、快照 JSON 回读和持续处理新帧，并保存网格效果截图。这两项属于恢复 tracker 前的 UI 验证，不据此证明当前算法行为；本次未修改这些 UI 功能。这些本机证据不纳入 Git；复现时运行本页构建/CTest 命令和 sim_vision 的 Windows 操作流程，界面文件检查使用输出目录默认 `vision_parameters.json`，分别打开/关闭 `flip_image`、`tracker.display` 后 Apply、保存并重新加载。ROS rqt 本体未在本机运行验证。
+参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。原生测试和 Windows 操作流程的历史记录见[审查快照](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前的[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)包含当时的输入翻转及跟踪图关闭/恢复。这些是恢复 tracker、隔离输入翻转之前的历史结果，不代表当前功能或算法验收。本机证据不纳入 Git；当前检查使用本页构建/CTest 命令及 sim_vision 的 Windows 操作流程，界面检查使用输出目录的 `vision_parameters.json`，验证显示旋转、`tracker.display`、保存/加载以及旧翻转配置的拒绝。ROS rqt 本体未在本机运行验证。
+
+2026-10-23 输入翻转隔离验证：6 项原生 CTest 全部通过；`native_pipeline` 检查所有 RGB 字节及 K/D、光学姿态、枪口偏移原样交付，拒绝旧翻转参数且保持当前配置，`original_tracker_baseline` 确认五个核心文件仍为原版。沿用审查快照中的 Windows 流程命令，本次 [workflow_44312](../../outputs/cpp_migration/workflow_44312/checks.json) 检查 1,016 帧，许可发弹 2 发、视觉断开后 0 发；调试开关及快照成功，保存参数不含 `flip_image`，截图保留每格显示旋转入口。未单独点击所有旋转角度及 GUI Load 文件对话框；旧参数拒绝由原生测试覆盖。本次未验证 ROS 或实车。
 
 ## 管线接口与坐标
 

@@ -7,7 +7,6 @@ VirtualCamera::VirtualCamera(const Json& session):socket(wire::Socket::connect(s
     socket.send({{"key",session.at("key")}});const auto hello=socket.receive();
     if(hello.metadata.value("protocol",0)!=1)throw std::runtime_error("Virtual camera authentication/protocol failed");
     description=request({{"op","describe"}});if(description.at("protocol")!=1)throw std::runtime_error("Unsupported virtual camera protocol");
-    description["camera"]["flip_image"]=false;
 }
 Json VirtualCamera::request(const Json& request) {
     socket.send(request);const auto reply=socket.receive();
@@ -22,25 +21,15 @@ std::optional<VirtualFrame> VirtualCamera::next(const Json& status,const Json& r
         throw std::runtime_error("Invalid virtual camera RGB shape");
     auto storage=std::make_shared<std::vector<std::uint8_t>>(std::move(reply.bytes));
     cv::Mat rgb(height,width,CV_8UC3,storage->data());
-    const bool flip=description.at("camera").at("flip_image");
-    if(flip)cv::flip(rgb,rgb,-1);
-    frame["flip_image"]=flip;
     return VirtualFrame{std::move(rgb),std::move(frame),std::move(storage)};
 }
 void VirtualCamera::configure(const Json& parameters){
-    validate(parameters);auto sensor=parameters;sensor.erase("flip_image");
-    const auto flip=parameters.value("flip_image",Json(description.at("camera").at("flip_image")));
-    description["camera"]=request({{"op","configure_camera"},{"parameters",sensor}}).at("parameters");
-    description["camera"]["flip_image"]=flip.is_boolean()?flip.get<bool>():flip.get<double>()!=0;
+    validate(parameters);
+    description["camera"]=request({{"op","configure_camera"},{"parameters",parameters}}).at("parameters");
 }
 void VirtualCamera::validate(const Json& parameters){
-    auto sensor=parameters;
-    if(sensor.contains("flip_image")){
-        const auto value=sensor.at("flip_image");
-        if(!value.is_boolean()&&(!value.is_number()||(value.get<double>()!=0&&value.get<double>()!=1)))throw std::invalid_argument("flip_image must be boolean");
-        sensor.erase("flip_image");
-    }
-    request({{"op","validate_camera"},{"parameters",sensor}});
+    if(parameters.contains("flip_image"))throw std::invalid_argument("flip_image is no longer supported; remove it from camera settings and use display rotation");
+    request({{"op","validate_camera"},{"parameters",parameters}});
 }
 Json aim_feedback(const Json& result) {
     if(result.is_null())return nullptr;
@@ -57,7 +46,7 @@ Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
     result.update({{"camera",m.at("camera")},{"robot_id",m.at("robot_id")},{"detect_color",result.at("input").at("detect_color")},{"reset_generation",m.at("generation")},
         {"transport","virtual_camera"},{"bullet_speed_m_s",speed?speed:pipeline.nominal_speed()},{"bullet_speed_source",speed?"dual_photogate":"tracker_config"},
         {"camera_ms",m.value("camera_ms",0.)},{"processing_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count()},
-        {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")},{"flip_image",m.value("flip_image",false)}});
+        {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")}});
     if(m.contains("appearance"))result["appearance"]=m.at("appearance");
     for(const char* key:{"camera_settings_version","sampling_target_hz","sampling_effective_limit_hz"})if(m.contains(key))result[key]=m.at(key);
     result["input"]["optical_transform"]=m.at("optical");return result;
