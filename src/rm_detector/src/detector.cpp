@@ -363,7 +363,8 @@ namespace DT46_VISION{
             return std::atan2(light.down.x - light.up.x, light.down.y - light.up.y) * 180.0 / CV_PI;
         };
         auto slopes_match = [&](const Light& a, const Light& b) {
-            const double tilt = std::abs(light_tilt_deg(a) - light_tilt_deg(b));
+            // 端点方向朝上，近竖直灯条会分布在 +180° 和 -180° 两侧。
+            const double tilt = std::abs(std::remainder(light_tilt_deg(a) - light_tilt_deg(b), 360.0));
             const double line = std::abs(std::atan2(static_cast<double>(b.cy - a.cy),
                                                      static_cast<double>(b.cx - a.cx)) * 180.0 / CV_PI);
             return tilt <= slope_limit && line <= slope_limit;

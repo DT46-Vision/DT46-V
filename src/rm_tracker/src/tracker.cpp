@@ -256,7 +256,11 @@ void Tracker::note_plate_arc(double x, double y) {
     }
 }
 
-bool Tracker::center_motion_is_slow() const {
+bool Tracker::center_motion_is_slow() {
+    // 单板持续可见时也要淘汰旧双板，不能让过期的平移判断维持瞄准模式。
+    while (!obs_center_hist_.empty() && move_clock_ - obs_center_hist_.front().t > 0.6) {
+        obs_center_hist_.pop_front();
+    }
     // 无双板观测时默认当原地：宁可跟慢平移，也不要让板噪声把车心判成在走。
     if (obs_center_hist_.size() < 2) return true;
     const double newest = obs_center_hist_.back().t;
@@ -325,9 +329,6 @@ void Tracker::hold_center_when_stationary(const std::vector<Armor>& armors) {
             have_dual = true;
             last_dual_innov_ = std::hypot(dual_x - target_state_(0), dual_y - target_state_(2));
             obs_center_hist_.push_back({move_clock_, dual_x, dual_y});
-            while (!obs_center_hist_.empty() && move_clock_ - obs_center_hist_.front().t > 0.6) {
-                obs_center_hist_.pop_front();
-            }
         }
     }
 
@@ -426,7 +427,7 @@ void Tracker::update_spin_aim_mode(double dt) {
         spin_aim_mode_clock_ = 0.0;
         return;
     }
-    // 无双板时 center_motion_is_slow==true → 保持/切回跟板，避免噪声误切正前。
+    // 双板观测不足或过期时不外推车心平移，避免旧速度继续拉动瞄准点。
     const bool want_trans = !center_motion_is_slow();
     if (want_trans == spin_aim_translate_) {
         spin_aim_mode_clock_ = 0.0;
@@ -696,6 +697,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
                                                             target_state_(0), target_state_(2));
                     yaw_diff = std::abs(shortest_angular_distance(target_state_(6), best_match_yaw));
                     best_match = armor;
+                    best_match->yaw = best_match_yaw;
                 }
             }
         }
@@ -1100,17 +1102,20 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     bool aimed = false;
     const double center_norm = std::hypot(target_state_(0), target_state_(2));
 
-    // SPIN + 平移：车心正前等板（只外推 xc/yc 平移，不跟板切向）。
-    if (spin_ && spin_aim_translate_ && center_norm > 0.3) {
+    // SPIN 在车心正前等到达时刻的板；判为平移时才外推车心，瞄准点与开火窗口使用同一块板。
+    if (spin_ && center_norm > 0.3) {
         const double x0 = target_state_(0), y0 = target_state_(2), z0 = target_state_(4);
+        const double vx = spin_aim_translate_ ? target_state_(1) : 0.0;
+        const double vy = spin_aim_translate_ ? target_state_(3) : 0.0;
+        const double vz = spin_aim_translate_ ? target_state_(5) : 0.0;
         const double rough = std::max(0.1, center_norm - target_state_(8));
         const double t_flight = (rough <= LUT_DIST_MAX)
                                 ? lut_lookup_tof(rough, z0)
                                 : rough / std::max(bullet_speed, 1e-3);
         const double select_t = t_flight + system_delay;
         const double aim_t = select_t + std::max(0.0, controller_delay_);
-        const double xc_s = x0 + target_state_(1) * select_t;
-        const double yc_s = y0 + target_state_(3) * select_t;
+        const double xc_s = x0 + vx * select_t;
+        const double yc_s = y0 + vy * select_t;
         const double yaw_arr = target_state_(6) + target_state_(7) * select_t;
         const double select_norm = std::hypot(xc_s, yc_s);
         if (select_norm > 0.3) {
@@ -1119,9 +1124,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
                 select_spin_front_plate(front_yaw_s, yaw_arr, target_state_(7));
             const bool even = (plate_i % 2 == 0);
             const double r = even ? target_state_(8) : another_r_;
-            const double xc_a = x0 + target_state_(1) * aim_t;
-            const double yc_a = y0 + target_state_(3) * aim_t;
-            const double za_a = z0 + target_state_(5) * aim_t;
+            const double xc_a = x0 + vx * aim_t;
+            const double yc_a = y0 + vy * aim_t;
+            const double za_a = z0 + vz * aim_t;
             const double aim_norm = std::hypot(xc_a, yc_a);
             if (aim_norm > 0.3) {
                 const double front_yaw_a = std::atan2(yc_a, xc_a);
@@ -1135,7 +1140,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
         }
     }
 
-    // 非 SPIN / 原地 SPIN / 正前失败：跟检测板。SPIN 原地不加切向 lead。
+    // 非 SPIN 跟板；SPIN 车心不可用时只跟随观测，不能以当前板朝向放开发弹。
     if (!aimed) {
         const Eigen::Vector3d plate_pos(plate_(0), plate_(2), plate_(4));
         const double dist_h = std::hypot(plate_pos(0), plate_pos(1));
@@ -1146,15 +1151,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
         const Eigen::Vector3d aim = spin_ ? plate_pos : (plate_pos + lead_vel_ * lead_t);
         target_cam = Armor(tracked_id, aim(0), aim(1), aim(2), last_plate_yaw_);
         target_cam.dist = std::hypot(aim(0), aim(1), aim(2));
-        if (spin_) {
-            const double los = std::atan2(plate_pos(1), plate_pos(0));
-            const double face_err = std::abs(shortest_angular_distance(los, last_plate_yaw_));
-            const double r = std::max(target_state_(8), 0.2);
-            target_cam.target_to_armor_dist = r * face_err;
-            target_cam.angle_diff = face_err;
-        } else {
-            target_cam.target_to_armor_dist = 0.0;
-        }
+        target_cam.target_to_armor_dist = spin_ ? std::numeric_limits<double>::infinity() : 0.0;
     }
 
     // 4. 转换至枪口系并打靶

@@ -1,0 +1,5 @@
+LIGHT raw_difference_deg=350.472717 geometric_difference_deg=9.527283 pair_opposite=0 pair_same=1
+HISTORY age_s=2.000000 slow_before=0 slow_after=0 translating_aim=1
+YAW corrected_deg=30.000000 gate_residual_deg=0.000000 actual_observation_deg=-30.000000
+SPIN arrival_s=0.264600 rotation_deg=60.641853 future_nearest_plate_err_deg=29.358147 future_arc_error_m=0.122975 allowed_half_width_m=0.059000 current_can_fire=1
+All four counterexamples reproduced; not a ROS/camera/EKF integration test.
