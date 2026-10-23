@@ -14,7 +14,7 @@ Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真�
 
 Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
 
-2026-10-23 交接访谈确认：平台大改期间以本节原 tracker 为默认基线。PR3 和 `codex/sim-vision-tracker-changes@032dfb1` 保留为后续优化计划，待平台大改完成后再开始算法优化；本次不切换默认 tracker。快照的算法与适配层差异记录在该分支的 `standalone/README.md`，后续比较需先统一输入与验收条件。
+2026-10-23 交接访谈确认：平台大改期间以本节原 tracker 为默认基线。PR3 和 `codex/sim-vision-tracker-changes@032dfb1` 保留为后续优化计划，待平台大改完成后再开始算法优化；本次不切换默认 tracker。最终将经过优化、验证的快照算法改动整合回 `codex/sim-vision-work`，形成统一工作版本。合并结果保留当前适配层的目标颜色过滤和下文的输入翻转隔离；原快照继续作为历史对照保留。快照的算法与适配层差异记录在该分支的 `standalone/README.md`，优化验证需先统一输入与验收条件。本次仅确认后续整合方向，未执行算法合并。
 
 ## 构建
 
