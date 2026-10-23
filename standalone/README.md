@@ -2,8 +2,7 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
-个人集成分支为 [`codex/sim-vision-work`](https://github.com/DT46-Vision/DT46-V/tree/codex/sim-vision-work)；`codex/aim-tracking-scenario` 的同帧评测接口、增益与调试记录在验证后汇回此分支，推送目标为 `origin/codex/sim-vision-work`，`codex/vision-threading` 未纳入。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
-
+个人集成分支为 [`codex/sim-vision-work`](https://github.com/DT46-Vision/DT46-V/tree/codex/sim-vision-work)；`codex/aim-tracking-scenario` 的同帧评测接口、增益与调试记录在验证后汇回此分支，推送目标为 `origin/codex/sim-vision-work`，`codex/vision-threading` 未纳入。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。主线恢复原 tracker 之前的逻辑快照保留在 `codex/sim-vision-tracker-changes`，与本线的 tracker 差异见下节。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；前次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。当前分支继续合入 `codex/camera-lighting@fd97680` 的原生相机增益更新，配置实际生效、同帧评测接口和原生回归的本次结果见[增益整合检查](../../outputs/vision_gain_merge_20261025/checks.json)；该记录明确配套仿真照明是否参与测试，不沿用旧精度数字代表新参数。
 
 ## 原始 tracker 基线
@@ -15,6 +14,34 @@ Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真�
 Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
 
 2026-10-23 交接访谈确认：平台大改期间以本节原 tracker 为默认基线。PR3 和 `codex/sim-vision-tracker-changes@032dfb1` 保留为后续优化计划，待平台大改完成后再开始算法优化；本次不切换默认 tracker。最终将经过优化、验证的快照算法改动整合回 `codex/sim-vision-work`，形成统一工作版本。合并结果保留当前适配层的目标颜色过滤和下文的输入翻转隔离；原快照继续作为历史对照保留。快照的算法与适配层差异记录在该分支的 `standalone/README.md`，优化验证需先统一输入与验收条件。本次仅确认后续整合方向，未执行算法合并。
+
+## tracker 逻辑改动保留分支
+
+用户于 2026-10-23 要求单独保留此前改变 tracker 逻辑的版本。本分支从个人主线的 `70447fee6fab2b62c90990f79efbd54d79e908b2` 建立：该提交紧邻恢复原 tracker 的 `5923209` 之前。本次只增加本页说明，代码完整保留 `70447fe`，没有重写历史或重新实现算法。
+
+下表比较原始 `3c41f0b` tracker（主线 `5923209` 已恢复）与本分支保留的改动版：
+
+| 部分 | 原始 tracker / 主线恢复后 | 本分支保留的行为 | 改动来源 |
+|---|---|---|---|
+| 近距离弹道 | 水平距离小于 1.5 m 时直接几何瞄准 | 有效距离从 0.2 m 起也查弹道表，加入重力与阻力补偿 | `c1c4b41` |
+| 重力 | 核心固定 9.81 m/s²；主线适配层拒绝其他值 | 使用 `Tracker::gravity` 成员，原生适配层可配置 | `c1c4b41` |
+| yaw 观测更新 | 消歧结果用于角差匹配，观测副本保留原始 yaw | 将消歧后的 yaw 写回副本，传给换板和 EKF 更新 | `1cc835c` |
+| 双板车心历史 | 只在加入新双板观测时清理超过 0.6 s 的样本 | 每次 `center_motion_is_slow` 都按当前时间清理 | `9408747` |
+| SPIN 瞄准和开火 | 原地跟当前板，平移时在车心正前等板；正前失败后仍按跟板规则判断许可 | 原地和平移都按到达时刻选板、车心正前等板；原地不外推线速度，车心不可用时关闭 SPIN 发弹许可 | `48e1ab9` |
+| 本帧有效性 | 核心没有 `aim_valid` 字段；主线适配层从原无状态求解器读取 | tracker 内添加并更新 `aim_valid`，适配层直接读取 | `e2590d6` |
+
+此快照也保留当时的适配层状态：**没有 `5923209` 补齐的送入 tracker 前目标颜色过滤**，手动目标色与检测色不一致时可能追踪非目标颜色；也没有该提交新增的五文件原始基线检查和固定重力拒绝测试。它是旧代码快照，不能称为“当前主线只切换了 tracker 算法”的版本。两边共有的灯条角度环绕修复、PnP 解耦及 `RmTF` 光学旋转/主点适配不属于这次分叉新增的差异。EKF 和 ROS tracker 节点源码在两边均沿用原始版本。
+
+R02/R03/R04 的改动理由和当时的逻辑反例、回归范围见[历史审查](../docs/reviews/aim-test-3c41f0b/README.md)。`70447fe` 在恢复前曾通过 5 项原生 CTest 及四组逻辑回归；本次仅检查 Git 分支起点和代码树一致性，没有重新编译、运行或做实机验证，不把主线恢复后的 6 项测试结果算到本分支。
+
+从 DT46-V 根目录直接比较两个版本：
+
+```powershell
+git diff 5923209 codex/sim-vision-tracker-changes -- src/rm_tracker/src/tracker.cpp src/rm_tracker/include/rm_tracker/tracker.hpp standalone/aim.cpp
+git diff --name-status 70447fe codex/sim-vision-tracker-changes
+```
+
+第二条应只列出本说明文件。分支没有推送，个人主线仍保留原 tracker，未合入 `aim_test`、`stable` 或 `main`。
 
 ## 构建
 
