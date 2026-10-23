@@ -27,6 +27,53 @@ Windows 原生链路、三种配置回放、录像和原始 tracker 基线检查
 
 检测器仍保留历史提交 `54d5a2f` 的一行角度环绕修复：灯条角差由 `abs(a-b)` 改为 `abs(remainder(a-b,360))`。本次未改动该项；因此整套视觉算法不等于逐文件恢复到原提交。PnP 接口去除 ROS 消息依赖、改收普通标定结构，保留 IPPE 求解路径。旧审查对三个 tracker 问题的反例仍作为历史记录保留，当前分支按用户要求采用原行为，不能再把旧修复回归当作当前必过检查。
 
+## 逻辑改动子分支与个人分支清单
+
+按用户后续要求，新建本地分支 `codex/sim-vision-tracker-changes`，起点为恢复前的个人主线 `70447fe`，说明提交为 `032dfb1`。它完整保留恢复前的代码，不是重新实现或移植一组算法补丁。与 `70447fe` 的整棵 Git 树比较，仅 `standalone/README.md` 不同；该页记录与原始 tracker / 恢复后 `5923209` 的行为差异及当时尚未补齐的颜色过滤。本节上表已经列出各项逻辑来源，不另维护一份算法说明。
+
+```powershell
+git show codex/sim-vision-tracker-changes:standalone/README.md
+git diff 5923209 codex/sim-vision-tracker-changes -- src/rm_tracker/src/tracker.cpp src/rm_tracker/include/rm_tracker/tracker.hpp standalone/aim.cpp
+```
+
+以下为 2026-10-23 本工作区个人开发所涉及的分支快照。DT46-V 远端分支名及提交通过 `git ls-remote --heads origin` 核对，并通过 GitHub API 核对 14 条远端分支头的作者账号；当前登录为 `unity-as`，远端三条 `codex/` 分支头均为该账号。未推送、删除、改名或重置已有分支。祖先关系只表示提交历史已在主线中，不表示后来没有撤回其行为。
+
+| DT46-V 个人分支 | 本地位置 / 远端位置 | 相对个人主线的情况 |
+|---|---|---|
+| `codex/sim-vision-work` | 本地以 `5923209` 为本次代码比较点；远端 `70447fe` | 当前主线，保留原 tracker；本次登记另增加文档提交 |
+| `codex/sim-vision-tracker-changes` | 本地 `032dfb1`；未推送 | 新保留的 tracker 改动版，代码等同 `70447fe` |
+| `codex/aim-test-sim` | 本地 `b412a22`；无同名远端 | 早期虚拟相机接入，分支头已是主线祖先 |
+| `codex/cpp-migration` | 本地 `6cc4492`；远端 `5ba00e2` | 原生迁移，分支头已是主线祖先；本地比该远端多 2 个提交 |
+| `codex/project-branch-isolation` | 本地 `4e6c93f`；无同名远端 | 分支隔离规范入口，分支头已是主线祖先 |
+| `codex/docs-aim-test-review` | 仅远端 `3d5bbb6` | 原四项审查/修复；提交历史已在主线中，其中 tracker 改动在 `5923209` 撤回 |
+
+`2027` 本地分支头为 GlennAde 的 `a49f697`，不列为本次个人开发分支。其余远端分支头的作者：`2025` / `2026` 为 `Kielas520`；`2027` / `CarMidPoint-armor_try` / `Tracker_to_C++` / `aim_test` / `cuda` / `stable` 为 `GlennAde`；`feat/ballistic-ls-fit` 为 `wren-or-avenir`；`nav_interface` 为 `wwweng6216`；`rm_watch_dog` 为 `xkh-829`。作者账号本身不等于分支所有权，本清单结合本会话已确认的个人开发历史划定范围，没有扫描账号下其他仓库，也没有改动上述分支。
+
+sim_vision 是用户的独立个人项目，本地共 18 条分支，无远端。除当前分支和同头的隔离分支外，其余分支头均是当前 `98d6b54` 的祖先；本次只列出，没有清理或修改这些分支。
+
+| sim_vision 分支 | 分支头 | 内容 |
+|---|---|---|
+| `codex/sim-vision-work` | `98d6b54` | 当前个人工作分支 |
+| `codex/project-branch-isolation` | `98d6b54` | 与当前工作分支同头 |
+| `codex/camera-presets` | `649755a` | 相机预设、海康单位适配 |
+| `codex/hikrobot-camera-reference` | `7cae7fe` | 海康资料与预设依据 |
+| `codex/camera-sampling-sensor` | `b18e8b1` | 曝光响应、帧参数快照、采样限速 |
+| `codex/indoor-shadows` | `e5f0b44` | 阵营色、泛光、曝光采样 |
+| `codex/original-infantry` | `cac0f93` | 老步兵与原驾驶路径 |
+| `codex/cpp-migration` | `ad04e2f` | 原生迁移及照明研究阶段 |
+| `main` | `ad04e2f` | 与迁移分支同头，旧整合位置 |
+| `codex/filament-renderer` | `7b18662` | Filament GPU 畸变和异步交付 |
+| `codex/fix-render-lod-correctness` | `16353e5` | CAD 命中隔离、减面距离与缓存 |
+| `codex/optional-shadows` | `57ee4fb` | 简化照明、可选投影阴影 |
+| `codex/profile-camera-pipeline` | `e09f607` | 不限频采图与阶段计时 |
+| `codex/optimize-camera-transfer` | `bcd8c45` | RGB 复制重叠、截止时间交付 |
+| `opt/gpu-camera-pipeline` | `ab28460` | GPU 畸变、推进与采图解耦 |
+| `opt/realtime-camera-benchmark` | `908982a` | 原始标定分辨率高频采图基准 |
+| `opt/render-lod` | `636632f` | 减面入库与分段帧率口径 |
+| `opt/visibility-culling` | `c4dbdd7` | 视锥和阴影贡献剔除 |
+
+本次子分支保存只改说明文档，使用 Git 树差异、分支祖先关系和主线五文件原始基线核对，不重复执行运行测试；此前验证仍按本报告原有范围解释。偏离：无。未完成：没有新增未完成事项；此前 ROS 与实机缺口继续保留。
+
 ## 功能对照
 
 | 原功能 | 当前对应 | 本次证据与边界 |
