@@ -2,6 +2,10 @@
 
 RoboMaster vision/auto-aim system: standalone C++20 applications and ROS 2 Humble workspace (Ubuntu 22.04). C++ packages (`rm_detector`, `rm_tracker`, `rm_serial`, `dm_imu`, `dt46_hardware`, `dt46_tools`), camera drivers with vendored SDKs. Native build and workflow: `standalone/README.md`. ROS/hardware validation remains separate from Windows native tests.
 
+## 仿真接入工作的 Git 约束
+
+必须遵守 [工作区 Git 分支隔离规范](../README.md#git-分支隔离)，优先于通用技能中的默认主分支流程。当前个人工作分支及 GlennAde 原始起点见 [原生运行说明](standalone/README.md)。
+
 ## 省额度
 
 - 检索限定单个包。不要打开 `hikSDK/`、`mvsdk/`、`build/`、`install/`、`*.so`、`*.onnx`。
