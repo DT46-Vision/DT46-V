@@ -2,6 +2,8 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
+当前个人开发使用 `codex/cpp-migration`，跟踪同名 `origin/codex/cpp-migration`；继续原生视觉和仿真接入工作时使用此分支。`stable` 仍是远端默认分支，本次发布不向 `stable` 或 `main` 合并，也不更改远端默认分支。
+
 ## 构建
 
 需要 CMake 3.24+、Ninja、C++20 编译器，以及 OpenCV 4.12、Eigen 3.4。可使用现有原生安装，或通过 CMake 准备固定版本依赖：
