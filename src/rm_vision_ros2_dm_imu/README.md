@@ -56,4 +56,4 @@ ros2 launch dm_imu dm_imu_rviz.launch.xml
 
 RViz 入口使用同一份 `dm_imu_params.yaml`，并加载包内 `rviz/imu.rviz`。设备准备见 [MCU 串口说明](../rm_serial/README.md#构建与启动)。整车只使用一个 `/imu/rpy` 来源。
 
-协议与姿态离线检查见 [非 ROS 工程验证](../../standalone/README.md#c-运行层迁移进行中)。本次未在 ROS 2 或真实 IMU 上验证节点构建、发布频率和串口通信。
+协议与姿态离线检查见 [原生构建与测试](../../standalone/README.md#构建)。本次未在 ROS 2 或真实 IMU 上验证节点构建、发布频率和串口通信。

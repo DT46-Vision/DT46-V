@@ -6,6 +6,14 @@
 
 此次汇集的验证及分支检查见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)。
 
+## 原始 tracker 基线
+
+按用户指定，`tracker.cpp` / `tracker.hpp`、`ekf.cpp` / `ekf.hpp`、ROS `node.cpp` 保持 GlennAde `3c41f0b` 的源码，忽略检出时的 CRLF/LF 差异。`original_tracker_baseline` 测试校验这五个文件；后续不能以修复、迁移或适配为由自动改变其逻辑。原算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护。
+
+Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走原默认路径。原 tracker 重力固定为 9.81 m/s²；配置其他重力时明确拒绝，不能声称已跟随仿真重力。弹速、阻力和枪口偏移继续读取相应反馈。每帧有效性由适配层读取原始弹道求解器的结果，不在 tracker 中新增状态或改变选板、EKF、弹道和发弹判据。
+
+Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
+
 ## 构建
 
 需要 CMake 3.24+、Ninja、C++20 编译器，以及 OpenCV 4.12、Eigen 3.4。可使用现有原生安装，或通过 CMake 准备固定版本依赖：
@@ -19,7 +27,7 @@ ctest --preset release
 
 依赖下载及校验值由 [bootstrap.cmake](../cmake/bootstrap.cmake) 维护；本工程另固定 nlohmann/json 和 GLFW。OpenCV 使用 CPU DNN，并启用图像和视频读写。Windows 运行前，将 OpenCV 安装目录下的 `x64/mingw/bin`（或相应编译器目录）加入当前进程 PATH；程序与依赖应使用兼容的编译器。FFmpeg 插件随 OpenCV 安装，录制时需要该插件。Linux 视频后端依赖本机 OpenCV/FFmpeg 构建配置。
 
-当前 Windows 原生测试已通过：标定 PnP/光学旋转、管线空图/时间戳/复位/参数原子更新、本机通信认证与长度限制、MCU/IMU 字节协议。媒体测试也已通过：20 视图已知参数标定恢复、20 帧 MP4 写入/读回及采样节奏；合成标定 RMS 为 0.000021 像素，不代表实机精度。40 帧仿真序列回放得到 31 帧检测、26 帧 TRACKING 和 8 帧录像；与迁移前接口比较的 1,914 个数值完全一致，比较不包含耗时、通信附加字段和调试日志快照。ROS 节点与实机串口未验证，本机没有 ROS 2 / WSL。
+当前构建提供 6 项原生测试：原始 tracker 基线、标定 PnP/光学旋转、管线、通信、MCU/IMU 字节协议及媒体。最新执行结果与限制见[本次审查](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前迁移时的 40 帧回放和 1,914 个数值对照属于恢复 tracker 之前的历史结果，不能证明当前分支全链路与原 ROS 等价。ROS 节点与实机串口未验证，本机没有可用的 ROS 2 / WSL 环境。
 
 ## 虚拟相机与独立调试
 
@@ -43,12 +51,12 @@ build/native/bin/dt46_vision.exe --save-debug
 | MindVision 曝光、增益、RGB、AE/AWB、饱和度、gamma | 使用相机服务的同名控制；成像近似与开销边界见 [仿真相机说明](../../README.md#仿真时序与采图) |
 | `flip_image` | 相机客户端在识别前翻转上下和左右，即旋转 180°；原图和所有叠加图使用翻转后的输入。与原驱动 `CameraFlipFrameBuffer(...,3)` 一致，保留 K/D，默认关闭；SDK 标志依据为 [CameraApi.h 的原始接口注释](https://github.com/MinSungjae/mindvision_gige_ros/blob/master/include/mindvision_ros/CameraApi.h#L4077-L4087)（上游镜像） |
 | 检测器灯条/装甲/ROI/阈值/模型/显示参数 | 对接原检测器；`detect_color` 支持 0 红、1 蓝、2 两色，另以 -1 保持原生默认的目标颜色跟随；`print_period_ms` 控制原生会话处理 FPS 的终端日志周期，不代表独立 detector/tracker 线程速率 |
-| tracker EKF、匹配、半径、延迟、弹道、旋转阈值 | 使用现有核心参数；`target_color` 支持红/蓝，默认 `follow_decision=true` 从仿真反馈取色，关闭后使用手动值 |
+| tracker EKF、匹配、半径、延迟、弹道、旋转阈值 | 使用原始核心参数；`target_color` 支持红/蓝，默认 `follow_decision=true` 从仿真反馈取色，关闭后使用手动值；送入 tracker 前按原 ROS 节点过滤颜色，即使检测页选择两色也不追踪非目标颜色 |
 | `display` / `display_fps_limit` / `text_size` | 控制跟踪和弹道图生成、约 30 Hz 的调试图更新限制、文字缩放；关闭 `display` 停止这两路图和其录像，识别继续。解除刷新限制会增加图像生成开销，窗口仍按约 30 Hz 绘制 |
 | 相机名称/标定地址、枪口位置、IMU 安装修正 | 原生相机标识、K/D、光学姿态和枪口偏移由采样反馈提供；面板说明来源并显示当前枪口偏移。`rotation_rpy_*` 是 ROS 的 IMU 适配参数，不再次叠加；`use_geometric_center` 固定为 false，保留标定主点 |
 | ROS QoS、图像点击发布、节点选择 | 由原生相机会话和三页参数分类适配；不伪造 ROS 参数服务器或点击话题。原保存布局未启用点击发布；其他未启用的 rqt 插件不构成本页基准 |
 
-参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。`ctest --preset release` 的 5 项原生测试通过，覆盖颜色过滤、手动/决策颜色切换、非法模型/参数保留上下文、翻转像素及标定不变。Windows [操作流程](../../outputs/cpp_migration/workflow_46304/checks.json)通过同一上下文开关调试及自瞄/发弹门控；[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)通过翻转与跟踪图关闭/恢复、快照 JSON 回读和持续处理新帧，并保存网格效果截图。这些本机证据不纳入 Git；复现时运行本页构建/CTest 命令和 sim_vision 的 Windows 操作流程，界面文件检查使用输出目录默认 `vision_parameters.json`，分别打开/关闭 `flip_image`、`tracker.display` 后 Apply、保存并重新加载。ROS rqt 本体未在本机运行验证。
+参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。当前原生测试和 Windows 操作流程见[本次审查](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前的[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)通过翻转与跟踪图关闭/恢复、快照 JSON 回读和持续处理新帧，并保存网格效果截图。这两项属于恢复 tracker 前的 UI 验证，不据此证明当前算法行为；本次未修改这些 UI 功能。这些本机证据不纳入 Git；复现时运行本页构建/CTest 命令和 sim_vision 的 Windows 操作流程，界面文件检查使用输出目录默认 `vision_parameters.json`，分别打开/关闭 `flip_image`、`tracker.display` 后 Apply、保存并重新加载。ROS rqt 本体未在本机运行验证。
 
 ## 管线接口与坐标
 
@@ -66,7 +74,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 输出包含装甲编号、分类分数、像素四角、相机系米制位置、追踪状态、预测状态、角度误差（度）及 `can_fire`。`position_camera_origin_world_axes_m` 以相机为原点，按世界轴表达；没有补偿自身底盘平移与光心移动，不能当作世界绝对位置。仿真反馈覆盖对应硬件输入，已给出的光学旋转不再叠加 IMU 安装修正。输入不含对手真值。
 
-`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开；每次 track 先清除，提前退出不会沿用旧值。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
+`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。适配层在调用 `track` 前清空仅供渲染的目标缓存；若本帧产生枪口目标，再调用原本无状态的 `solve_ballistic` 读取有效标记并检查有限角度。提前退出时不会导出旧帧有效性；额外调用只有原查表和三角运算，不修改核心状态。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
 图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，PnP 则把原始像素和 K/D 传给 `solvePnPGeneric`，在几何求解中补偿畸变。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
 

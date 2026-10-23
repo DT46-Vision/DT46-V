@@ -41,6 +41,8 @@ add_executable(dt46_vision project/application/virtual_vision.cpp)
 target_link_libraries(dt46_vision PRIVATE dt46_debug dt46_media)
 target_compile_definitions(dt46_vision PRIVATE DT46_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 if(BUILD_TESTING)
+    add_test(NAME original_tracker_baseline COMMAND ${CMAKE_COMMAND}
+        "-DDT46_ROOT=${CMAKE_CURRENT_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_tracker_check.cmake")
     add_executable(dt46_hardware_check tests/hardware_check.cpp)
     target_link_libraries(dt46_hardware_check PRIVATE dt46_hardware nlohmann_json::nlohmann_json)
     add_test(NAME hardware_protocol COMMAND dt46_hardware_check "${CMAKE_CURRENT_SOURCE_DIR}/tests/data/protocol_reference.json")

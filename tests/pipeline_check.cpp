@@ -43,6 +43,9 @@ int main(int argc, char** argv) {
         const auto* initial = pipeline.context();
         const auto revision = pipeline.revision();
         bool rejected = false;
+        try { pipeline.configure({{"tracker", {{"gravity", 9.8}}}}); } catch (const std::exception&) { rejected = true; }
+        if (!rejected || pipeline.context() != initial || pipeline.revision()!=revision) throw std::runtime_error("Original tracker gravity constraint ignored");
+        rejected = false;
         try { pipeline.configure({{"detector", {{"roi_scale", 0}}}}); } catch (const std::exception&) { rejected = true; }
         if (!rejected || pipeline.context() != initial || pipeline.revision()!=revision) throw std::runtime_error("Invalid configuration changed the pipeline");
         const cv::Mat image(64,64,CV_8UC3,cv::Scalar(0,0,0));

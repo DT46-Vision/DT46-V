@@ -41,12 +41,12 @@
 
 1. **颜色过滤 + 坐标变换**（`node.cpp`）：`target_color == 0` 只保留 `armor_id >= 6`（红方），`== 1` 只保留 `armor_id < 6`（蓝方）。相机系坐标 `dx/dy/dz`（mm → m）经 `RmTF::cam_to_world()` 结合 IMU RPY 转到世界系；观测 yaw 取反后与云台 yaw 相加得到世界系绝对 yaw。
 2. **时间步长**：`dt` 由 `ArmorsMsg.header.stamp` 差分得到；`dt <= 1ms` 时使用 10ms，`dt > 100ms` 时截断到 100ms，其余使用实际间隔。
-3. **目标选择与跳变**（`tracker.cpp`）：先用位置消歧观测 yaw，同一消歧结果用于角度匹配、换板和 EKF 更新。当前位置、角差分别通过 `max_match_distance` 和 `max_match_yaw_diff` 时直接更新；否则仅在观测更接近其他预测板、且换板冷却结束时处理跳变。
+3. **目标选择与跳变**（`tracker.cpp`）：先用位置消歧观测 yaw，并据此计算匹配角差；原实现传入 EKF 的匹配观测仍保留原始 yaw，不将消歧结果写回。当前位置、角差分别通过 `max_match_distance` 和 `max_match_yaw_diff` 时直接更新；否则仅在观测更接近其他预测板、且换板冷却结束时处理跳变。
 4. **EKF**：9 维状态 `[xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r]`，观测为 4 维 `[x, y, z, yaw]`；Q/R 由 `ekf_QR_*` 参数在线计算，半径 `r` 用 `radius_r_min/max` 限幅。
 5. **状态机**：`LOST → DETECTING`（连续 `tracking_thres` 帧）`→ TRACKING → TEMP_LOST → LOST`（连续 `lost_thres` 帧）。状态切换会打印到终端。
-6. **反小陀螺**：同向换板连续两次进入 SPIN；没有继续换板时，结合板运动速度计时退出。每次平移判断先淘汰距当前时刻超过 0.6 s 的双板车心样本；剩余样本跨度不足 0.4 s 时按原地处理，切换仍有滞回。SPIN 使用到达时刻的四板预测，在车心正前等板；判为平移时才外推车心，否则忽略残余线速度。
-7. **弹道解算**：`build_ballistic_lut()` 用 `bullet_speed` 与 `k_v2`（平方空气阻力 `a = -k·v²`）预建 25×15 查找表（距离 0.1–12 m 步长 0.5，高度 −3.5–3.5 m 步长 0.5），运行时按目标距离/高度查表得到 pitch 补偿；同时补偿 `system_delay`（弹丸飞行时间 + 系统延迟）与相机→枪口外参 `cam_to_gun_*`。
-8. **开火判定**：目标距离 ≤ `shootable_dist`，yaw 误差位于装甲左右边缘角窗内，pitch 误差通过动态门限。SPIN 额外检查所选装甲在弹丸到达时刻是否位于正对窗口；交替半径和板高随选板同步，车心不可用时关闭发弹许可。`controller_delay` 只影响瞄准点外推，不改变选板的到达时刻。
+6. **反小陀螺**：同向换板连续两次进入 SPIN；没有继续换板时，结合板运动速度计时退出。双板车心历史只在加入新双板观测时淘汰超过 0.6 s 的样本；用于平移判断的样本跨度不足 0.4 s 时按原地处理，切换有滞回。原地 SPIN 跟随当前板，不加切向提前量；平移 SPIN 使用到达时刻的四板预测，在外推后的车心正前等板。
+7. **弹道解算**：`build_ballistic_lut()` 用 `bullet_speed`、固定重力 9.81 m/s² 与 `k_v2`（平方空气阻力 `a = -k·v²`）预建 25×15 查找表（距离 0.1–12 m 步长 0.5，高度 −3.5–3.5 m 步长 0.5）。原 `solve_ballistic()` 在水平距离小于 1.5 m 时直接几何瞄准，不加重力/阻力补偿；其余表内距离查表，超出表范围回退到几何角。目标外推使用弹丸飞行时间、`system_delay` 和 `controller_delay`，并转换相机→枪口外参 `cam_to_gun_*`。
+8. **开火判定**：目标距离 ≤ `shootable_dist`，yaw 误差位于装甲左右边缘角窗内，pitch 误差通过动态门限。SPIN 额外比较目标的正对误差与装甲宽度窗口：原地跟板使用当前板朝向，平移正前路径使用到达时刻所选板；正前路径不可用时回退跟板，没有额外强制关闭许可。交替半径和板高随选板同步；`controller_delay` 只影响瞄准点外推，不改变选板的到达时刻。基线和历史修复取舍见 [原始 tracker 基线](../../standalone/README.md#原始-tracker-基线)。
 
 ## 参数
 
@@ -146,10 +146,10 @@ ros2 param set /rm_tracker display true       # 打开调试图
 
 ## 注意事项 / 已知问题
 
-1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期帧计数版小陀螺），配置里留着会让人误以为可以调。当前小陀螺是**按时间**累计的（`spin_enter_time` / `spin_exit_time`）。
+1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期帧计数版小陀螺），配置里留着会让人误以为可以调。当前进入 SPIN 依赖连续同向换板，退出结合时间门限；不能把 `min_spinning_vel` / `spin_enter_time` 理解为唯一进入条件。
 2. **不声明就改不动**：ROS 2 对未声明的参数只会当作 override 忽略，不会有任何报错或告警，排查参数问题时建议先 `ros2 param list /rm_tracker` 核对。
-3. **颜色过滤只在节点层做**：`Tracker::target_color` 成员在 `tracker.cpp` 里没有被使用，实际过滤发生在 `node.cpp` 的 `armors_cb`。
+3. **颜色过滤在核心外做**：`Tracker::target_color` 成员在 `tracker.cpp` 里没有被使用；ROS 在 `node.cpp` 的 `armors_cb` 过滤，原生接入在适配层执行相同过滤。
 4. **渲染依赖 `/camera_info`**：`res_img_cb` 在 `tf_.has_camera_info()` 为 false 时直接返回，表现为"开了 display 也没有图像"。
 5. **`/nav/decision` 缺失时不会切色**：`follow_decision: true` 的英雄/步兵配置依赖 `rm_serial` 转发裁判系统颜色；纯视觉 launch 下该话题不存在，会一直用 YAML 里的 `target_color`。
 6. **两个 `/imu/rpy` 发布者会冲突**：`dm_imu`（默认开）与 `rm_serial`（`pub_rpy`，默认 false）都会发这个话题，且 `rm_serial` 直通下位机数据、单位不一定与 `dm_imu` 一致，不要同时开。
-7. **`dt` 保护会掩盖时间戳问题**：帧间隔异常（≤1ms 或 >30ms）会被强制成 10ms，如果发现速度和预测明显异常，先确认 `/detector/armors_info` 的时间戳是否正常。
+7. **`dt` 保护会掩盖时间戳问题**：帧间隔 ≤1 ms 时改用 10 ms，超过 100 ms 时截断为 100 ms；其余使用实际间隔。如果速度和预测明显异常，先确认 `/detector/armors_info` 的时间戳。

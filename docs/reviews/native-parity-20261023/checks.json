@@ -1,0 +1,671 @@
+{
+  "date": "2026-10-23",
+  "timezone": "Asia/Shanghai",
+  "snapshot_kind": "Audit and restored working-tree validation, not a second current contract",
+  "audit_start_commit": "70447fee6fab2b62c90990f79efbd54d79e908b2",
+  "branch": "codex/sim-vision-work",
+  "tracker_baseline": "3c41f0b02a05bf06ad28ca8440bc8099545498ab",
+  "original_tracker_files": [
+    {
+      "path": "src/rm_tracker/src/tracker.cpp",
+      "normalized_sha256": "40212ca84ef5f936888dc9e8a8bda3e937969214ff51586d57ddf78d9ed6e98e",
+      "matches_baseline": true
+    },
+    {
+      "path": "src/rm_tracker/include/rm_tracker/tracker.hpp",
+      "normalized_sha256": "99a07dedac95cbf8774fd02c36e1e4ea9005c69be18003af84aa507005311c29",
+      "matches_baseline": true
+    },
+    {
+      "path": "src/rm_tracker/src/ekf.cpp",
+      "normalized_sha256": "153ecec8accb03b91de7751c28852d19eac0425e90eddc0a4f31d717cb95d331",
+      "matches_baseline": true
+    },
+    {
+      "path": "src/rm_tracker/include/rm_tracker/ekf.hpp",
+      "normalized_sha256": "7d5c26d0749c8c5cab70ed1989f973d912499066e12a5ce6f437b4e4100cf767",
+      "matches_baseline": true
+    },
+    {
+      "path": "src/rm_tracker/src/node.cpp",
+      "normalized_sha256": "d48003505c48424f891ee1375ac89a8566c0d75e9da7028ceb7fb5eddc26139b",
+      "matches_baseline": true
+    }
+  ],
+  "remaining_adaptations": [
+    "rm_tf_tools optional optical rotation and calibrated principal point; ROS defaults preserved",
+    "Native input/output, per-frame validity, enemy-color gate, fixed original gravity validation"
+  ],
+  "remaining_detector_algorithm_change": {
+    "commit": "54d5a2f",
+    "path": "src/rm_detector/src/detector.cpp",
+    "change": "abs(a-b) -> abs(remainder(a-b,360)); not modified in this task"
+  },
+  "launch_inventory": {
+    "baseline": "3c41f0b02a05bf06ad28ca8440bc8099545498ab",
+    "original_python_file_count": 31,
+    "original_python_files": [
+      "bags/make_sentry_variant.py",
+      "bags/record_tracker_mp4.py",
+      "src/rm_DT46/launch/bag_record.launch.py",
+      "src/rm_DT46/launch/hero.launch.py",
+      "src/rm_DT46/launch/hik.launch.py",
+      "src/rm_DT46/launch/hik_nav.launch.py",
+      "src/rm_DT46/launch/infantry.launch.py",
+      "src/rm_DT46/launch/mv.launch.py",
+      "src/rm_DT46/launch/mv_nav.launch.py",
+      "src/rm_DT46/launch/sentry.launch.py",
+      "src/rm_DT46/launch/usb_nav.launch.py",
+      "src/rm_detector/launch/detector.launch.py",
+      "src/rm_serial/launch/rm_serial.launch.py",
+      "src/rm_serial/rm_serial/__init__.py",
+      "src/rm_serial/rm_serial/modules/__init__.py",
+      "src/rm_serial/rm_serial/modules/crc.py",
+      "src/rm_serial/rm_serial/modules/crc_table.py",
+      "src/rm_serial/rm_serial/node.py",
+      "src/rm_serial/setup.py",
+      "src/rm_tracker/launch/tracker.launch.py",
+      "src/rm_vision_ros2_dm_imu/dm_imu/__init__.py",
+      "src/rm_vision_ros2_dm_imu/dm_imu/modules/__init__.py",
+      "src/rm_vision_ros2_dm_imu/dm_imu/modules/dm_crc.py",
+      "src/rm_vision_ros2_dm_imu/dm_imu/modules/dm_serial.py",
+      "src/rm_vision_ros2_dm_imu/dm_imu/node.py",
+      "src/rm_vision_ros2_dm_imu/launch/dm_imu.launch.py",
+      "src/rm_vision_ros2_dm_imu/launch/dm_imu_rviz.launch.py",
+      "src/rm_vision_ros2_dm_imu/setup.py",
+      "src/rm_vision_ros2_hik_camera/launch/hik_camera.launch.py",
+      "src/rm_vision_ros2_mindvision_camera/launch/mv_launch.py",
+      "src/rm_vision_ros2_usb_camera/launch/usb_camera.launch.py"
+    ],
+    "launch_count": 17,
+    "launches": [
+      {
+        "original": "src/rm_DT46/launch/bag_record.launch.py",
+        "current": "src/rm_DT46/launch/bag_record.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/hero.launch.py",
+        "current": "src/rm_DT46/launch/hero.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": [
+          "$(find-pkg-share hik_camera)/launch/hik_camera.launch.xml"
+        ]
+      },
+      {
+        "original": "src/rm_DT46/launch/hik.launch.py",
+        "current": "src/rm_DT46/launch/hik.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "hik_camera",
+            "executable": "hik_camera_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/hik_nav.launch.py",
+        "current": "src/rm_DT46/launch/hik_nav.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "hik_camera",
+            "executable": "hik_camera_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/infantry.launch.py",
+        "current": "src/rm_DT46/launch/infantry.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "mindvision_camera",
+            "executable": "mindvision_camera_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/mv.launch.py",
+        "current": "src/rm_DT46/launch/mv.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "mindvision_camera",
+            "executable": "mindvision_camera_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/mv_nav.launch.py",
+        "current": "src/rm_DT46/launch/mv_nav.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "mindvision_camera",
+            "executable": "mindvision_camera_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_DT46/launch/sentry.launch.py",
+        "current": "src/rm_DT46/launch/sentry.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": [
+          "$(find-pkg-share hik_camera)/launch/hik_camera.launch.xml"
+        ]
+      },
+      {
+        "original": "src/rm_DT46/launch/usb_nav.launch.py",
+        "current": "src/rm_DT46/launch/usb_nav.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "usb_camera",
+            "executable": "usb_camera_node"
+          },
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          },
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          },
+          {
+            "package": "rqt_gui",
+            "executable": "rqt_gui"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_detector/launch/detector.launch.py",
+        "current": "src/rm_detector/launch/detector.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_detector",
+            "executable": "rm_detector_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_serial/launch/rm_serial.launch.py",
+        "current": "src/rm_serial/launch/rm_serial.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_serial",
+            "executable": "rm_serial_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_tracker/launch/tracker.launch.py",
+        "current": "src/rm_tracker/launch/tracker.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "rm_tracker",
+            "executable": "rm_tracker_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_vision_ros2_dm_imu/launch/dm_imu.launch.py",
+        "current": "src/rm_vision_ros2_dm_imu/launch/dm_imu.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_vision_ros2_dm_imu/launch/dm_imu_rviz.launch.py",
+        "current": "src/rm_vision_ros2_dm_imu/launch/dm_imu_rviz.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "dm_imu",
+            "executable": "dm_imu_node"
+          },
+          {
+            "package": "rviz2",
+            "executable": "rviz2"
+          }
+        ],
+        "includes": [
+          "$(find-pkg-share dm_imu)/launch/dm_imu.launch.xml"
+        ]
+      },
+      {
+        "original": "src/rm_vision_ros2_hik_camera/launch/hik_camera.launch.py",
+        "current": "src/rm_vision_ros2_hik_camera/launch/hik_camera.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "hik_camera",
+            "executable": "hik_camera_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_vision_ros2_mindvision_camera/launch/mv_launch.py",
+        "current": "src/rm_vision_ros2_mindvision_camera/launch/mv_launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "mindvision_camera",
+            "executable": "mindvision_camera_node"
+          }
+        ],
+        "includes": []
+      },
+      {
+        "original": "src/rm_vision_ros2_usb_camera/launch/usb_camera.launch.py",
+        "current": "src/rm_vision_ros2_usb_camera/launch/usb_camera.launch.xml",
+        "xml_parse": "passed",
+        "active_literal_node_inventory": "matched",
+        "nodes": [
+          {
+            "package": "usb_camera",
+            "executable": "usb_camera_node"
+          }
+        ],
+        "includes": []
+      }
+    ],
+    "scope": "Static XML parsing, local includes and active literal Node package/executable inventory; dm_imu_rviz replaces its literal IMU Node with an include. Not ROS launch execution or full substitution evaluation."
+  },
+  "final_native_build": {
+    "command": "cmake --build --preset release --parallel 4",
+    "exit_code": 0
+  },
+  "final_native_ctest": {
+    "command": "ctest --preset release",
+    "exit_code": 0,
+    "passed": 6,
+    "failed": 0,
+    "tests": [
+      "native_media",
+      "original_tracker_baseline",
+      "hardware_protocol",
+      "native_pipeline",
+      "native_transport",
+      "calibrated_pnp_and_optical_rotation"
+    ],
+    "measured_wall_seconds": 0.99
+  },
+  "related_sim_ctest": {
+    "command": "ctest --preset release -R 'auto_aim_control|camera_sampling'",
+    "passed": 2,
+    "failed": 0
+  },
+  "fixture": {
+    "frames": 20,
+    "width": 640,
+    "height": 512,
+    "quality": "low",
+    "simulation_seconds": 0.2,
+    "sample_timestamp_hz": 100,
+    "real_time_performance_measurement": false,
+    "detector_binary_val": 40,
+    "input": "rendered RGB and same-frame camera/self feedback; no opponent truth input"
+  },
+  "color_cases_before_restore": {
+    "follow_blue": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "can_fire_frames": 0,
+      "observed_ids": [
+        5
+      ],
+      "tracked_ids": [
+        5
+      ]
+    },
+    "target_red_detect_both": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "can_fire_frames": 0,
+      "observed_ids": [
+        5
+      ],
+      "tracked_ids": [
+        5
+      ]
+    },
+    "target_red_detect_blue": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "can_fire_frames": 0,
+      "observed_ids": [
+        5
+      ],
+      "tracked_ids": [
+        5
+      ]
+    },
+    "target_red_detect_follow": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 0,
+      "tracking_frames": 0,
+      "can_fire_frames": 0,
+      "observed_ids": [],
+      "tracked_ids": []
+    }
+  },
+  "color_cases_after_restore_and_adapter_gate": {
+    "follow_blue": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "can_fire_frames": 0,
+      "tracked_ids": [
+        5
+      ]
+    },
+    "target_red_detect_both": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 0,
+      "can_fire_frames": 0,
+      "tracked_ids": []
+    },
+    "target_red_detect_blue": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 0,
+      "can_fire_frames": 0,
+      "tracked_ids": []
+    },
+    "target_red_detect_follow": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 0,
+      "tracking_frames": 0,
+      "can_fire_frames": 0,
+      "tracked_ids": []
+    }
+  },
+  "profiles_after_restore": {
+    "infantry": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "video_frames": 4
+    },
+    "sentry": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "video_frames": 4
+    },
+    "hero": {
+      "exit_code": 0,
+      "frames": 20,
+      "frames_with_detections": 20,
+      "tracking_frames": 15,
+      "video_frames": 4
+    }
+  },
+  "windows_workflow_after_restore": {
+    "path": "outputs/cpp_migration/workflow_45276/checks.json",
+    "passed": true,
+    "vision_frames_checked": 1138,
+    "auto_aim_shots": 2,
+    "disconnect_shots": 0,
+    "camera_rate": {
+      "deadline_late_max_ms": 717.5384,
+      "deadline_late_mean_ms": 0.9340524557695209,
+      "delivered_hz": 281.17192232286635,
+      "effective_limit_max_hz": 300.0,
+      "effective_limit_min_hz": 300.0,
+      "exposure_limit_hz": 400.0,
+      "limit_attainment_percent": 93.72397410762211,
+      "measurement": "rate_limited_delivery_not_maximum_throughput",
+      "missed_schedule_slots": 238,
+      "readback_waits": 14,
+      "simulation_step_s": 0.001,
+      "state_limit_hz": 333.3333333333333,
+      "state_waits": 1836,
+      "submissions": 3503,
+      "target_hz": 300.0
+    },
+    "physics_error": "",
+    "camera_error": "",
+    "scope": "Functional UI/control run, not throughput benchmark"
+  },
+  "failed_attempts": [
+    {
+      "path": "outputs/cpp_migration/workflow_27924",
+      "stage": "before tracker restore",
+      "failure": "Timeout waiting for rendering.json after quality panel interaction",
+      "cause": "unconfirmed; later pass does not establish the reason"
+    },
+    {
+      "path": "outputs/native_parity_20261023/color_attempt_missing_runtime_path.json",
+      "failure": "0xC0000135 at process startup because command PATH lacked runtime DLL directories",
+      "resolution": "Configured dependency PATH, then reran replay"
+    }
+  ],
+  "historical_fix_regression": {
+    "checked_at": "70447fe before restore",
+    "groups": 4,
+    "passed_before_restore": true,
+    "applicable_to_restored_tracker": false,
+    "reason": "R02/R03/R04 fixes intentionally not applied to selected original baseline"
+  },
+  "unverified": [
+    "ROS 2 Humble node build and launch/parameter/topic runtime",
+    "Physical HIKROBOT, MindVision and USB cameras",
+    "Real MCU/IMU serial communication, reconnection and scheduling under write backpressure",
+    "Vehicle-specific accuracy, rotating-target performance and real firing accuracy",
+    "Separate timing cost of adapter validity lookup"
+  ],
+  "temporary_script_files_created": 0,
+  "protected_remote_tracking_refs_observed": {
+    "aim_test": "96bc416994000aaf30d8b58941ddc3bc9617a50f",
+    "stable": "2b1c1666cca40e6841bde8ecae6c6cd811676e73"
+  },
+  "remote_writes_in_this_task": false,
+  "raw_local_evidence": "sim_vision/outputs (ignored); use README reproduction commands on another machine",
+  "sentry_variant": {
+    "exit_code": 0,
+    "values": {
+      "ekf_QR_q_xyz": 20.0,
+      "ekf_QR_r_xyz_factor": 0.01,
+      "ekf_QR_q_yaw": 100.0,
+      "ekf_QR_q_r": 80.0
+    },
+    "all_other_yaml_text_and_comments_unchanged": true
+  }
+}

@@ -1,6 +1,6 @@
 # aim_test 分支审查证据
 
-本文保留指定提交的审阅快照，并集中维护四项问题的修复方案和验证记录。下方 R01 至 R04 的证据仍对应旧提交；当前实现进展见“修复方案与验证”。各模块使用说明继续由各包 README 维护。
+本文保留指定提交及 PR #3 修复历史的审阅快照；下方 R01 至 R04 的反例和回归结果均对应当时版本。用户随后指定保留原始 tracker，当前个人分支的恢复范围与验证见 [2026-10-23 原生功能审查](../native-parity-20261023/README.md)。本页不作为当前 tracker 已采用 R02/R03/R04 修复的依据。各模块使用说明继续由各包 README 维护。
 
 ## 审查范围
 
@@ -32,13 +32,13 @@ python3 docs/reviews/aim-test-3c41f0b/reproduce.py
 
 Windows 可用 `python` 运行同一脚本，编译器须在 PATH 中。脚本在系统临时目录生成 C++ 文件和可执行文件，运行结束清理，不覆盖结果快照。默认模式的退出码 0 表示旧提交的反例复现成功。
 
-检查当前工作树修复：
+在采用 PR #3 四项修复的工作树检查回归：
 
 ```bash
 python3 docs/reviews/aim-test-3c41f0b/reproduce.py --check-fixes
 ```
 
-该模式的退出码 0 表示下述四组逻辑回归通过；它不能替代 ROS 2 或实车验收。合入原生视觉分支后，测试夹具提供与 `Tracker` 默认值相同的 `gravity=9.81`，供摘取的弹道函数使用。
+该模式的退出码 0 表示下述四组逻辑回归通过；它不能替代 ROS 2 或实车验收。当前保留原始 tracker 的分支不满足其中 R02/R03/R04 的修复断言，不能把它列为当前必过检查。测试夹具的 `gravity=9.81` 用于兼容当时原生分支摘取的弹道函数。
 
 ### 验证边界
 
@@ -66,7 +66,7 @@ PR #3 的业务代码变更限定在检测器配对和追踪器中这四项逻�
 
 **R02 的行为选择：** 单独给当前板朝向加 `角速度 × 时间`，仍会让瞄准点停留在旧板位置，不能解决时刻不一致。因此本次原地 SPIN 改为复用已有的车心正前等板路径，选板使用 `飞行时间 + system_delay`，`controller_delay` 仍只影响平移瞄准点。该修复重新依赖车心估计的稳定性，需要用原地小陀螺回放检查红圈抖动及模式切换；当前回归只证明理想输入下的几何与逻辑一致。
 
-**实现入口：** [检测器](../../../src/rm_detector/src/detector.cpp)的 `is_armor`；[追踪器](../../../src/rm_tracker/src/tracker.cpp)的 `update`、`center_motion_is_slow` 和 `track`。当前运行行为分别维护在 [rm_detector 处理流程](../../../src/rm_detector/README.md#处理流程)和 [rm_tracker 数据流与算法](../../../src/rm_tracker/README.md#数据流与算法)。
+**历史修复入口：** 检测器的 `is_armor`；追踪器的 `update`、`center_motion_is_slow` 和 `track`，具体实现以表中提交为准。当前运行行为分别维护在 [rm_detector 处理流程](../../../src/rm_detector/README.md#处理流程)和 [rm_tracker 数据流与算法](../../../src/rm_tracker/README.md#数据流与算法)。
 
 **尚待目标环境验收：** 在 Ubuntu 22.04 / ROS 2 Humble 中先构建 `rm_interfaces`，再以 `colcon build --packages-select rm_detector rm_tracker` 构建相关包；回放远距离检测、原地/平移旋转、双板转单板序列，检查真实 EKF 状态、观测时间及发弹窗口；最后验证实车延迟和弹着点。当前环境没有可用的 ROS 2 构建链，以上未验证。
 

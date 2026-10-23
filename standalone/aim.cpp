@@ -33,7 +33,6 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
     PARAM(controller_delay_, "controller_delay");
     PARAM(bullet_speed, "bullet_speed");
     PARAM(k_v2, "k_v2");
-    PARAM(gravity, "gravity");
     PARAM(shootable_dist, "shootable_dist");
     PARAM(yaw_tolerance_deg, "yaw_tolerance_deg");
     PARAM(pitch_tolerance_deg, "pitch_tolerance_deg");
@@ -41,6 +40,8 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
     PARAM(spin_enter_time_, "spin_enter_time");
     PARAM(spin_exit_time_, "spin_exit_time");
 #undef PARAM
+    if (parameter(config, "gravity", 9.81) != 9.81)
+        throw std::invalid_argument("Original tracker requires gravity = 9.81 m/s^2");
     tracker.cam_to_gun_rpy << parameter(config, "cam_to_gun_rpy_r", 0.0),
                               parameter(config, "cam_to_gun_rpy_p", 0.0),
                               parameter(config, "cam_to_gun_rpy_y", 0.0);
@@ -113,6 +114,9 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
         const Eigen::Vector3d world = rotation * Eigen::Vector3d(x, y, z) / 1000.0;
         const double heading = std::atan2(rotation(1, 2), rotation(0, 2));
         const double world_yaw = dt46_vision::normalize_angle(heading - yaw*dt46_vision::DEG2RAD);
+        // Match the ROS node's color gate even when the detector displays both colors.
+        if ((pipeline.tracker.target_color == 0 && armor.armor_id < 6) ||
+            (pipeline.tracker.target_color == 1 && armor.armor_id >= 6)) continue;
         armors.emplace_back(armor.armor_id, world.x(), world.y(), world.z(), world_yaw);
     }
 }
@@ -124,7 +128,7 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
                                   cv::FileStorage::FORMAT_JSON);
     json << "spin" << int(s.spin) << "bullet_speed_m_s" << s.bullet_speed;
     json << "yaw_tolerance_deg" << s.yaw_tolerance_deg << "pitch_tolerance_deg" << s.pitch_tolerance_deg;
-    json << "gravity_m_s2" << pipeline.tracker.gravity << "quadratic_drag_per_m" << pipeline.tracker.k_v2;
+    json << "gravity_m_s2" << 9.81 << "quadratic_drag_per_m" << pipeline.tracker.k_v2;
     json << "gimbal_control" << "[" << std::get<0>(s.gimbal_control)
          << std::get<1>(s.gimbal_control) << std::get<2>(s.gimbal_control) << "]";
     json << "yaw_armors" << "[";
@@ -245,11 +249,20 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         pipeline.previous_time = timestamp;
         if (dt <= 0.001) dt = 0.01;
         else dt = std::min(dt, 0.1);
+        // These public caches only feed rendering; clear them so an early return cannot export an old aim.
+        pipeline.tracker.target_cam_cache_.reset();
+        pipeline.tracker.target_muzzle_cache_.reset();
+        pipeline.tracker.gimbal_control_cache_ = {0.0, 0.0, false};
         const auto tracked = pipeline.tracker.track(pipeline.transform, armors, Eigen::Vector3d::Zero(), dt);
         save_snapshot(pipeline, rotation, std::get<1>(tracked));
         const auto& command = std::get<0>(tracked);
         const double raw_yaw = command[0], raw_pitch = command[1];
-        result->aim_valid = pipeline.tracker.aim_valid;
+        if (const auto& target = pipeline.tracker.target_muzzle_cache_; target) {
+            // Read validity through the original, stateless solver instead of changing Tracker.
+            const auto [yaw, pitch, valid] = pipeline.tracker.solve_ballistic(
+                pipeline.transform, *target, pipeline.tracker.cam_to_gun_rpy, Eigen::Vector3d::Zero());
+            result->aim_valid = valid && std::isfinite(yaw) && std::isfinite(pitch);
+        }
         result->yaw_command_deg = raw_yaw;
         result->pitch_command_deg = raw_pitch;
         if (!pipeline.smooth_ready) {

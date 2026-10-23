@@ -60,4 +60,4 @@ ros2 launch rm_serial rm_serial.launch.xml
 
 直接运行时使用 `ros2 run rm_serial rm_serial_node --ros-args -r __node:=rm_serial --params-file install/rm_serial/share/rm_serial/config/rm_serial_params.yaml`。串口设备的发现与 udev 设置由根目录 [setup_serial.sh](../../setup_serial.sh) 提供；设备 ID 应从实机读取。
 
-协议的离线对照检查见 [非 ROS 工程验证](../../standalone/README.md#c-运行层迁移进行中)。ROS 2 节点编译、真实端口收发和断线重连尚未在本次 Windows 环境验证。
+协议的离线对照检查见 [原生构建与测试](../../standalone/README.md#构建)。ROS 2 节点编译、真实端口收发和断线重连尚未在本次 Windows 环境验证。
