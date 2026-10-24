@@ -1,6 +1,8 @@
 #include "modules/vision/debug_images.hpp"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
+#include <algorithm>
+#include <cmath>
 #include <optional>
 #include <iomanip>
 #include <sstream>
@@ -19,6 +21,11 @@ std::optional<cv::Point> project(const Json& point,const Json& result) {
     return project(cv::Vec3d(point.at(0),point.at(1),point.at(2)),k,d);
 }
 std::string number(double value,int precision=2){std::ostringstream output;output<<std::fixed<<std::setprecision(precision)<<value;return output.str();}
+void outlined_text(cv::Mat& image,const std::string& text,cv::Point origin,double scale,const cv::Scalar& color) {
+    const int thickness=std::max(1,int(std::lround(2*scale)));
+    cv::putText(image,text,origin,cv::FONT_HERSHEY_SIMPLEX,scale,cv::Scalar(0,0,0),thickness+2,cv::LINE_AA);
+    cv::putText(image,text,origin,cv::FONT_HERSHEY_SIMPLEX,scale,color,thickness,cv::LINE_AA);
+}
 }
 cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
     cv::Mat output=rgb.clone();
@@ -27,7 +34,7 @@ cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
         cv::polylines(output,corners,true,cv::Scalar(255,220,0),2);
     }
     for(const auto& armor:result.at("tracker_debug").at("yaw_armors"))if(auto point=project(armor.at("position_camera_m"),result))
-        cv::putText(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,cv::FONT_HERSHEY_SIMPLEX,.55*text_size,cv::Scalar(255,0,255),2);
+        outlined_text(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,.55*text_size,cv::Scalar(255,0,255));
     return output;
 }
 cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result,double text_size) {
@@ -41,8 +48,8 @@ cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result,double text_size) 
         "Diff: "+number(debug.value("target_angle_diff_deg",0.),1)+" deg","Pitch: "+number(debug.at("gimbal_control").at(1))+" deg",
         "Yaw: "+number(debug.at("gimbal_control").at(0))+" deg","P/Y Tol: "+number(debug.at("pitch_tolerance_deg"))+" / "+number(debug.at("yaw_tolerance_deg"))+" deg",
         "Bullet Speed: "+number(debug.at("bullet_speed_m_s"))+" m/s",fire?"FIRE ENABLE":"HOLD FIRE"};
-    for(std::size_t row=0;row<lines.size();++row){const cv::Point point(18,int((28+26*int(row))*text_size));const auto color=row==lines.size()-1&&fire?cv::Scalar(0,255,0):cv::Scalar(255,255,255);
-        cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6*text_size,{0,0,0},3);cv::putText(output,lines[row],point,cv::FONT_HERSHEY_SIMPLEX,.6*text_size,color,1);}
+    for(std::size_t row=0;row<lines.size();++row){const cv::Point point(18,int((28+26*int(row))*text_size));const auto color=row==lines.size()-1?(fire?cv::Scalar(80,255,120):cv::Scalar(255,210,90)):cv::Scalar(255,255,255);
+        outlined_text(output,lines[row],point,.6*text_size,color);}
     return output;
 }
 cv::Mat observer_image(const cv::Mat& rgb,const Json& result,const cv::Matx44d& optical,const cv::Matx33d& k,const cv::Vec<double,5>& d) {

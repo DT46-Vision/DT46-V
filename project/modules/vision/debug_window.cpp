@@ -32,6 +32,8 @@
 namespace dt46 {
 namespace {
 std::array<const char*,10> views={"image_raw","ballistic_img","tracking_state_img","result","crop_img","bin_img","img_armor","img_armor_processed","img_debug","gray"};
+constexpr std::array<float,6> font_sizes={14,16,18,20,24,28};
+std::array<const char*,6> font_labels={"14 px","16 px","18 px","20 px","24 px","28 px"};
 bool physics_input(const std::string& group,const std::string& key){return group=="tracker"&&(key=="k_v2"||key=="gravity"||key=="bullet_speed");}
 void png(const std::filesystem::path& path,const cv::Mat& rgb) {
     std::ofstream file(path,std::ios::binary);const auto callback=[](void* context,void* data,int size){static_cast<std::ofstream*>(context)->write(static_cast<char*>(data),size);};
@@ -52,6 +54,7 @@ std::filesystem::path choose_file(bool save,const std::filesystem::path& fallbac
 struct VisionDebug::Impl {
     AimPipeline& pipeline;VirtualCamera& camera;std::filesystem::path output;
     GLFWwindow* window=nullptr;nk_context* ui=nullptr;bool backend=false;
+    std::array<nk_font*,6> fonts{};int font_choice=2;
     VirtualFrame last_frame;Json last_result=nullptr;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
     std::array<int,4> choices{3,1,7,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
     struct ViewOptions {int smooth=0,zoom=0,grid=0,rotation=0;};std::array<ViewOptions,4> view_options;
@@ -64,7 +67,9 @@ struct VisionDebug::Impl {
         if(!window){glfwTerminate();throw std::runtime_error("Cannot create vision debug window");}
         glfwMakeContextCurrent(window);if(!gladLoadGL(glfwGetProcAddress)){glfwDestroyWindow(window);glfwTerminate();throw std::runtime_error("Cannot initialize debug OpenGL");}
         glfwSwapInterval(0);ui=nk_glfw3_init(window,NK_GLFW3_INSTALL_CALLBACKS);backend=true;
-        nk_font_atlas* atlas;nk_glfw3_font_stash_begin(&atlas);nk_glfw3_font_stash_end();glGenTextures(4,textures.data());
+        nk_font_atlas* atlas;nk_glfw3_font_stash_begin(&atlas);
+        for(std::size_t i=0;i<fonts.size();++i)fonts[i]=nk_font_atlas_add_default(atlas,font_sizes[i],nullptr);
+        nk_glfw3_font_stash_end();nk_style_set_font(ui,&fonts[font_choice]->handle);glGenTextures(4,textures.data());
         for(GLuint texture:textures){glBindTexture(GL_TEXTURE_2D,texture);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);}
         Json groups={{"camera",camera.description.at("camera")},{"detector",pipeline.settings().at("detector")},{"tracker",pipeline.settings().at("tracker")}};
         groups["detector"]["cls_model_file"]=pipeline.settings().at("model");field_types=groups;
@@ -73,6 +78,7 @@ struct VisionDebug::Impl {
         }
     }
     ~Impl(){if(window){glfwMakeContextCurrent(window);glDeleteTextures(4,textures.data());if(backend)nk_glfw3_shutdown();glfwDestroyWindow(window);glfwTerminate();}}
+    float scaled(float value)const{return value*font_sizes[font_choice]/14.f;}
     Json settings()const {
         Json result=Json::object();for(const auto& [group,values]:fields)for(const auto& [key,text]:values) {
             if(key=="cls_model_file"){result["model"]=text.data();continue;}
@@ -116,13 +122,13 @@ struct VisionDebug::Impl {
     void pane(int index,float x,float y,float width,float height) {
         const std::string title="View "+std::to_string(index+1);
         if(nk_begin(ui,title.c_str(),nk_rect(x,y,width,height),NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR)) {
-            nk_layout_row_dynamic(ui,24,1);choices[index]=nk_combo(ui,views.data(),int(views.size()),choices[index],22,nk_vec2(230,250));
+            nk_layout_row_dynamic(ui,scaled(24),1);choices[index]=nk_combo(ui,views.data(),int(views.size()),choices[index],int(scaled(22)),nk_vec2(scaled(230),scaled(250)));
             auto& options=view_options[index];const auto previous=options;
-            nk_layout_row_dynamic(ui,22,4);nk_checkbox_label(ui,"Smooth",&options.smooth);nk_checkbox_label(ui,"1:1",&options.zoom);nk_checkbox_label(ui,"Grid",&options.grid);
-            const char* rotations[]={"0 deg","90 deg","180 deg","270 deg"};options.rotation=nk_combo(ui,rotations,4,options.rotation,22,nk_vec2(110,125));
+            nk_layout_row_dynamic(ui,scaled(22),4);nk_checkbox_label(ui,"Smooth",&options.smooth);nk_checkbox_label(ui,"1:1",&options.zoom);nk_checkbox_label(ui,"Grid",&options.grid);
+            const char* rotations[]={"0 deg","90 deg","180 deg","270 deg"};options.rotation=nk_combo(ui,rotations,4,options.rotation,int(scaled(22)),nk_vec2(scaled(110),scaled(125)));
             const auto& source=images[choices[index]];cv::Mat image=source;
             if(!source.empty()&&options.rotation)cv::rotate(source,image,options.rotation==1?cv::ROTATE_90_CLOCKWISE:options.rotation==2?cv::ROTATE_180:cv::ROTATE_90_COUNTERCLOCKWISE);
-            if(image.empty()){nk_layout_row_dynamic(ui,30,1);nk_label(ui,"No current image / display disabled",NK_TEXT_CENTERED);}
+            if(image.empty()){nk_layout_row_dynamic(ui,scaled(30),1);nk_label(ui,"No current image / display disabled",NK_TEXT_CENTERED);}
             else {
                 glBindTexture(GL_TEXTURE_2D,textures[index]);const int filter=options.smooth?GL_LINEAR:GL_NEAREST;
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,filter);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,filter);
@@ -130,7 +136,7 @@ struct VisionDebug::Impl {
                     glBindTexture(GL_TEXTURE_2D,textures[index]);glPixelStorei(GL_UNPACK_ALIGNMENT,1);glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
                     glTexImage2D(GL_TEXTURE_2D,0,GL_RGB8,image.cols,image.rows,0,GL_RGB,GL_UNSIGNED_BYTE,image.data);texture_views[index]=choices[index];
                 }
-                const float available_w=width-28,available_h=std::max(1.f,height-87),scale=options.zoom?1.f:std::min(available_w/image.cols,available_h/image.rows);
+                const float available_w=std::max(1.f,width-scaled(28)),available_h=std::max(1.f,height-scaled(87)),scale=options.zoom?1.f:std::min(available_w/image.cols,available_h/image.rows);
                 nk_layout_row_dynamic(ui,available_h,1);const std::string group=title+" image";
                 if(nk_group_begin(ui,group.c_str(),options.zoom?0:NK_WINDOW_NO_SCROLLBAR)){
                     nk_layout_row_static(ui,image.rows*scale,int(image.cols*scale),1);const auto bounds=nk_widget_bounds(ui);nk_image(ui,nk_image_id(int(textures[index])));
@@ -142,22 +148,22 @@ struct VisionDebug::Impl {
         }nk_end(ui);
     }
     void parameters(float x,float y,float width,float height) {
-        if(nk_begin(ui,"Settings",nk_rect(x,y,width,height),NK_WINDOW_BORDER|NK_WINDOW_NO_SCROLLBAR)) {
-            nk_layout_row_dynamic(ui,24,1);nk_label(ui,"Simulated camera / original vision",NK_TEXT_LEFT);
-            constexpr const char* groups[]={"camera","detector","tracker"};nk_layout_row_dynamic(ui,24,3);
+        if(nk_begin(ui,"Settings",nk_rect(x,y,width,height),NK_WINDOW_BORDER)) {
+            nk_layout_row_dynamic(ui,scaled(24),1);nk_label(ui,"Simulated camera / original vision",NK_TEXT_LEFT);
+            constexpr const char* groups[]={"camera","detector","tracker"};nk_layout_row_dynamic(ui,scaled(24),3);
             for(int i=0;i<3;++i)if(nk_option_label(ui,groups[i],tab==i))tab=i;
-            nk_layout_row_dynamic(ui,std::max(120.f,height-315),1);
+            nk_layout_row_dynamic(ui,std::max(scaled(120),height-scaled(315)),1);
             if(nk_group_begin(ui,"Parameters",NK_WINDOW_BORDER)) {
                 for(auto& [key,buffer]:fields.at(groups[tab])) {
-                    nk_layout_row_dynamic(ui,24,1);nk_label(ui,key.c_str(),NK_TEXT_LEFT);
-                    nk_layout_row_dynamic(ui,24,1);
+                    nk_layout_row_dynamic(ui,scaled(24),1);nk_label(ui,key.c_str(),NK_TEXT_LEFT);
+                    nk_layout_row_dynamic(ui,scaled(24),1);
                     if(physics_input(groups[tab],key))nk_label(ui,buffer.data(),NK_TEXT_LEFT);
                     else if(field_types.at(groups[tab]).at(key).is_boolean()){
                         int enabled=std::string(buffer.data())=="1"||std::string(buffer.data())=="1.0";
                         if(nk_checkbox_label(ui,"Enabled",&enabled)){buffer.fill(0);buffer[0]=enabled?'1':'0';}
                     }else nk_edit_string_zero_terminated(ui,NK_EDIT_FIELD,buffer.data(),int(buffer.size()),key=="cls_model_file"?nk_filter_default:nk_filter_float);
                 }
-                const auto note=[&](const std::string& text){nk_layout_row_dynamic(ui,42,1);nk_label_wrap(ui,text.c_str());};
+                const auto note=[&](const std::string& text){nk_layout_row_dynamic(ui,scaled(42),1);nk_label_wrap(ui,text.c_str());};
                 if(tab==0){note("View rotation changes display only; vision uses the original camera image");note("camera_name / camera_info_url: frame camera and K/D; use_sensor_data_qos: ROS only");}
                 if(tab==1){note("detect_color: -1 follow target, 0 red, 1 blue, 2 both");note("use_geometric_center: false (frame calibration)");note("print_period_ms: native processing FPS log interval");}
                 if(tab==2){note("target_color: 0 red / 1 blue; follow_decision uses simulation feedback");
@@ -165,19 +171,22 @@ struct VisionDebug::Impl {
                     note("rotation_rpy_*: ROS IMU adapter replaced by optical feedback");}
                 nk_group_end(ui);
             }
-            nk_layout_row_dynamic(ui,20,1);nk_label(ui,"k / gravity / speed follow shooter config",NK_TEXT_LEFT);
-            const auto action=[&](const char* label,auto fn){nk_layout_row_dynamic(ui,27,1);if(nk_button_label(ui,label))try{fn();}catch(const std::exception& e){message=e.what();}};
+            nk_layout_row_dynamic(ui,scaled(20),1);nk_label(ui,"k / gravity / speed follow shooter config",NK_TEXT_LEFT);
+            const auto action=[&](const char* label,auto fn){nk_layout_row_dynamic(ui,scaled(27),1);if(nk_button_label(ui,label))try{fn();}catch(const std::exception& e){message=e.what();}};
             action("Apply (resets tracker)",[&]{apply();});action("Load parameters JSON",[&]{load();});action("Save parameters JSON",[&]{save_settings();});
-            nk_layout_row_dynamic(ui,44,1);nk_label_wrap(ui,message.c_str());nk_layout_row_dynamic(ui,100,1);
-            if(nk_group_begin(ui,"Logs",NK_WINDOW_BORDER)){for(const auto& line:logs){nk_layout_row_dynamic(ui,18,1);nk_label(ui,line.c_str(),NK_TEXT_LEFT);}nk_group_end(ui);}
+            nk_layout_row_dynamic(ui,scaled(44),1);nk_label_wrap(ui,message.c_str());nk_layout_row_dynamic(ui,scaled(100),1);
+            if(nk_group_begin(ui,"Logs",NK_WINDOW_BORDER)){for(const auto& line:logs){nk_layout_row_dynamic(ui,scaled(18),1);nk_label(ui,line.c_str(),NK_TEXT_LEFT);}nk_group_end(ui);}
         }nk_end(ui);
     }
     bool pump() {
         glfwMakeContextCurrent(window);glfwPollEvents();if(glfwWindowShouldClose(window))return false;nk_glfw3_new_frame();
-        int width,height;glfwGetWindowSize(window,&width,&height);const float sidebar=330,top=45,image_width=std::max(200.f,width-sidebar);
+        int width,height;glfwGetWindowSize(window,&width,&height);const float sidebar=scaled(330),top=scaled(45),image_width=std::max(200.f,width-sidebar);
         if(nk_begin(ui,"Toolbar",nk_rect(0,0,float(width),top),NK_WINDOW_NO_SCROLLBAR)) {
-            nk_layout_row_begin(ui,NK_STATIC,26,2);nk_layout_row_push(ui,110);if(nk_button_label(ui,"Save frame"))try{save_frame();}catch(const std::exception& e){message=e.what();}
-            nk_layout_row_push(ui,float(width-150));nk_label(ui,status.c_str(),NK_TEXT_LEFT);nk_layout_row_end(ui);
+            nk_layout_row_begin(ui,NK_STATIC,scaled(26),4);nk_layout_row_push(ui,scaled(110));if(nk_button_label(ui,"Save frame"))try{save_frame();}catch(const std::exception& e){message=e.what();}
+            nk_layout_row_push(ui,scaled(60));nk_label(ui,"UI font",NK_TEXT_LEFT);nk_layout_row_push(ui,scaled(90));
+            const int next_font=nk_combo(ui,font_labels.data(),int(font_labels.size()),font_choice,int(scaled(26)),nk_vec2(scaled(110),scaled(220)));
+            if(next_font!=font_choice){font_choice=next_font;nk_style_set_font(ui,&fonts[font_choice]->handle);}
+            nk_layout_row_push(ui,std::max(100.f,width-scaled(300)));nk_label(ui,status.c_str(),NK_TEXT_LEFT);nk_layout_row_end(ui);
         }nk_end(ui);
         for(int i=0;i<4;++i)pane(i,float(i%2)*image_width/2,top+float(i/2)*(height-top)/2,image_width/2,(height-top)/2);
         parameters(image_width,top,sidebar,height-top);dirty=false;glClearColor(.08f,.08f,.08f,1);glClear(GL_COLOR_BUFFER_BIT);nk_glfw3_render(NK_ANTI_ALIASING_ON);

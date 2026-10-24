@@ -2,5 +2,8 @@
   "camera": {
     "exposure_time": 2000,
     "analog_gain": 256
+  },
+  "tracker": {
+    "text_size": 2.5
   }
 }
