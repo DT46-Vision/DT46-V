@@ -46,6 +46,7 @@ class Session {
 public:
     explicit Session(const Options& options):o(options),camera(read_json(o.session)),pipeline(o.root,o.profile,true),control(o.debug_session) {
         auto settings=o.parameters.empty()?Json::object():read_json(o.parameters);
+        if(settings.is_object()&&settings.empty())settings=read_json(o.root/"standalone/virtual_camera.json");
         if(settings.contains("camera")){camera.validate(settings.at("camera"));camera.configure(settings.at("camera"));settings.erase("camera");}
         for(const auto& [key,value]:camera.description.at("physics").items())settings["tracker"][key]=value;
         pipeline.configure(settings);

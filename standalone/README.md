@@ -44,6 +44,10 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
+未指定 `--parameters` 或文件内容为 `{}` 时，原生视觉启动会加载 [virtual_camera.json](virtual_camera.json)，通过现有相机接口应用曝光（微秒）和相对增益；两种仿真相机预设共用该启动覆盖，标定和其他成像参数仍由各自预设提供。非空 `--parameters` 文件完整替代这一默认覆盖，保持已有调参文件的行为。配置仅用于连接后的视觉相机，不写回仿真预设或 ROS 驱动 YAML，也不作用于操作手图传；没有启用视觉相机/DT46 的会话不会因此开启识别。离线回放仍使用已经采集的图像，调曝光须先重新采图。
+
+2026-10-24 调参在中画质、所选标定原生分辨率下检查老步兵静止蓝方 3 号及默认运动蓝方 7 号目标；离线与实时均取得连续检出及建轨后持续 `TRACKING`，非空参数文件的旧行为也已复核。本机证据与复现脚本见[调参检查记录](../.cache/camera_tuning_20261024/checks.json)。实时检查使用仿真当前提交的隔离配置快照，避开同时进行的裁判配置修改；红靶对照在调整前后都未检出，尚未解决，不代表全部距离、光照、运动或实机效果。
+
 调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/detector/img_armor_processed`、`/detector/bin_img`；仍可切换原始 RGB、tracking_state_img、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
 
 右侧仍分相机、检测器、追踪器三页，包含 tracker 日志、参数应用/保存/加载 JSON、保存当前图像与窗口截图。布尔参数使用复选框；检测器 `cls_model_file` 可编辑字符串，JSON 沿用顶层 `model` 字段，模型相对 `src/rm_detector/model` 解析。Apply 重建上下文，失败保留原上下文；不会写回源 YAML。图像查看选项仅在当前窗口有效，不随参数 JSON 保存。显示异常只关闭显示。
