@@ -1,6 +1,6 @@
 {
   "camera": {
     "exposure_time": 2000,
-    "analog_gain": 1280
+    "analog_gain": 256
   }
 }
