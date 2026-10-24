@@ -14,3 +14,8 @@ ament_auto_package(
   INSTALL_TO_SHARE
   launch
 )
+
+# rqt 布局随包安装，避免写死 ~/DT46_V 这类本机路径
+install(FILES Kielas_Vision.perspective
+  DESTINATION share/${PROJECT_NAME}
+)

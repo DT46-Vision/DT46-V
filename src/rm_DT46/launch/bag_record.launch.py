@@ -17,8 +17,9 @@ def generate_launch_description():
     tracker_params_file = os.path.join(
         get_package_share_directory("rm_tracker"), "config", "tracker_params.yaml"
     )
-    perspective_file = os.path.expanduser(
-        "Kielas_Vision.perspective"
+    perspective_file = os.path.join(
+        get_package_share_directory("rm_vision_bringup"),
+        "Kielas_Vision.perspective",
     )
 
     # ---------------- Launch 配置变量 ----------------

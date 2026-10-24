@@ -29,7 +29,10 @@ def generate_launch_description():
     serial_params = os.path.join(rm_serial_pkg, 'config', 'rm_serial_params.yaml')
 
     # RQT 界面配置
-    perspective_file = os.path.expanduser('~/DT46_V/Kielas_Vision.perspective')
+    perspective_file = os.path.join(
+        get_package_share_directory("rm_vision_bringup"),
+        "Kielas_Vision.perspective",
+    )
 
     # ==================== 3. 组装 LaunchDescription ====================
     return LaunchDescription([

@@ -78,12 +78,14 @@ class DmImuNode(Node):
 
         # ---------- Serial ----------
         try:
-            # 按你的要求：初始化不传 timeout
             self.ser = DM_Serial(self.port, baudrate=self.baudrate)
-            self.ser.start_reader()  # 后台读线程交给你的类
+            if not self.ser.start_reader():
+                raise RuntimeError(f'IMU reader thread failed to start on {self.port}')
             self.get_logger().info(f'Opened serial {self.port} @ {self.baudrate}')
         except Exception as e:
-            self.get_logger().fatal(f'Init serial failed: {e}')
+            self.get_logger().fatal(
+                f'Init serial failed: {e}. 检查 /dev/ttyPortIMU 是否存在（ls -l /dev/ttyPortIMU /dev/ttyACM*）'
+            )
             raise
 
         # ---------- Timers ----------
@@ -108,15 +110,22 @@ class DmImuNode(Node):
                 self.get_logger().warn(f'get_latest() exception: {e}')
             return
 
-        if latest is None:
+        # get_latest 返回 (pkt, ts, count)；pkt 为 None 表示还没解出帧
+        pkt = latest[0] if isinstance(latest, tuple) and len(latest) >= 1 else None
+        if pkt is None:
             self._no_frame_ticks += 1
-            if self._no_frame_ticks % 200 == 0 and self.verbose:  # ≈每秒一次
-                self.get_logger().warn('No frames yet from serial (≈1s). Check IMU streaming/baud/crc.')
+            if self._no_frame_ticks % 200 == 0:  # ≈每 2s
+                err = self.ser.last_error() if hasattr(self.ser, 'last_error') else None
+                self.get_logger().warn(
+                    f'No IMU frames yet on {self.port}'
+                    + (f' (last_error={err})' if err else '')
+                    + '. Check cable/udev/baud.'
+                )
             return
 
-        ok, stamp_ts, r_deg, p_deg, y_deg = self._extract_latest(latest)  # 提取数据!!
+        ok, stamp_ts, r_deg, p_deg, y_deg = self._extract_latest(latest)
         if not ok:
-            if not self._logged_bad_fmt_once and self.verbose:
+            if not self._logged_bad_fmt_once:
                 self.get_logger().warn(f'Unknown latest frame format; example: {repr(latest)}')
                 self._logged_bad_fmt_once = True
             return

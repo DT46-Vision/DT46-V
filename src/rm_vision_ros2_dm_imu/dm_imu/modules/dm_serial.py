@@ -56,7 +56,11 @@ class DM_Serial:
         self._latest_count: int = 0
         self._last_error: Optional[str] = None
 
-        self._open()
+        # 打不开串口就立刻失败，避免节点空转却让 tracker 永远等 IMU
+        if not self._open():
+            raise serial.SerialException(
+                self._last_error or f'failed to open {port} @ {baudrate}'
+            )
 
     # ------------ 公共 API ------------
     def read(self, max_bytes: int | None = None) -> Optional[Tuple[int, Tuple[float, float, float]]]:

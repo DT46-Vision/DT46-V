@@ -33,7 +33,7 @@ launch/
 | `usb_nav.launch.py` | `usb_camera` | 否 | 是 | 是 | 是 | 是 | 通用算法参数 + `usb_camera` 的相机参数 |
 | `bag_record.launch.py` | rosbag 回放 | 否 | 否 | 是 | 否（注释掉） | 是 | 通用参数 |
 
-每个 launch 末尾都会拉起 `rqt_gui`，加载 `~/DT46_V/Kielas_Vision.perspective`（见"注意事项"第 2 条）。
+每个 launch 末尾都会拉起 `rqt_gui`，加载包内 `Kielas_Vision.perspective`。
 
 ## launch 参数
 
@@ -135,7 +135,7 @@ alias rmmv='ros2 launch rm_vision_bringup mv.launch.py'
 ## 注意事项 / 已知问题
 
 1. **`package.xml` 依赖的 `rm_opencv_aim` 在工作空间里不存在**（历史遗留）。`colcon build` 不受影响，但 `rosdep install --from-paths src` 会因找不到该依赖报错。
-2. **rqt 布局路径与本机实际路径不符**：所有 launch 都写 `os.path.expanduser("~/DT46_V/Kielas_Vision.perspective")`，而本仓库在 `~/DT46-V`（布局文件在仓库根目录）。路径不存在时 rqt 会以空白布局启动（不崩溃，但看不到预设界面）。修正方式是做一个软链接 `~/DT46_V -> ~/DT46-V`，或改 launch 里的路径。
+2. **rqt 布局**：已改为从 `rm_vision_bringup` 安装目录加载 `Kielas_Vision.perspective`；改布局后需重新 `colcon build --packages-select rm_vision_bringup`。
 3. **`bag_record.launch.py` 里追踪节点被注释掉**：只跑检测；`tracker_params_file` 参数虽然声明了但没被使用。想联调追踪需要自己取消注释。另外它的 rqt 布局用的是相对路径 `Kielas_Vision.perspective`（`expanduser` 不会把相对路径变成仓库根），会按"当前工作目录"去找。
 4. **`hero.launch.py` / `sentry.launch.py` 无法用命令行覆盖参数**：路径硬编码，换文件必须改 launch。
 5. **`infantry.launch.py` 与 `mv.launch.py` 内容几乎相同**（都是迈德威视 + 步兵参数），维护时注意同步修改。
