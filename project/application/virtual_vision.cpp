@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
+#include <tuple>
 
 namespace {
 using Clock=std::chrono::steady_clock;
@@ -16,20 +17,28 @@ struct Options {
     std::filesystem::path root=DT46_SOURCE_ROOT,session,debug_session,output,record,parameters;
     std::string profile="infantry",command;
     double duration=0,video_fps=20;std::uint64_t maximum_frames=0;bool hidden=false,debug=false,help=false;
+    Json logging={{"frames",true},{"events",true},{"parameters",true},{"reports",true}};
 };
 Options options(int argc,char** argv) {
-    Options o;
+    Options o;Json logging_overrides=Json::object();
     for(int i=1;i<argc;++i) {
         const std::string arg=argv[i];const auto value=[&]{if(i+1>=argc)throw std::invalid_argument("Missing value for "+arg);return std::string(argv[++i]);};
         if(arg=="--root")o.root=value();else if(arg=="--camera-session")o.session=value();else if(arg=="--output")o.output=value();
         else if(arg=="--debug-session")o.debug_session=value();else if(arg=="--profile")o.profile=value();
         else if(arg=="--duration")o.duration=std::stod(value());else if(arg=="--frames")o.maximum_frames=std::stoull(value());
         else if(arg=="--record")o.record=value();else if(arg=="--video-fps")o.video_fps=std::stod(value());else if(arg=="--parameters")o.parameters=value();
+        else if(arg=="--no-logs"||arg=="--logs")logging_overrides["enabled"]=arg=="--logs";
+        else if(arg=="--log"||arg=="--no-log"){
+            const auto name=value();if(!o.logging.contains(name))throw std::invalid_argument("Unknown vision log: "+name);
+            logging_overrides[name]=arg=="--log";
+        }
         else if(arg=="--show-debug")o.command="show";else if(arg=="--close-debug")o.command="close";
         else if(arg=="--save-debug")o.command="save";else if(arg=="--debug")o.debug=true;
         else if(arg=="--debug-hidden")o.hidden=true;else if(arg=="--help")o.help=true;
         else throw std::invalid_argument("Unknown argument: "+arg);
     }
+    if(logging_overrides.contains("enabled"))for(auto& enabled:o.logging)enabled=logging_overrides.at("enabled");
+    for(const auto& [name,enabled]:logging_overrides.items())if(name!="enabled")o.logging[name]=enabled;
     if(!std::isfinite(o.duration)||o.duration<0)throw std::invalid_argument("Duration must be finite and nonnegative");
     if(!std::isfinite(o.video_fps)||o.video_fps<=0)throw std::invalid_argument("Video FPS must be positive and finite");
     if(o.output.empty())o.output=o.root/".cache/virtual_camera";
@@ -51,9 +60,13 @@ public:
         for(const auto& [key,value]:camera.description.at("physics").items())settings["tracker"][key]=value;
         pipeline.configure(settings);
         if(!o.record.empty())recorder=std::make_unique<dt46::Recorder>(o.record,o.video_fps);
-        std::filesystem::create_directories(o.output);log.open(o.output/"frames.jsonl");events.open(o.output/"debug_events.jsonl");
-        parameters_log.open(o.output/"parameter_revisions.jsonl");
-        if(!log||!events||!parameters_log)throw std::runtime_error("Cannot open vision logs");control.requested=o.debug;
+        std::filesystem::create_directories(o.output);
+        for(const auto& [name,file,stream]:std::initializer_list<std::tuple<const char*,const char*,std::ofstream*>>{
+                {"frames","frames.jsonl",&log},{"events","debug_events.jsonl",&events},{"parameters","parameter_revisions.jsonl",&parameters_log}}){
+            if(!o.logging.at(name).get<bool>())continue;
+            stream->open(o.output/file);if(!*stream)throw std::runtime_error("Cannot open vision log: "+std::string(name));
+        }
+        control.requested=o.debug;
     }
     int run() {
         std::string stopped="limit",error;
@@ -72,7 +85,7 @@ public:
         }catch(const dt46::wire::Disconnected& e){stopped=e.what();}
         catch(const std::exception& e){stopped="error";error=e.what();}
         close_debug();if(recorder)recorder->close();log.flush();events.flush();parameters_log.flush();
-        write_json(o.output/"report.json",{{"frames",frames},{"wall_seconds",elapsed()},{"last_frame",result},
+        if(o.logging.at("reports").get<bool>())write_json(o.output/"report.json",{{"frames",frames},{"wall_seconds",elapsed()},{"last_frame",result},
             {"stopped",stopped},{"error",error},{"profile",o.profile},{"context",context()},{"video_frames",recorder?recorder->frames():0}});
         if(!error.empty())throw std::runtime_error(error);
         std::cout<<"Processed "<<frames<<" virtual-camera frames\n";return 0;
@@ -88,6 +101,7 @@ private:
     std::uintptr_t context()const{return reinterpret_cast<std::uintptr_t>(pipeline.context());}
     double elapsed()const{return std::chrono::duration<double>(Clock::now()-began).count();}
     void event(const std::string& operation,const std::string& error="") {
+        if(!events.is_open())return;
         events<<Json{{"event",operation},{"frames",frames},{"context",context()},{"wall_seconds",elapsed()},{"error",error}}.dump()<<'\n';events.flush();
     }
     void close_debug(){if(debug){debug.reset();event("closed");}}
@@ -107,7 +121,7 @@ private:
         const double timestamp=frame.metadata.at("time");if(timestamp<=last_time)return;
         result=dt46::process_frame(pipeline,frame);result_revision=pipeline.revision();last_time=timestamp;++frames;
         const auto camera_version=result.value("camera_settings_version",std::uint64_t(0));
-        if(logged_revision!=result_revision||logged_camera_version!=camera_version){
+        if(parameters_log.is_open()&&(logged_revision!=result_revision||logged_camera_version!=camera_version)){
             parameters_log<<Json{{"parameter_revision",result_revision},{"camera_settings_version",camera_version},
                 {"reset_generation",generation},{"state_tick",result.at("state_tick")},{"simulation_time_s",timestamp},
                 {"settings",pipeline.settings()},{"camera_parameters",camera.description.at("camera")},{"sensor",result.at("sensor")}}.dump()<<'\n';
@@ -119,8 +133,7 @@ private:
         if(recorder&&enabled(display.at("display"))&&recorder->due(timestamp,generation)){
             const double size=display.at("text_size");recorder->write(dt46::ballistic_image(dt46::tracking_image(frame.rgb,result,size),result,size));result["recorded"]=true;
         }
-        log<<result.dump()<<'\n';
-        if(!log)throw std::runtime_error("Cannot write vision frame log");
+        if(log.is_open()){log<<result.dump()<<'\n';if(!log)throw std::runtime_error("Cannot write vision frame log");}
         const auto now=Clock::now();const double seconds=std::chrono::duration<double>(now-last_fps).count();
         if(seconds*1000>=pipeline.settings().at("detector").at("print_period_ms").get<double>()){
             std::cout<<"[vision] processed FPS="<<(frames-fps_frames)/seconds<<'\n';last_fps=now;fps_frames=frames;
@@ -135,6 +148,7 @@ int main(int argc,char** argv) {
     try {
         const auto o=options(argc,argv);
         if(o.help){std::cout<<"dt46_vision --camera-session FILE [--root DIR] [--profile infantry|sentry|hero] [--output DIR] [--duration SECONDS] [--frames COUNT] [--debug] [--debug-hidden] [--parameters FILE] [--record FILE.mp4 --video-fps 20]\n"
+            <<"  --no-logs | --logs | --log NAME | --no-log NAME (frames, events, parameters, reports)\n"
             <<"dt46_vision --show-debug|--close-debug|--save-debug [--root DIR] [--debug-session FILE]\n";return 0;}
         if(!o.command.empty())return send_command(o);
         if(o.session.empty())throw std::invalid_argument("--camera-session is required");

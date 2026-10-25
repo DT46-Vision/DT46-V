@@ -52,6 +52,8 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
+原生虚拟相机入口支持 `--no-logs` / `--logs` 总开关，以及可重复的 `--log NAME` / `--no-log NAME`；分项为 `frames`、`events`、`parameters`、`reports`，默认全部开启。总开关先应用，显式分项再覆盖，例如 `--no-logs --log events` 仅记录调试事件。关闭记录仍正常采图和识别，保留调试控制连接、手动保存与显式录像；仿真启动时的统一配置和对应分项由[仿真日志开关](../../README.md#日志开关)维护。
+
 虚拟相机逐帧结果带 `parameter_revision`，用于区分调参和 tracker 重置。`parameter_revisions.jsonl` 在视觉版本或相机设置版本变化后记录第一张实际处理帧的 generation/tick/time、管线参数、相机请求参数及该帧实际 sensor 响应；请求值与实际成像以各自字段为准。调试截图目录包含 generation、参数版本和帧号，复位后同一仿真时间不会覆盖上一轮；其中 `parameters.json` 保存该帧的管线参数和实际相机设置，不读取编辑框里尚未应用的草稿。Save parameters JSON 仍用于保存编辑框配置。仿真 F6 的实例入口、运动档位及分段评测流程由[自瞄场景说明](../../README.md#自瞄运动与预测验证场景)维护；此记录不改变原 tracker 或相机传输顺序。
 
 未指定 `--parameters` 或文件内容为 `{}` 时，原生视觉启动会加载 [virtual_camera.json](virtual_camera.json)，通过现有相机接口应用曝光（微秒）和相对增益，并覆盖原生 tracker 叠加图的 `text_size`；两种仿真相机预设共用该启动覆盖，标定和其他成像参数仍由各自预设提供。非空 `--parameters` 文件完整替代这一默认覆盖，保持已有调参文件的行为。相机组仅用于连接后的视觉相机，不写回仿真预设或 ROS 驱动 YAML，也不作用于操作手图传；tracker 字号覆盖不改写 ROS 共用 YAML。没有启用视觉相机/DT46 的会话不会因此开启识别。离线回放仍使用已经采集的图像，调曝光须先重新采图。
