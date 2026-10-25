@@ -1,0 +1,28 @@
+{
+  "defaults": {"native": "Night", "python": "Day"},
+  "font_sizes": [14, 16, 18, 20, 24, 28],
+  "themes": {
+    "Night": {
+      "text": "#afafaf", "window": "#2d2d2d", "header": "#282828", "border": "#414141",
+      "button": "#323232", "button_hover": "#282828", "button_active": "#232323",
+      "toggle": "#646464", "toggle_hover": "#787878", "toggle_cursor": "#2d2d2d",
+      "select": "#2d2d2d", "select_active": "#232323", "slider": "#262626",
+      "slider_cursor": "#646464", "slider_cursor_hover": "#787878", "slider_cursor_active": "#969696",
+      "property": "#262626", "edit": "#262626", "edit_cursor": "#afafaf", "combo": "#2d2d2d",
+      "chart": "#787878", "chart_color": "#2d2d2d", "chart_color_highlight": "#ff0000",
+      "scrollbar": "#282828", "scrollbar_cursor": "#646464", "scrollbar_cursor_hover": "#787878",
+      "scrollbar_cursor_active": "#969696", "tab_header": "#282828", "image_background": "#181818"
+    },
+    "Day": {
+      "text": "#202020", "window": "#f0f0f0", "header": "#e6e6e6", "border": "#b0b0b0",
+      "button": "#e8e8e8", "button_hover": "#dcdcdc", "button_active": "#c8c8c8",
+      "toggle": "#ffffff", "toggle_hover": "#e6e6e6", "toggle_cursor": "#404040",
+      "select": "#f0f0f0", "select_active": "#c9def5", "slider": "#dedede",
+      "slider_cursor": "#b0b0b0", "slider_cursor_hover": "#999999", "slider_cursor_active": "#808080",
+      "property": "#ffffff", "edit": "#ffffff", "edit_cursor": "#202020", "combo": "#f0f0f0",
+      "chart": "#ffffff", "chart_color": "#404040", "chart_color_highlight": "#cc0000",
+      "scrollbar": "#e6e6e6", "scrollbar_cursor": "#b0b0b0", "scrollbar_cursor_hover": "#999999",
+      "scrollbar_cursor_active": "#808080", "tab_header": "#e6e6e6", "image_background": "#181818"
+    }
+  }
+}
