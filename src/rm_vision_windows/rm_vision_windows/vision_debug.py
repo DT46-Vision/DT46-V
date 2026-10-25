@@ -1,14 +1,15 @@
 """Tk replacement for the DT46 rqt perspective and runtime parameter editor."""
 
 import json
+import copy
 import os
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, font as tkfont
 
 from PIL import Image, ImageDraw, ImageGrab, ImageTk
 
-from .aim import DEBUG_IMAGES
+from .aim import DEBUG_IMAGES, ROOT
 from .debug import ballistic_image, tracking_image
 
 
@@ -34,8 +35,14 @@ class VisionDebug:
         self.aim, self.output = aim, output
         self.running = True
         self.last_frame = None
+        self.images, self.last_parameters = {}, None
+        self.theme_config = json.loads((ROOT / "standalone/debug_ui.json").read_text(encoding="utf-8"))
         self.window = tk.Tk()
-        self.window.title("DT46 — Native vision debug / rqt migration")
+        self.window.title("DT46 - Windows simulation vision debug (Python)")
+        self.style = ttk.Style(self.window)
+        self.style.theme_use("clam")  # Native Windows ttk themes ignore custom widget colors.
+        self.theme = tk.StringVar(value=self.theme_config["defaults"]["python"])
+        self.font_size = tk.IntVar(value=18)
         width = min(1440, self.window.winfo_screenwidth() - 80)
         height = min(900, self.window.winfo_screenheight() - 100)
         self.window.geometry(f"{width}x{height}+20+20")
@@ -45,10 +52,20 @@ class VisionDebug:
         toolbar = ttk.Frame(self.window)
         toolbar.pack(fill="x")
         ttk.Button(toolbar, text="Save frame", command=self.save_frame).pack(side="left")
+        ttk.Label(toolbar, text="UI font").pack(side="left", padx=(10, 4))
+        self.font_selector = ttk.Combobox(toolbar, textvariable=self.font_size, values=self.theme_config["font_sizes"], width=3, state="readonly")
+        self.font_selector.pack(side="left")
+        self.font_selector.bind("<<ComboboxSelected>>", lambda _: self.apply_font())
+        ttk.Label(toolbar, text="Theme").pack(side="left", padx=(10, 4))
+        self.theme_selector = ttk.Combobox(toolbar, textvariable=self.theme, values=("Day", "Night"), width=6, state="readonly")
+        self.theme_selector.pack(side="left")
+        self.theme_selector.bind("<<ComboboxSelected>>", lambda _: self.apply_theme())
         self.status = tk.StringVar(value="Starting — camera controls are simulated")
         ttk.Label(toolbar, textvariable=self.status).pack(side="left", padx=10)
         body = ttk.Panedwindow(self.window, orient="horizontal")
         body.pack(fill="both", expand=True)
+        self.body = body
+        body.bind("<Configure>", lambda event: body.sashpos(0, max(200, event.width-int(330*self.font_size.get()/14))))
         images, settings = ttk.Frame(body), ttk.Frame(body, width=330)
         body.add(images, weight=4)
         body.add(settings, weight=1)
@@ -83,12 +100,48 @@ class VisionDebug:
             images.rowconfigure(index, weight=1, uniform="views")
             images.columnconfigure(index, weight=1, uniform="views")
         self.make_settings(settings)
+        self.apply_font()
+        self.apply_theme()
+
+    def apply_font(self):
+        for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkFixedFont"):
+            tkfont.nametofont(name, root=self.window).configure(size=-self.font_size.get(),
+                family="Consolas" if name == "TkFixedFont" else "Segoe UI")
+        self.style.configure(".", font="TkDefaultFont")
+        self.body.sashpos(0, max(200, self.body.winfo_width()-int(330*self.font_size.get()/14)))
+        self.redraw()
+
+    def apply_theme(self):
+        p = self.theme_config["themes"][self.theme.get()]
+        self.palette = p
+        self.window.configure(background=p["window"])
+        self.style.configure(".", background=p["window"], foreground=p["text"], bordercolor=p["border"],
+                             lightcolor=p["border"], darkcolor=p["border"], fieldbackground=p["edit"],
+                             arrowcolor=p["text"], insertcolor=p["edit_cursor"], troughcolor=p["scrollbar"])
+        self.style.configure("TButton", background=p["button"])
+        self.style.map("TButton", background=[("pressed", p["button_active"]), ("active", p["button_hover"])])
+        self.style.map("TCombobox", fieldbackground=[("readonly", p["combo"])], foreground=[("readonly", p["text"])])
+        self.style.map("TEntry", fieldbackground=[("readonly", p["header"])])
+        self.style.map("TNotebook.Tab", background=[("selected", p["window"]), ("!selected", p["header"])])
+        self.style.map("TCheckbutton", background=[("active", p["window"])],
+                       indicatorbackground=[("selected", p["toggle_cursor"]), ("!selected", p["toggle"])])
+        self.window.option_add("*TCombobox*Listbox.background", p["edit"])
+        self.window.option_add("*TCombobox*Listbox.foreground", p["text"])
+        self.window.option_add("*TCombobox*Listbox.selectBackground", p["select_active"])
+        self.window.option_add("*TCombobox*Listbox.selectForeground", p["text"])
+        self.logs.configure(background=p["edit"], foreground=p["text"], insertbackground=p["edit_cursor"])
+        for canvas in self.settings_canvases:
+            canvas.configure(background=p["window"])
+        for _, canvas in self.panes:
+            canvas.configure(background=p["image_background"])
+        self.redraw()
 
     def make_settings(self, parent):
-        ttk.Label(parent, text="Simulated camera / original detector & tracker").pack()
+        ttk.Label(parent, text="Simulated camera / original vision").pack()
         notebook = ttk.Notebook(parent)
         notebook.pack(fill="both", expand=True)
         self.entries = {}
+        self.settings_canvases = []
         groups = {"camera": self.aim.stage.camera_sensors[self.aim.camera].parameters,
                   "detector": {**self.aim.pipeline.settings["detector"], "cls_model_file": self.aim.pipeline.settings["model"]},
                   "tracker": self.aim.pipeline.settings["tracker"]}
@@ -96,6 +149,7 @@ class VisionDebug:
             page = ttk.Frame(notebook)
             notebook.add(page, text=name)
             canvas = tk.Canvas(page, highlightthickness=0, width=315)
+            self.settings_canvases.append(canvas)
             scroll = ttk.Scrollbar(page, orient="vertical", command=canvas.yview)
             canvas.configure(yscrollcommand=scroll.set)
             scroll.pack(side="right", fill="y")
@@ -104,22 +158,22 @@ class VisionDebug:
             canvas.create_window((0, 0), window=fields, anchor="nw")
             fields.bind("<Configure>", lambda _, c=canvas: c.configure(scrollregion=c.bbox("all")))
             self.entries[name] = {}
-            for row, (key, value) in enumerate(parameters.items()):
-                ttk.Label(fields, text=key).grid(row=row, column=0, sticky="w")
+            for row, (key, value) in enumerate(sorted(parameters.items())):
+                ttk.Label(fields, text=key).grid(row=2*row, column=0, sticky="w")
                 variable = tk.BooleanVar(value=value) if isinstance(value, bool) else tk.StringVar(value=str(value))
                 state = "readonly" if name == "tracker" and key in PHYSICS_INPUTS else "normal"
                 if isinstance(value, bool):
-                    ttk.Checkbutton(fields, variable=variable).grid(row=row, column=1)
+                    ttk.Checkbutton(fields, text="Enabled", variable=variable).grid(row=2*row+1, column=0, sticky="w")
                 else:
-                    ttk.Entry(fields, textvariable=variable, width=11, state=state).grid(row=row, column=1)
+                    ttk.Entry(fields, textvariable=variable, width=28, state=state).grid(row=2*row+1, column=0, sticky="ew")
                 self.entries[name][key] = variable
-        ttk.Label(parent, text="k / gravity / initial speed follow shooter config").pack()
+        ttk.Label(parent, text="k / gravity / speed follow shooter config", wraplength=310, justify="left").pack(fill="x")
         ttk.Button(parent, text="Apply (resets tracker)", command=self.apply).pack(fill="x")
         ttk.Button(parent, text="Load parameters JSON", command=self.load_settings).pack(fill="x")
         ttk.Button(parent, text="Save parameters JSON", command=self.save_settings).pack(fill="x")
         self.message = tk.StringVar()
         ttk.Label(parent, textvariable=self.message, wraplength=310).pack(fill="x")
-        self.logs = tk.Text(parent, height=10, width=38, state="disabled")
+        self.logs = tk.Text(parent, height=6, width=32, state="disabled", font="TkFixedFont")
         self.logs.pack(fill="x")
 
     def close(self):
@@ -182,13 +236,16 @@ class VisionDebug:
 
     def update(self, image, result):
         self.last_frame = image, result
-        self.status.set(f"t={result['simulation_time_s']:.2f}s  {result['state']}  "
-                        f"id={result['tracked_id']}  fire={int(result['can_fire'])}  "
+        self.last_parameters = copy.deepcopy(self.aim.parameters())
+        self.last_parameters["camera"] = copy.deepcopy(result["sensor"]["parameters"])
+        self.images = {name: view_image(name, image, result, self.aim) for name in VIEWS}
+        self.status.set(f"t={result['simulation_time_s']:.2f}s  {result['state']} "
+                        f"id={result['tracked_id']} fire={int(result['can_fire'])} "
                         f"vision={result['processing_ms']:.1f}ms")
         logs = result["tracker_debug"]["logs"]
         if logs:
             self.logs.configure(state="normal")
-            self.logs.insert("end", "".join(f"{result['simulation_time_s']:.3f} {entry['name']}: {entry['value']}\n"
+            self.logs.insert("end", "".join(f"{result['simulation_time_s']:.6f} {entry['name']}: {json.dumps(entry['value'], separators=(',', ':'))}\n"
                                            for entry in logs))
             count = int(self.logs.index("end-1c").split(".")[0])
             if count > 1000:
@@ -203,19 +260,22 @@ class VisionDebug:
         image, result = self.last_frame
         for (choice, canvas), options in zip(self.panes, self.view_options):
             canvas.delete("all")
-            frame = view_image(choice.get(), image, result, self.aim)
+            frame = self.images.get(choice.get())
             if frame is None:
-                canvas.create_text(10, 15, anchor="nw", fill="white", text="No current image")
+                canvas.create_text(10, 15, anchor="nw", fill="white", text="No current image / display disabled")
                 continue
-            display = Image.fromarray(frame).rotate(options["rotate"].get(), expand=True)
+            display = Image.fromarray(frame).rotate(-options["rotate"].get(), expand=True)
             if not options["zoom"].get():
-                display.thumbnail((max(100, canvas.winfo_width()), max(100, canvas.winfo_height())),
-                                  Image.Resampling.LANCZOS if options["smooth"].get() else Image.Resampling.NEAREST)
+                scale = min(max(1, canvas.winfo_width())/display.width, max(1, canvas.winfo_height())/display.height)
+                display = display.resize((max(1, int(display.width*scale)), max(1, int(display.height*scale))),
+                                         Image.Resampling.LANCZOS if options["smooth"].get() else Image.Resampling.NEAREST)
             if options["grid"].get():
-                draw = ImageDraw.Draw(display)
+                if display.mode != "RGB":
+                    display = display.convert("RGB")
+                draw = ImageDraw.Draw(display, "RGBA")
                 for step in range(1, 4):
-                    draw.line((display.width*step//4, 0, display.width*step//4, display.height), fill="yellow")
-                    draw.line((0, display.height*step//4, display.width, display.height*step//4), fill="yellow")
+                    draw.line((display.width*step//4, 0, display.width*step//4, display.height), fill=(255, 255, 255, 150))
+                    draw.line((0, display.height*step//4, display.width, display.height*step//4), fill=(255, 255, 255, 150))
             canvas.frame = ImageTk.PhotoImage(display)
             canvas.create_image(0, 0, anchor="nw", image=canvas.frame)
             canvas.configure(scrollregion=(0, 0, display.width, display.height))
@@ -227,11 +287,11 @@ class VisionDebug:
         folder = self.output/f"g{result['reset_generation']}_p{result['parameter_revision']}_f{result['frame_number']}"
         folder.mkdir(parents=True, exist_ok=True)
         for name in VIEWS:
-            frame = view_image(name, image, result, self.aim)
+            frame = self.images.get(name)
             if frame is not None:
                 Image.fromarray(frame).save(folder/f"{name}.png")
         (folder/"result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-        (folder/"parameters.json").write_text(json.dumps(self.aim.parameters(), indent=2), encoding="utf-8")
+        (folder/"parameters.json").write_text(json.dumps(self.last_parameters, indent=2), encoding="utf-8")
         self.window.update_idletasks()
         if self.window.winfo_viewable():
             x, y = self.window.winfo_rootx(), self.window.winfo_rooty()
@@ -241,7 +301,7 @@ class VisionDebug:
             preview = Image.new("RGB", (1000, 760), "#181818")
             draw = ImageDraw.Draw(preview)
             for index, (choice, _) in enumerate(self.panes):
-                pixels = view_image(choice.get(), image, result, self.aim)
+                pixels = self.images.get(choice.get())
                 if pixels is not None:
                     tile = Image.fromarray(pixels)
                     tile.thumbnail((490, 350))
@@ -249,6 +309,7 @@ class VisionDebug:
                 draw.text(((index % 2)*500+5, (index//2)*380+5), choice.get(), fill="white")
             preview.save(folder/"window.png")
         (folder/"display.json").write_text(json.dumps({"desktop_capture": bool(self.window.winfo_viewable()),
+            "theme": self.theme.get(), "ui_font_px": self.font_size.get(),
             "panes": [{"view": choice.get(), **{key: value.get() for key, value in options.items()}}
                       for (choice, _), options in zip(self.panes, self.view_options)]}, indent=2), encoding="utf-8")
         self.status.set(f"Saved {folder.name}")

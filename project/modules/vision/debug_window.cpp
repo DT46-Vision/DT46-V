@@ -32,8 +32,9 @@
 namespace dt46 {
 namespace {
 std::array<const char*,10> views={"image_raw","ballistic_img","tracking_state_img","result","crop_img","bin_img","img_armor","img_armor_processed","img_debug","gray"};
-constexpr std::array<float,6> font_sizes={14,16,18,20,24,28};
 std::array<const char*,6> font_labels={"14 px","16 px","18 px","20 px","24 px","28 px"};
+constexpr std::array<const char*,NK_COLOR_COUNT> color_roles={"text","window","header","border","button","button_hover","button_active","toggle","toggle_hover","toggle_cursor","select","select_active","slider","slider_cursor","slider_cursor_hover","slider_cursor_active","property","edit","edit_cursor","combo","chart","chart_color","chart_color_highlight","scrollbar","scrollbar_cursor","scrollbar_cursor_hover","scrollbar_cursor_active","tab_header"};
+std::array<const char*,2> theme_names={"Day","Night"};
 bool physics_input(const std::string& group,const std::string& key){return group=="tracker"&&(key=="k_v2"||key=="gravity"||key=="bullet_speed");}
 void png(const std::filesystem::path& path,const cv::Mat& rgb) {
     std::ofstream file(path,std::ios::binary);const auto callback=[](void* context,void* data,int size){static_cast<std::ofstream*>(context)->write(static_cast<char*>(data),size);};
@@ -54,22 +55,27 @@ std::filesystem::path choose_file(bool save,const std::filesystem::path& fallbac
 struct VisionDebug::Impl {
     AimPipeline& pipeline;VirtualCamera& camera;std::filesystem::path output;
     GLFWwindow* window=nullptr;nk_context* ui=nullptr;bool backend=false;
-    std::array<nk_font*,6> fonts{};int font_choice=2;
+    std::array<nk_font*,6> fonts{};std::array<float,6> font_sizes{};int font_choice=2;
+    Json theme_config;int theme_choice=1;
     VirtualFrame last_frame;Json last_result=nullptr,last_parameters;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
     std::array<int,4> choices{3,1,7,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
     struct ViewOptions {int smooth=0,zoom=0,grid=0,rotation=0;};std::array<ViewOptions,4> view_options;
     std::map<std::string,std::map<std::string,std::array<char,256>>> fields;Json field_types;
     std::string status="Starting",message;std::deque<std::string> logs;int tab=0;std::filesystem::path pending_screenshot;
     Impl(AimPipeline& p,VirtualCamera& c,std::filesystem::path folder,bool visible):pipeline(p),camera(c),output(std::move(folder)) {
+        std::ifstream theme_file(pipeline.root()/"standalone/debug_ui.json");theme_config=Json::parse(theme_file);
+        font_sizes=theme_config.at("font_sizes").get<std::array<float,6>>();
+        theme_choice=theme_config.at("defaults").at("native")=="Day"?0:1;
         if(!glfwInit())throw std::runtime_error("Cannot initialize vision debug window");
         glfwDefaultWindowHints();glfwWindowHint(GLFW_VISIBLE,visible?GLFW_TRUE:GLFW_FALSE);glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_COMPAT_PROFILE);
-        window=glfwCreateWindow(1440,900,"DT46 - Native vision debug",nullptr,nullptr);
+        window=glfwCreateWindow(1440,900,"DT46 - Windows simulation vision debug (C++)",nullptr,nullptr);
         if(!window){glfwTerminate();throw std::runtime_error("Cannot create vision debug window");}
         glfwMakeContextCurrent(window);if(!gladLoadGL(glfwGetProcAddress)){glfwDestroyWindow(window);glfwTerminate();throw std::runtime_error("Cannot initialize debug OpenGL");}
         glfwSwapInterval(0);ui=nk_glfw3_init(window,NK_GLFW3_INSTALL_CALLBACKS);backend=true;
         nk_font_atlas* atlas;nk_glfw3_font_stash_begin(&atlas);
         for(std::size_t i=0;i<fonts.size();++i)fonts[i]=nk_font_atlas_add_default(atlas,font_sizes[i],nullptr);
         nk_glfw3_font_stash_end();nk_style_set_font(ui,&fonts[font_choice]->handle);glGenTextures(4,textures.data());
+        apply_theme();
         for(GLuint texture:textures){glBindTexture(GL_TEXTURE_2D,texture);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);}
         Json groups={{"camera",camera.description.at("camera")},{"detector",pipeline.settings().at("detector")},{"tracker",pipeline.settings().at("tracker")}};
         groups["detector"]["cls_model_file"]=pipeline.settings().at("model");field_types=groups;
@@ -79,6 +85,12 @@ struct VisionDebug::Impl {
     }
     ~Impl(){if(window){glfwMakeContextCurrent(window);glDeleteTextures(4,textures.data());if(backend)nk_glfw3_shutdown();glfwDestroyWindow(window);glfwTerminate();}}
     float scaled(float value)const{return value*font_sizes[font_choice]/14.f;}
+    void apply_theme() {
+        const auto& palette=theme_config.at("themes").at(theme_names[theme_choice]);std::array<nk_color,NK_COLOR_COUNT> colors;
+        for(std::size_t i=0;i<colors.size();++i){const auto hex=palette.at(color_roles[i]).get<std::string>();colors[i]=nk_rgb_hex(hex.c_str()+1);}
+        nk_style_from_table(ui,colors.data());
+        ui->style.combo.button.padding=nk_vec2(scaled(5),scaled(5));
+    }
     Json settings()const {
         Json result=Json::object();for(const auto& [group,values]:fields)for(const auto& [key,text]:values) {
             if(key=="cls_model_file"){result["model"]=text.data();continue;}
@@ -107,7 +119,10 @@ struct VisionDebug::Impl {
     void save_frame() {
         if(last_result.is_null())return;std::ostringstream name;name<<"frame_g"<<last_result.at("reset_generation")<<"_r"<<last_result.value("parameter_revision",std::uint64_t(0))
             <<"_n"<<last_result.at("frame_number")<<"_t"<<std::fixed<<std::setprecision(6)<<last_result.at("simulation_time_s").get<double>();const auto folder=output/name.str();std::filesystem::create_directories(folder);
-        for(std::size_t i=0;i<views.size();++i)if(!images[i].empty())png(folder/(std::string(views[i])+".png"),images[i]);json_file(folder/"result.json",last_result);json_file(folder/"parameters.json",last_parameters);message="Saved "+name.str();pending_screenshot=folder/"window.png";
+        for(std::size_t i=0;i<views.size();++i)if(!images[i].empty())png(folder/(std::string(views[i])+".png"),images[i]);json_file(folder/"result.json",last_result);json_file(folder/"parameters.json",last_parameters);
+        Json panes=Json::array();for(std::size_t i=0;i<choices.size();++i){const auto& v=view_options[i];panes.push_back({{"view",views[choices[i]]},{"smooth",bool(v.smooth)},{"zoom",bool(v.zoom)},{"grid",bool(v.grid)},{"rotate",v.rotation*90}});}
+        json_file(folder/"display.json",{{"theme",theme_names[theme_choice]},{"ui_font_px",font_sizes[font_choice]},{"panes",panes},{"desktop_capture",false},{"capture_source","OpenGL framebuffer"}});
+        message="Saved "+name.str();pending_screenshot=folder/"window.png";
     }
     void update(const VirtualFrame& frame,const Json& result) {
         last_frame=frame;last_result=result;images[0]=frame.rgb;const auto& tracker=pipeline.settings().at("tracker");const auto& display=tracker.at("display");
@@ -184,11 +199,14 @@ struct VisionDebug::Impl {
         glfwMakeContextCurrent(window);glfwPollEvents();if(glfwWindowShouldClose(window))return false;nk_glfw3_new_frame();
         int width,height;glfwGetWindowSize(window,&width,&height);const float sidebar=scaled(330),top=scaled(45),image_width=std::max(200.f,width-sidebar);
         if(nk_begin(ui,"Toolbar",nk_rect(0,0,float(width),top),NK_WINDOW_NO_SCROLLBAR)) {
-            nk_layout_row_begin(ui,NK_STATIC,scaled(26),4);nk_layout_row_push(ui,scaled(110));if(nk_button_label(ui,"Save frame"))try{save_frame();}catch(const std::exception& e){message=e.what();}
+            nk_layout_row_begin(ui,NK_STATIC,scaled(26),6);nk_layout_row_push(ui,scaled(110));if(nk_button_label(ui,"Save frame"))try{save_frame();}catch(const std::exception& e){message=e.what();}
             nk_layout_row_push(ui,scaled(60));nk_label(ui,"UI font",NK_TEXT_LEFT);nk_layout_row_push(ui,scaled(90));
             const int next_font=nk_combo(ui,font_labels.data(),int(font_labels.size()),font_choice,int(scaled(26)),nk_vec2(scaled(110),scaled(220)));
-            if(next_font!=font_choice){font_choice=next_font;nk_style_set_font(ui,&fonts[font_choice]->handle);}
-            nk_layout_row_push(ui,std::max(100.f,width-scaled(300)));nk_label(ui,status.c_str(),NK_TEXT_LEFT);nk_layout_row_end(ui);
+            if(next_font!=font_choice){font_choice=next_font;nk_style_set_font(ui,&fonts[font_choice]->handle);ui->style.combo.button.padding=nk_vec2(scaled(5),scaled(5));}
+            nk_layout_row_push(ui,scaled(60));nk_label(ui,"Theme",NK_TEXT_LEFT);nk_layout_row_push(ui,scaled(90));
+            const int next_theme=nk_combo(ui,theme_names.data(),int(theme_names.size()),theme_choice,int(scaled(26)),nk_vec2(scaled(110),scaled(90)));
+            if(next_theme!=theme_choice){theme_choice=next_theme;apply_theme();}
+            nk_layout_row_push(ui,std::max(100.f,width-scaled(460)));nk_label(ui,status.c_str(),NK_TEXT_LEFT);nk_layout_row_end(ui);
         }nk_end(ui);
         for(int i=0;i<4;++i)pane(i,float(i%2)*image_width/2,top+float(i/2)*(height-top)/2,image_width/2,(height-top)/2);
         parameters(image_width,top,sidebar,height-top);dirty=false;glClearColor(.08f,.08f,.08f,1);glClear(GL_COLOR_BUFFER_BIT);nk_glfw3_render(NK_ANTI_ALIASING_ON);

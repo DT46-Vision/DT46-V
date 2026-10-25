@@ -23,6 +23,7 @@ public:
                  const cv::Vec3d& muzzle_offset, int target_color, double measured_speed = 0);
     cv::Mat debug_image(const std::string& name) const;
     const Json& settings() const { return settings_; }
+    const std::filesystem::path& root() const { return root_; }
     double nominal_speed() const { return settings_.at("tracker").at("bullet_speed"); }
     const void* context() const { return context_; }
     std::uint64_t revision() const { return revision_; }

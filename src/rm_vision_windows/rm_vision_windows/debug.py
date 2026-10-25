@@ -1,6 +1,7 @@
 """ROS-free equivalents of rm_tracker/node.cpp's two rqt image topics (RGB)."""
 
 import cv2
+import math
 import numpy as np
 
 
@@ -14,6 +15,13 @@ def project_camera(point, K, D):
     return tuple(np.rint(pixel).astype(int)) if np.isfinite(pixel).all() and np.max(np.abs(pixel)) < 1e7 else None
 
 
+def outlined_text(image, text, point, scale, color):
+    # Match native debug_images.cpp, including C++ lround and antialiasing.
+    thickness = max(1, math.floor(2*scale + .5))
+    cv2.putText(image, text, point, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), thickness+2, cv2.LINE_AA)
+    cv2.putText(image, text, point, cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv2.LINE_AA)
+
+
 def tracking_image(rgb, result, text_size=1.0):
     output = rgb.copy()
     for armor in result["observations"]:
@@ -22,8 +30,7 @@ def tracking_image(rgb, result, text_size=1.0):
     for armor in result["tracker_debug"]["yaw_armors"]:
         point = project_camera(armor["position_camera_m"], result["input"]["K"], result["input"]["D"])
         if point:
-            cv2.putText(output, f"yaw {armor['yaw_rad']:.1f} rad", point,
-                        cv2.FONT_HERSHEY_SIMPLEX, .55*text_size, (255, 0, 255), max(1, round(2*text_size)))
+            outlined_text(output, f"yaw {armor['yaw_rad']:.1f} rad", point, .55*text_size, (255, 0, 255))
     return output
 
 
@@ -43,16 +50,15 @@ def ballistic_image(rgb, result, text_size=1.0):
              f"Armor w: {debug.get('ekf_yaw_velocity_rad_s', 0):.2f} rad/s",
              f"Dist: {debug.get('target_distance_m', 0):.2f} m",
              f"Diff: {debug.get('target_angle_diff_deg', 0):.1f} deg",
-             f"Pitch: {debug['gimbal_control'][1]:+.2f} deg",
-             f"Yaw: {debug['gimbal_control'][0]:+.2f} deg",
+             f"Pitch: {debug['gimbal_control'][1]:.2f} deg",
+             f"Yaw: {debug['gimbal_control'][0]:.2f} deg",
              f"P/Y Tol: {debug['pitch_tolerance_deg']:.2f} / {debug['yaw_tolerance_deg']:.2f} deg",
              f"Bullet Speed: {debug['bullet_speed_m_s']:.2f} m/s",
              "FIRE ENABLE" if result["can_fire"] else "HOLD FIRE"]
     for row, text in enumerate(lines):
-        point = (18, round((28+26*row)*text_size))
-        color = (0, 255, 0) if row == len(lines)-1 and result["can_fire"] else (255, 255, 255)
-        cv2.putText(output, text, point, cv2.FONT_HERSHEY_SIMPLEX, .6*text_size, (0, 0, 0), max(3, round(2*text_size)+2))
-        cv2.putText(output, text, point, cv2.FONT_HERSHEY_SIMPLEX, .6*text_size, color, max(1, round(2*text_size)))
+        point = (18, int((28+26*row)*text_size))
+        color = ((80, 255, 120) if result["can_fire"] else (255, 210, 90)) if row == len(lines)-1 else (255, 255, 255)
+        outlined_text(output, text, point, .6*text_size, color)
     return output
 
 

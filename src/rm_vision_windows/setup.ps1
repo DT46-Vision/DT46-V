@@ -8,6 +8,12 @@ param(
     [string]$IndexUrl = 'https://pypi.tuna.tsinghua.edu.cn/simple'
 )
 $ErrorActionPreference = 'Stop'
+if ($OpenCVDir -and !(Test-Path -LiteralPath $OpenCVDir -PathType Container)) {
+    throw "OpenCVDir does not exist: $OpenCVDir"
+}
+if ($EigenDir -and !(Test-Path -LiteralPath (Join-Path $EigenDir 'Eigen/Core') -PathType Leaf)) {
+    throw "EigenDir must contain Eigen/Core: $EigenDir"
+}
 $visionRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $environmentPython = Join-Path $visionRoot '.venv/Scripts/python.exe'
 if (!(Test-Path -LiteralPath $environmentPython)) {

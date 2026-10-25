@@ -72,11 +72,13 @@ Python 的 `opencv-python-headless` 供外层绘图和视频使用，**不能代
 
 准备脚本执行：创建 `.venv` → pip 安装本包及依赖 → 缺少原生 SDK 时调用 [bootstrap.cmake](../../cmake/bootstrap.cmake) → 构建已有 C++ 核心 → 生成本机 `.local/native.json`。日志目录在完成时打印；任一步失败即停止。**准备完成只说明环境和编译完成，不能代替下文的接入验收。**
 
-使用外部 SDK 后，后续 `dt46-build` 仍需传同样的 `--opencv-dir`、`--eigen-dir`；不传则使用项目内部默认目录。Windows SDK 的运行 DLL 和编译器运行库若不在标准路径，可给 setup 传 `-RuntimeDir @('<目录>')`，或给构建命令重复传 `--runtime-dir`。这里只记录路径，不把编译器复制入项目。切换编译器/架构/生成器前移走旧 `build/python-core/`，再重建兼容 SDK 和核心；不能混用先前缓存。
+后续 `dt46-build` 默认复用 `.local/native.json` 中上次成功构建的 SDK、生成器、配置和显式运行库目录，命令行参数可以覆盖；首次构建默认使用项目内部 SDK。Windows SDK 的运行 DLL 和编译器运行库若不在标准路径，可给 setup 传 `-RuntimeDir @('<目录>')`，或给构建命令传 `--runtime-dir`。这里只记录路径，不把编译器复制入项目。切换编译器/架构/生成器前移走旧 `build/python-core/`，再重建兼容 SDK 和核心；不能混用先前缓存。
 
 国内下载：pip 默认地址见脚本的 `IndexUrl`，可用 `-IndexUrl https://pypi.org/simple` 切回官方源；用法依据 [清华 PyPI 说明](https://mirrors.tuna.tsinghua.edu.cn/help/pypi/)。原生准备传 `DOWNLOAD_REGION=cn`，为 OpenCV 自身下载器设置 GitCode 镜像，依据 [OpenCV 官方 FAQ](https://github.com/opencv/opencv/wiki/FAQ)。当前 bootstrap 的主源码包和 FFmpeg 预取仍经过 GitHub/GitLab，不承诺全程国内加速；网络受限时优先复用团队提供的同版本、同工具链 SDK，并保留 bootstrap 中的校验值。只复制 `.deps` 的兼容原生安装，重新生成本机配置和虚拟环境。
 
 ## Windows 接入与 ROS 对应
+
+界面与 C++ 版统一为 Windows 仿真调试四视图，顶部 `Theme` 可选 Day / Night（本版默认 Day），`UI font` 调整面板字号。配色、图像文字、保存帧、参数快照和 rqt 的边界统一见 [共用调试 UI 约定](../../standalone/README.md#虚拟相机与独立调试)。主题切换不重建 C++ 上下文；保存使用显示帧缓存，不读取之后生成的调试图或尚未应用的编辑值。
 
 | aim_test 入口 / 数据 | Windows 外层对应 |
 |---|---|
@@ -137,8 +139,8 @@ Python 的 `opencv-python-headless` 供外层绘图和视频使用，**不能代
 | 运行方式 | 保留的原生依赖 | 外层依赖 |
 |---|---|---|
 | 仿真平台 | MuJoCo、OpenCV、Eigen、nlohmann/json、GLFW、随源码提供的 TinyXML-2；版本由[仿真 lock](../../../cmake/dependency-lock.cmake)维护 | 正常仿真运行无 Python；离线工具单独处理 |
-| DT46 纯 C++ 独立应用 | OpenCV、Eigen；原生外层另用 nlohmann/json、GLFW/OpenGL 与随源码提供的 ImGui | 不需要 Python，见 [standalone](../../standalone/README.md) |
-| 本包 Python 外层 + 原 C++ 核心 | OpenCV、Eigen；不构建原生 GUI/通信外层，因此核心本身不引入 GLFW、ImGui、nlohmann/json | NumPy、PyYAML、Pillow、Python OpenCV，固定版本见 pyproject；Tk 随 Python |
+| DT46 纯 C++ 独立应用 | OpenCV、Eigen；原生外层另用 nlohmann/json、GLFW/OpenGL 与随 GLFW 源码提供的 Nuklear | 不需要 Python，见 [standalone](../../standalone/README.md) |
+| 本包 Python 外层 + 原 C++ 核心 | OpenCV、Eigen；不构建原生 GUI/通信外层，因此核心本身不引入 GLFW、Nuklear、nlohmann/json | NumPy、PyYAML、Pillow、Python OpenCV，固定版本见 pyproject；Tk 随 Python |
 | aim_test ROS 路径 | 原 C++ detector/tracker 及 OpenCV、Eigen、ROS 2 C++ 依赖；相机 SDK 按驱动选择 | ROS 2 Humble / rclpy / launch、消息包、colcon、pyserial；与 Windows pip 包分开 |
 
 因此不能笼统说“纯 C++ 只多一个 YAML 库”，也不能说“有仿真后视觉不需要另外声明依赖”。当前 C++ 独立路径用 JSON 配置，不依赖 yaml-cpp；ROS 路径和 Python 外层的 YAML 读取另有各自实现。两边相同的原生 SDK 可以在兼容前提下复用，但必须由视觉自己的构建显式指向，不能偷偷从仿真源码或 Python wheel 取头文件。

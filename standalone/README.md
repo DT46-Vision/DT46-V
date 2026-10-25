@@ -35,6 +35,14 @@ ctest --preset release
 
 ## 虚拟相机与独立调试
 
+Windows 仿真接口保留两条个人开发分支：本 C++ 应用为 `codex/sim-vision-work`，Python 外壳调用同一 C++ 算法核心为 `codex/python-outer`（流程在该分支的 `src/rm_vision_windows/README.md`）。暂不据此选定最终实现，也不把外壳差别合入原 tracker。两版顶栏均提供 `Theme: Day / Night` 和 `UI font`；[debug_ui.json](debug_ui.json) 是共同的配色与字号定义，C++ 默认 Night，Python 默认 Day。C++ 窗口使用 Nuklear，Python 使用 Tk/ttk，统一功能布局、文字和颜色，不承诺不同控件库像素级相同。
+
+主题只改变窗口控件配色，UI 字号只影响面板；两者不改变相机曝光、RGB、tracker 参数版本、跟踪状态或录像内容。以 C++ 界面作为样式基准；原生下拉箭头增加内边距以缩小三角形，点击区域不变，随面板字号缩放。tracker 图像文字以 C++ `project/modules/vision/debug_images.cpp` 为基准，日夜模式共用相同文字、描边、精度和状态颜色。`Save frame` 固定保存当前显示帧的图像、结果和实际相机参数；`display.json` 另外记录主题、面板字号与各格查看选项。主题和字号只在当前窗口有效，不混入算法参数 JSON。
+
+ROS 的 rqt 仍使用原 perspective 中的四个 `rqt_image_view` 和一个 `rqt_reconfigure`；本轮不修改 ROS 节点、DDS 或实机参数回调。rqt 是 Qt 插件容器，控件配色可另行通过 Qt 主题统一，而已叠在图像中的 tracker 文字由 ROS 节点生成。建议先保留实机流程，后续在 Ubuntu / ROS 2 Humble 上验证 rqt 配色与 perspective；Windows 两版调试通过不等于 ROS 或硬件验证通过。
+
+本轮源码审查、日夜切换、保存帧和两版 tracker 图像对照的结果与限制见[Windows UI 收尾记录](../outputs/windows_ui_review_20261026/checks.json)。rqt 的职责参见 [ROS 官方说明](https://index.ros.org/p/rqt/)；此处保留原 ROS 行为，不把 Windows 主题方案直接套进 rqt 插件。
+
 ```powershell
 build/native/bin/dt46_vision.exe --camera-session <相机会话.json> --output <结果目录>
 build/native/bin/dt46_vision.exe --show-debug

@@ -12,14 +12,26 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def main() -> None:
+    config_path = ROOT / ".local/native.json"
+    previous = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+
+    def configured_path(key, fallback):
+        path = Path(previous.get(key, fallback))
+        return path if path.is_absolute() else ROOT / path
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--opencv-dir", type=Path, default=ROOT / ".deps/native/opencv")
-    parser.add_argument("--eigen-dir", type=Path, default=ROOT / ".deps/native/deps/eigen-3.4.0")
-    parser.add_argument("--runtime-dir", type=Path, action="append", default=[])
-    parser.add_argument("--generator", default="Ninja")
-    parser.add_argument("--config", choices=("Release", "Debug"), default="Release")
+    parser.add_argument("--opencv-dir", type=Path, default=configured_path("opencv_dir", ".deps/native/opencv"))
+    parser.add_argument("--eigen-dir", type=Path, default=configured_path("eigen_dir", ".deps/native/deps/eigen-3.4.0"))
+    parser.add_argument("--runtime-dir", type=Path, action="append")
+    parser.add_argument("--generator", default=previous.get("generator", "Ninja"))
+    parser.add_argument("--config", choices=("Release", "Debug"), default=previous.get("config", "Release"))
     parser.add_argument("--jobs", type=int, default=4)
     args = parser.parse_args()
+    if args.jobs < 1:
+        parser.error("--jobs must be positive")
+    if args.runtime_dir is None:
+        args.runtime_dir = [Path(path) if Path(path).is_absolute() else ROOT / path
+                            for path in previous.get("runtime_dirs", [])]
     build = ROOT / "build/python-core"
     output = build / "bin"
     if not args.opencv_dir.is_dir() or not (args.eigen_dir / "Eigen/Core").is_file():
@@ -49,7 +61,8 @@ def main() -> None:
         raise FileNotFoundError(library)
     settings = {"library": stored(library), "dll_dirs": [stored(path) for path in directories],
                 "opencv_dir": stored(args.opencv_dir), "eigen_dir": stored(args.eigen_dir),
-                "generator": args.generator, "config": args.config}
+                "generator": args.generator, "config": args.config,
+                "runtime_dirs": [stored(path) for path in args.runtime_dir]}
     (ROOT / ".local").mkdir(exist_ok=True)
     (ROOT / ".local/native.json").write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
     print("Native core ready; local runtime configuration: .local/native.json")

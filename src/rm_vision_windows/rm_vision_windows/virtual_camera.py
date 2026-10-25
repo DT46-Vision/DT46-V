@@ -94,8 +94,12 @@ class Session:
 
     def close_debug(self) -> None:
         if self.ui:
-            self.ui.window.destroy()
-            self.ui = None
+            from tkinter import TclError
+            ui, self.ui = self.ui, None
+            try:
+                ui.window.destroy()
+            except TclError:
+                pass  # The window may already have been destroyed by the desktop.
             self.event("closed")
 
     def debug_commands(self) -> None:
@@ -145,7 +149,7 @@ class Session:
                 self.event("generation_reset", generation=generation)
             self.generation, self.last_time = generation, -1.0
         if packet["time"] <= self.last_time:
-            self.result, self.result_revision = None, 0
+            self.result, self.packet, self.result_revision = None, None, 0
             return
         started = time.perf_counter()
         self.result = process_frame(self.pipeline, packet)
@@ -201,13 +205,18 @@ class Session:
             else:
                 time.sleep(0.001)
             if self.ui:
-                self.ui.pump()
-                if not self.ui.running:
+                try:
+                    self.ui.pump()
+                    if not self.ui.running:
+                        self.close_debug()
+                    elif self.packet is not None and time.perf_counter() - self.last_draw >= 1/30:
+                        self.ui.update(self.packet["image"], self.result)
+                        self.displays += 1
+                        self.last_draw = time.perf_counter()
+                except Exception as error:
+                    # Match the native adapter: a display failure must not stop tracking.
+                    self.event("window_error", error=f"{type(error).__name__}: {error}")
                     self.close_debug()
-                elif self.packet is not None and time.perf_counter() - self.last_draw >= 1/30:
-                    self.ui.update(self.packet["image"], self.result)
-                    self.displays += 1
-                    self.last_draw = time.perf_counter()
 
 
 def run(args) -> int:

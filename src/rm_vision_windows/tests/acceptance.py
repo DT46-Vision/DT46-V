@@ -5,6 +5,7 @@ from contextlib import ExitStack
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import time
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -99,6 +100,32 @@ def main() -> int:
             context, frames = session.pipeline.handle, session.frames
             require(not issue("show")["error"] and session.ui.window.winfo_viewable(), "visible Tk debug window opens")
             require(session.ui.entries["detector"]["binary_val"].get() in ("121", "121.0"), "editor displays applied runtime values")
+            revision = session.pipeline.revision
+            current = session.ui.last_frame[1]
+            pixels = {name: frame.copy() for name, frame in session.ui.images.items() if frame is not None}
+            for theme in ("Night", "Day"):
+                session.ui.theme.set(theme)
+                session.ui.theme_selector.event_generate("<<ComboboxSelected>>")
+                session.ui.pump()
+                snapshot = session.ui.save_frame()
+                require(read(snapshot / "display.json")["theme"] == theme, f"actual Tk selector applies {theme} theme")
+                shutil.copy2(snapshot / "window.png", output / f"python-{theme.lower()}.png")
+                require(read(snapshot / "parameters.json")["camera"] == current["sensor"]["parameters"], "saved parameters belong to the displayed frame")
+            session.ui.font_size.set(20)
+            session.ui.font_selector.event_generate("<<ComboboxSelected>>")
+            session.ui.pump()
+            for name, frame in pixels.items():
+                np.testing.assert_array_equal(frame, session.ui.images[name])
+            require((context, revision) == (session.pipeline.handle, session.pipeline.revision), "theme and UI font preserve tracker context, revision and all image pixels")
+            # Advancing the core without updating the view must not mix two frames when saving.
+            session.pipeline.debug_image = lambda _: (_ for _ in ()).throw(AssertionError("saved view must use its own image cache"))
+            try:
+                session.ui.save_frame()
+            finally:
+                del session.pipeline.debug_image
+            require(True, "saving a displayed frame never queries newer core debug images")
+            session.ui.font_size.set(18)
+            session.ui.apply_font()
             before = session.packet["image"].copy(), session.packet["K"].copy()
             for index, view in enumerate(session.ui.view_options):
                 for key, value in {"smooth": True, "zoom": index == 0, "grid": True, "rotate": 90 * index}.items():
@@ -126,7 +153,13 @@ def main() -> int:
             pump()
             require(not issue("show")["error"] and session.pipeline.handle == context and session.frames > frames,
                     "closing and reopening debug keeps the C++ context and frame processing")
-            require(not issue("close")["error"], "close reopened debug")
+            from tkinter import TclError
+            with patch.object(session.ui, "pump", side_effect=TclError("acceptance: window destroyed")):
+                pump()
+            require(session.ui is None and session.pipeline.handle == context, "a Tk display error closes only the window; tracking continues")
+            session.process(session.packet)
+            require(session.packet is None and session.result is None, "duplicate timestamp cannot leave a stale packet paired with an empty result")
+            pump()
             require(not issue("configure", parameters={"tracker": {"display": False}})["error"], "disable tracker display")
             recorded = session.video_frames
             pump()
