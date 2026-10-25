@@ -145,6 +145,7 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
         json << "ekf_state" << "[";
         for (int i=0; i<9; ++i) json << s.target_state[i];
         json << "]" << "ekf_yaw_velocity_rad_s" << s.ekf_yaw_vel;
+        json << "ekf_second_radius_m" << s.another_r << "ekf_alternate_height_m" << s.dz;
         if (s.target) {
             const Eigen::Vector3d point = rotation.transpose()*s.target->pos;
             json << "target_camera_m" << "[" << point[0] << point[1] << point[2] << "]";

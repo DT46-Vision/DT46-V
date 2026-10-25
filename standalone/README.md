@@ -2,7 +2,7 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
-当前工作分支为 `codex/sim-vision-work`，已快进合入成像及原生调试配套分支 `codex/camera-lighting@c242783`，本次仅本地整合。该个人工作分支跟踪同名 `origin/codex/sim-vision-work`，原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。此分支汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
+当前工作分支为 `codex/aim-tracking-scenario`，从已整合成像及原生调试工作的 `codex/sim-vision-work@e0e0981` 分出，本次仅本地保存。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 
 此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；本次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。
 
@@ -81,6 +81,8 @@ build/native/bin/dt46_vision.exe --save-debug
 | `measured_speed` | 有效测速，米/秒；未获得传 0，沿用 tracker 配置弹速，原核心仅采用大于 10 m/s 的反馈 |
 
 输出包含装甲编号、分类分数、像素四角、相机系米制位置、追踪状态、预测状态、角度误差（度）及 `can_fire`。`position_camera_origin_world_axes_m` 以相机为原点，按世界轴表达；没有补偿自身底盘平移与光心移动，不能当作世界绝对位置。仿真反馈覆盖对应硬件输入，已给出的光学旋转不再叠加 IMU 安装修正。输入不含对手真值。
+
+非 `LOST` 帧的只读 `tracker_debug.ekf_state` 顺序为 `[xc,vx,yc,vy,za,vz,yaw,vyaw,r]`，位置单位米、速度米/秒、角度弧度、角速度弧度/秒。车心 XY 与装甲基准高度 za 均以采样时的相机光心为原点、按世界轴表达；转换世界位置只加 `input.optical_transform` 的平移，不能再次旋转。速度包含相机原点运动的影响。适配层同时导出原 `RenderSnapshot` 的 `ekf_second_radius_m`（另一对板半径）与 `ekf_alternate_height_m`（相邻板高度差 dz），不修改 tracker。四板模型为 `yaw_i=yaw-iπ/2`、`p_i=(xc-r_i cos(yaw_i), yc-r_i sin(yaw_i), z_i)`，偶数板取 r、za，奇数板取另一半径、za+dz。此状态重建与最终弹道目标不同；仿真同帧真值和评测流程见[自瞄验证场景](../../README.md#自瞄运动与预测验证场景)。
 
 `aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。适配层在调用 `track` 前清空仅供渲染的目标缓存；若本帧产生枪口目标，再调用原本无状态的 `solve_ballistic` 读取有效标记并检查有限角度。提前退出时不会导出旧帧有效性；额外调用只有原查表和三角运算，不修改核心状态。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
