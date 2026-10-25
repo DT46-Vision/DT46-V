@@ -46,7 +46,7 @@ Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
     result.update({{"camera",m.at("camera")},{"robot_id",m.at("robot_id")},{"detect_color",result.at("input").at("detect_color")},{"reset_generation",m.at("generation")},
         {"transport","virtual_camera"},{"bullet_speed_m_s",speed?speed:pipeline.nominal_speed()},{"bullet_speed_source",speed?"dual_photogate":"tracker_config"},
         {"camera_ms",m.value("camera_ms",0.)},{"processing_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count()},
-        {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")}});
+        {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")},{"parameter_revision",pipeline.revision()}});
     if(m.contains("appearance"))result["appearance"]=m.at("appearance");
     for(const char* key:{"camera_settings_version","sampling_target_hz","sampling_effective_limit_hz"})if(m.contains(key))result[key]=m.at(key);
     result["input"]["optical_transform"]=m.at("optical");return result;

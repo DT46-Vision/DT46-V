@@ -55,7 +55,7 @@ struct VisionDebug::Impl {
     AimPipeline& pipeline;VirtualCamera& camera;std::filesystem::path output;
     GLFWwindow* window=nullptr;nk_context* ui=nullptr;bool backend=false;
     std::array<nk_font*,6> fonts{};int font_choice=2;
-    VirtualFrame last_frame;Json last_result=nullptr;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
+    VirtualFrame last_frame;Json last_result=nullptr,last_parameters;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
     std::array<int,4> choices{3,1,7,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
     struct ViewOptions {int smooth=0,zoom=0,grid=0,rotation=0;};std::array<ViewOptions,4> view_options;
     std::map<std::string,std::map<std::string,std::array<char,256>>> fields;Json field_types;
@@ -105,11 +105,13 @@ struct VisionDebug::Impl {
     }
     void save_settings(){const auto path=choose_file(true,output/"vision_parameters.json");if(!path.empty()){json_file(path,settings());message="Saved "+path.string();}}
     void save_frame() {
-        if(last_result.is_null())return;std::ostringstream name;name<<"frame_"<<std::fixed<<std::setprecision(6)<<last_result.at("simulation_time_s").get<double>();const auto folder=output/name.str();std::filesystem::create_directories(folder);
-        for(std::size_t i=0;i<views.size();++i)if(!images[i].empty())png(folder/(std::string(views[i])+".png"),images[i]);json_file(folder/"result.json",last_result);json_file(folder/"parameters.json",settings());message="Saved "+name.str();pending_screenshot=folder/"window.png";
+        if(last_result.is_null())return;std::ostringstream name;name<<"frame_g"<<last_result.at("reset_generation")<<"_r"<<last_result.value("parameter_revision",std::uint64_t(0))
+            <<"_n"<<last_result.at("frame_number")<<"_t"<<std::fixed<<std::setprecision(6)<<last_result.at("simulation_time_s").get<double>();const auto folder=output/name.str();std::filesystem::create_directories(folder);
+        for(std::size_t i=0;i<views.size();++i)if(!images[i].empty())png(folder/(std::string(views[i])+".png"),images[i]);json_file(folder/"result.json",last_result);json_file(folder/"parameters.json",last_parameters);message="Saved "+name.str();pending_screenshot=folder/"window.png";
     }
     void update(const VirtualFrame& frame,const Json& result) {
         last_frame=frame;last_result=result;images[0]=frame.rgb;const auto& tracker=pipeline.settings().at("tracker");const auto& display=tracker.at("display");
+        last_parameters=pipeline.settings();last_parameters["camera"]=frame.metadata.at("sensor").at("parameters");
         if(display.is_boolean()?display.get<bool>():display.get<double>()!=0){const double size=tracker.at("text_size");images[1]=ballistic_image(frame.rgb,result,size);images[2]=tracking_image(frame.rgb,result,size);}
         else{images[1].release();images[2].release();}
         for(std::size_t i=3;i<views.size();++i) {

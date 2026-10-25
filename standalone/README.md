@@ -2,7 +2,7 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
-当前工作分支为 `codex/aim-tracking-scenario`，从已整合成像及原生调试工作的 `codex/sim-vision-work@e0e0981` 分出，本次仅本地保存。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
+个人集成分支为 `codex/sim-vision-work`；`codex/aim-tracking-scenario` 的同帧评测接口、增益与调试记录在验证后汇回此分支，本次仅本地保存，`codex/vision-threading` 未纳入。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 
 此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；前次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。当前分支继续合入 `codex/camera-lighting@fd97680` 的原生相机增益更新，配置实际生效、同帧评测接口和原生回归的本次结果见[增益整合检查](../../outputs/vision_gain_merge_20261025/checks.json)；该记录明确配套仿真照明是否参与测试，不沿用旧精度数字代表新参数。
 
@@ -43,6 +43,8 @@ build/native/bin/dt46_vision.exe --save-debug
 仿真驾驶默认启动第一条命令对应的独立进程。识别默认在后台运行，调试窗口读取同一管线；关闭、重开显示不会重建检测器或追踪器。调试命令通过本工程 `.cache/virtual_camera/session.json` 找到当前任务，可用 `--debug-session` 指定实例。退出只清理自己创建的会话。相机正常关闭后视觉结束；协议错误与超时记录为失败。视觉断开不得影响驾驶，完整边界和操作验收见 [sim_vision 项目规范](../../README.md#项目规范工程边界与使用流程)。
 
 `--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
+
+虚拟相机逐帧结果带 `parameter_revision`，用于区分调参和 tracker 重置。`parameter_revisions.jsonl` 在视觉版本或相机设置版本变化后记录第一张实际处理帧的 generation/tick/time、管线参数、相机请求参数及该帧实际 sensor 响应；请求值与实际成像以各自字段为准。调试截图目录包含 generation、参数版本和帧号，复位后同一仿真时间不会覆盖上一轮；其中 `parameters.json` 保存该帧的管线参数和实际相机设置，不读取编辑框里尚未应用的草稿。Save parameters JSON 仍用于保存编辑框配置。仿真 F6 的实例入口、运动档位及分段评测流程由[自瞄场景说明](../../README.md#自瞄运动与预测验证场景)维护；此记录不改变原 tracker 或相机传输顺序。
 
 未指定 `--parameters` 或文件内容为 `{}` 时，原生视觉启动会加载 [virtual_camera.json](virtual_camera.json)，通过现有相机接口应用曝光（微秒）和相对增益，并覆盖原生 tracker 叠加图的 `text_size`；两种仿真相机预设共用该启动覆盖，标定和其他成像参数仍由各自预设提供。非空 `--parameters` 文件完整替代这一默认覆盖，保持已有调参文件的行为。相机组仅用于连接后的视觉相机，不写回仿真预设或 ROS 驱动 YAML，也不作用于操作手图传；tracker 字号覆盖不改写 ROS 共用 YAML。没有启用视觉相机/DT46 的会话不会因此开启识别。离线回放仍使用已经采集的图像，调曝光须先重新采图。
 

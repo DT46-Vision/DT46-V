@@ -52,7 +52,8 @@ public:
         pipeline.configure(settings);
         if(!o.record.empty())recorder=std::make_unique<dt46::Recorder>(o.record,o.video_fps);
         std::filesystem::create_directories(o.output);log.open(o.output/"frames.jsonl");events.open(o.output/"debug_events.jsonl");
-        if(!log||!events)throw std::runtime_error("Cannot open vision logs");control.requested=o.debug;
+        parameters_log.open(o.output/"parameter_revisions.jsonl");
+        if(!log||!events||!parameters_log)throw std::runtime_error("Cannot open vision logs");control.requested=o.debug;
     }
     int run() {
         std::string stopped="limit",error;
@@ -70,7 +71,7 @@ public:
             }
         }catch(const dt46::wire::Disconnected& e){stopped=e.what();}
         catch(const std::exception& e){stopped="error";error=e.what();}
-        close_debug();if(recorder)recorder->close();log.flush();events.flush();
+        close_debug();if(recorder)recorder->close();log.flush();events.flush();parameters_log.flush();
         write_json(o.output/"report.json",{{"frames",frames},{"wall_seconds",elapsed()},{"last_frame",result},
             {"stopped",stopped},{"error",error},{"profile",o.profile},{"context",context()},{"video_frames",recorder?recorder->frames():0}});
         if(!error.empty())throw std::runtime_error(error);
@@ -78,10 +79,11 @@ public:
     }
 private:
     const Options& o;dt46::VirtualCamera camera;dt46::AimPipeline pipeline;dt46::DebugControl control;
-    std::unique_ptr<dt46::VisionDebug> debug;std::ofstream log,events;
+    std::unique_ptr<dt46::VisionDebug> debug;std::ofstream log,events,parameters_log;
     std::unique_ptr<dt46::Recorder> recorder;
     std::uint64_t frames=0,generation=UINT64_MAX;double last_time=-1;
     std::uint64_t result_revision=0;
+    std::uint64_t logged_revision=UINT64_MAX,logged_camera_version=UINT64_MAX;
     Json result=nullptr;Clock::time_point began=Clock::now(),last_draw{},last_images{},last_fps=began;std::uint64_t fps_frames=0;
     std::uintptr_t context()const{return reinterpret_cast<std::uintptr_t>(pipeline.context());}
     double elapsed()const{return std::chrono::duration<double>(Clock::now()-began).count();}
@@ -104,6 +106,14 @@ private:
         if(next_generation!=generation){if(generation!=UINT64_MAX)pipeline.reset();generation=next_generation;last_time=-1;}
         const double timestamp=frame.metadata.at("time");if(timestamp<=last_time)return;
         result=dt46::process_frame(pipeline,frame);result_revision=pipeline.revision();last_time=timestamp;++frames;
+        const auto camera_version=result.value("camera_settings_version",std::uint64_t(0));
+        if(logged_revision!=result_revision||logged_camera_version!=camera_version){
+            parameters_log<<Json{{"parameter_revision",result_revision},{"camera_settings_version",camera_version},
+                {"reset_generation",generation},{"state_tick",result.at("state_tick")},{"simulation_time_s",timestamp},
+                {"settings",pipeline.settings()},{"camera_parameters",camera.description.at("camera")},{"sensor",result.at("sensor")}}.dump()<<'\n';
+            parameters_log.flush();if(!parameters_log)throw std::runtime_error("Cannot write parameter revision log");
+            logged_revision=result_revision;logged_camera_version=camera_version;
+        }
         const auto& display=pipeline.settings().at("tracker");
         const auto enabled=[](const Json& value){return value.is_boolean()?value.get<bool>():value.get<double>()!=0;};
         if(recorder&&enabled(display.at("display"))&&recorder->due(timestamp,generation)){
