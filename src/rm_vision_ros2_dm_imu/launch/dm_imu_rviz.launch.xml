@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-  <include file="$(find-pkg-share dm_imu)/launch/dm_imu.launch.xml" />
-  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(find-pkg-share dm_imu)/rviz/imu.rviz" />
-</launch>

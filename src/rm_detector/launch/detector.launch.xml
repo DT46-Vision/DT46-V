@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-  <node pkg="rm_detector" exec="rm_detector_node" name="rm_detector" output="screen">
-    <param from="$(find-pkg-share rm_detector)/config/detector_params.yaml" />
-  </node>
-</launch>

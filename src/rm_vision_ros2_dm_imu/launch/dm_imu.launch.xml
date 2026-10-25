@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-  <node pkg="dm_imu" exec="dm_imu_node" name="dm_imu" output="screen">
-    <param from="$(find-pkg-share dm_imu)/config/dm_imu_params.yaml" />
-  </node>
-</launch>

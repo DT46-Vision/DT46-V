@@ -2,6 +2,8 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
+当前并行分支 `codex/python-outer` 恢复 aim_test 的 Python launch、串口和 IMU 项目结构，并新增 `src/rm_vision_windows/` 作为 Windows Python 外层；C++ 核心保持下文的原始 tracker 基线。Python 包内虚拟环境、独立构建、依赖差别和已测/未测边界由 [Windows 包说明](../src/rm_vision_windows/README.md)维护。本文以下构建和命令继续描述保留的纯 C++ 独立应用；未把新外层强制设为仿真默认。
+
 个人集成分支为 [`codex/sim-vision-work`](https://github.com/DT46-Vision/DT46-V/tree/codex/sim-vision-work)；`codex/aim-tracking-scenario` 的同帧评测接口、增益与调试记录在验证后汇回此分支，推送目标为 `origin/codex/sim-vision-work`，`codex/vision-threading` 未纳入。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 
 此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；前次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。当前分支继续合入 `codex/camera-lighting@fd97680` 的原生相机增益更新，配置实际生效、同帧评测接口和原生回归的本次结果见[增益整合检查](../../outputs/vision_gain_merge_20261025/checks.json)；该记录明确配套仿真照明是否参与测试，不沿用旧精度数字代表新参数。

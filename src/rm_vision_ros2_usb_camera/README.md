@@ -11,7 +11,7 @@ ROS 2 Humble 相机驱动节点：用 OpenCV 打开**本地 USB 摄像头**（V4
 | --- | --- | --- |
 | `usb_camera_node` | `usb_camera_node`（安装到 `lib/usb_camera/usb_camera_node`） | 打开相机 → 独立线程循环采帧 → 发布 `image_raw` / `camera_info`；对 `fps`、曝光、增益支持运行时修改 |
 
-- 节点名来自 `src/usb_camera_node.cpp` 的 `Node("usb_camera_node")`，节点没有设置 namespace，所以完整节点名是 `/usb_camera_node`。`launch/usb_camera.launch.xml` 里也显式写了 `name='usb_camera_node'`，与之一致。
+- 节点名来自 `src/usb_camera_node.cpp` 的 `Node("usb_camera_node")`，节点没有设置 namespace，所以完整节点名是 `/usb_camera_node`。`launch/usb_camera.launch.py` 里也显式写了 `name='usb_camera_node'`，与之一致。
 - 可执行文件名与节点名相同，但两者是不同概念：`ros2 run` 用可执行名，`ros2 node list` / 参数文件顶层键用节点名。
 
 ## 话题接口
@@ -68,10 +68,10 @@ source install/setup.bash
 ### launch 启动
 
 ```bash
-ros2 launch usb_camera usb_camera.launch.xml
+ros2 launch usb_camera usb_camera.launch.py
 ```
 
-launch 暴露的可配置参数：**没有**。`launch/usb_camera.launch.xml` 里没有 `<arg>`，节点使用 `output="screen"`；写死的两项是：
+launch 暴露的可配置参数：**没有**。`launch/usb_camera.launch.py` 里没有 `DeclareLaunchArgument`，节点也只用 `output='screen'`；写死的两项是：
 
 | 写死的内容 | 值 | 作用 |
 | --- | --- | --- |
@@ -85,7 +85,19 @@ launch 暴露的可配置参数：**没有**。`launch/usb_camera.launch.xml` �
 - 标定文件是 `config/camera_info.yaml`，字段是 camera_info_manager / camera_calibration_parsers 的标准格式：`image_width` 640、`image_height` 480、`camera_name` `usb_camera`、`camera_matrix`、`distortion_model` `plumb_bob`、5 个 `distortion_coefficients`、`rectification_matrix`、`projection_matrix`。当前值对应 640x480（fx≈443.21、fy≈442.92、cx≈311.89、cy≈224.69）。
 - 加载流程：构造函数里把 `camera_name` / `camera_info_url` 交给 `camera_info_manager::CameraInfoManager`，若 URL 非空就调用 `loadCameraInfo()`：成功打 INFO「加载相机标定文件: ...」，失败只打 WARN 且**不退出**——这种情况下每帧发布的仍是 camera_info_manager 的默认（未标定）CameraInfo，注意别把这种消息当有效内参用。
 - 分辨率改了（`frame_width/height`）就要重新标定：现有 yaml 是 640x480 的，代码默认却是 1920x1080。
-- 本项目使用 C++ 工具采集棋盘图片并输出标准 YAML，操作见[标定工具](../../standalone/README.md#离线回放录像与标定)。检查结果后更新本包配置、重新安装并重启节点。
+- 重新标定用 ROS 2 自带的 `camera_calibration`（不是本包依赖，需自行安装）：
+
+```bash
+# 终端 1：正常启动驱动，提供 /image_raw 与 /usb_camera_node/set_camera_info
+ros2 launch usb_camera usb_camera.launch.py
+
+# 终端 2：需要图形界面；--size/--square 按你的标定板填写
+ros2 run camera_calibration cameracalibrator.py --size 8x6 --square 0.025 \
+  image:=/image_raw camera:=/usb_camera_node
+```
+
+  其中 `image:=/image_raw` 是把标定器订阅的 `image` 重映射到本包话题，`camera:=/usb_camera_node` 是把标定器调用的 `camera/set_camera_info` 重映射到本节点提供的服务。
+- 标定器界面上点 SAVE 后，Humble 版 `camera_calibration` 会把结果打包写到 `/tmp/calibrationdata.tar.gz`（这是该工具自身的行为）；把里面的 `ost.yaml` 按上面同样的字段格式覆盖本包 `config/camera_info.yaml`，再 `colcon build` + 重启节点即可。
 
 ### 直接 ros2 run
 
@@ -126,7 +138,7 @@ USB 模式还是网络模式的判定只看 `web_cam`：为 `false` 时走 V4L2 
 
 软件依赖（`package.xml` / `CMakeLists.txt`）：
 
-- 构建：`ament_cmake`；`depend`：`rclcpp`、`sensor_msgs`、`image_transport`、`cv_bridge`、`camera_info_manager`、`OpenCV`；`exec_depend`：`launch`、`launch_ros`、`ros2launch`；C++17，编译选项 `-Wall -Wextra -Wpedantic`。
+- 构建：`ament_cmake`；`depend`：`rclcpp`、`sensor_msgs`、`image_transport`、`cv_bridge`、`camera_info_manager`、`OpenCV`；`exec_depend`：`launch`、`launch_ros`、`ament_index_python`；C++17，编译选项 `-Wall -Wextra -Wpedantic`。
 - `image_transport` 在 `package.xml` 与 `ament_target_dependencies` 里声明并链接，但源码没有使用它（发布用的是 `rclcpp::Publisher`）。
 - 现有 build 目录里链接的是系统 OpenCV 4.5.4（Ubuntu 包，`libopencv_*.so.4.5.4`）。
 - `camera_calibration` 只在需要重新标定时才用，不是本包依赖。
@@ -140,7 +152,7 @@ USB 模式还是网络模式的判定只看 `web_cam`：为 `false` 时走 V4L2 
      what():  parameter 'fps' has invalid type: Wrong parameter type, parameter {fps} is of type {double}, setting it to {integer} is not allowed.
    ```
 
-   实测方式：用本包源码 `colcon build` 出可执行文件后分别运行 `--params-file config/camera_params.yaml` 与 `ros2 launch usb_camera usb_camera.launch.xml`，两者都以 exit code -6 结束；把该行改成 `fps: 240.0` 后节点能正常走到相机初始化。**本 README 未修改任何配置**，使用前请自行把 yaml 里的 `fps` 改成浮点数（`240.0`）。
+   实测方式：用本包源码 `colcon build` 出可执行文件后分别运行 `--params-file config/camera_params.yaml` 与 `ros2 launch usb_camera usb_camera.launch.py`，两者都以 exit code -6 结束；把该行改成 `fps: 240.0` 后节点能正常走到相机初始化。**本 README 未修改任何配置**，使用前请自行把 yaml 里的 `fps` 改成浮点数（`240.0`）。
 2. `web_cam_url` 代码默认值是 `http://127.0.0.1:4090/video`，yaml 里是 `http://192.168.1.216:4747/video`；不传参数文件时用前者，经 launch 启动时用后者。
 3. 分辨率/帧率三处取值：代码默认 1920x1080 @120fps，`config/camera_params.yaml` 是 640x480 @240fps，`config/camera_info.yaml` 的内参也是 640x480（后两者一致）。
 4. 参数在 yaml 里有、代码却没 `declare_parameter` 的情况：**没有**。实测把整个 `camera_params.yaml` 传给节点，除第 1 条的 `fps` 类型错误外没有「参数未声明」报错。
@@ -150,7 +162,7 @@ USB 模式还是网络模式的判定只看 `web_cam`：为 `false` 时走 V4L2 
 8. `pixel_format` 会被无条件按 4 个字符索引（`pixel_format_[0]..[3]`）拼 FOURCC，源码没有做长度检查：如果配置里写少于 4 个字符的字符串（例如空串），`std::string::operator[]` 越界属于未定义行为。此项是代码分析结论，未实测。
 9. `web_cam=true` 时，曝光/增益只能走 OpenCV 的 `cap_.set()`：源码里 V4L2 回退函数 `set_v4l2_control()` 在 `web_cam_` 为真时是空操作，而且失败日志被注释掉了，因此设置失败是静默的。另外网络流通常不会理会 `frame_width/height/fps` 请求。
 10. 采帧线程在 `cap_.read()` 失败时只打 WARN 并继续循环（线程退出标志只在析构函数里置位），摄像头掉线或流中断时会持续刷「捕获帧失败 (Frame Dropped or Timeout)」日志。
-11. `ros2 launch usb_camera usb_camera.launch.xml` 无法通过 launch argument 改任何东西（见「launch 启动」）；改 `config` 后必须重新 `colcon build`，因为 launch 读的是 `share/usb_camera/config/`。
+11. `ros2 launch usb_camera usb_camera.launch.py` 无法通过 launch argument 改任何东西（见「launch 启动」）；改 `config` 后必须重新 `colcon build`，因为 launch 读的是 `share/usb_camera/config/`。
 12. 构建产物统一在仓库根目录：`build/`、`install/`、`log/`（均被 gitignore）。历史上 `src/` 下曾误建过另一套 `src/build/`、`src/install/`、`src/log/`，其中 `src/install/usb_camera` 链接的是 2026-05-29 的旧二进制（会打印源码里已被注释掉的 `使用 USB Camera` 日志），现已删除。**只在根目录 `colcon build` 并 `source install/setup.bash`**，就不会跑到旧二进制。
 13. 源码里没有任何 TF 发布，`header.frame_id` 固定为 `camera_optical_frame`，但包内没有这个坐标系，使用方需要自己在 TF 树里提供。
 14. 旧 README 写的「ROS2的节点名为usb_camera_node」与源码一致；它用的标题 `ROS2_USB_CAM` 是历史名，实际包名是 `usb_camera`。

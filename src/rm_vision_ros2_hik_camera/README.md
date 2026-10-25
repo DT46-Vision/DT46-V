@@ -2,7 +2,7 @@
 
 海康（HIKVISION）USB3 工业相机的 ROS 2 驱动（ROS 2 Humble，C++），通过 MVS SDK 取流，转成 RGB8 后以 image_transport 的 CameraPublisher 发布 `sensor_msgs/Image` 与 `sensor_msgs/CameraInfo`。
 
-上游来源：**无法从仓库内文件核实**（目录名 `rm_vision_ros2_hik_camera`、包名 `hik_camera`，包内无 git 历史/submodule/上游链接）。本目录原有的 README 内容实际是从 [chenjunnn/ros2_mindvision_camera](https://github.com/chenjunnn/ros2_mindvision_camera) 复制来的（标题写成 `ros2_mindvision_camera`、启动命令写成 `mv_launch.xml`，与本包源码不符），已按源码重写。
+上游来源：**无法从仓库内文件核实**（目录名 `rm_vision_ros2_hik_camera`、包名 `hik_camera`，包内无 git 历史/submodule/上游链接）。本目录原有的 README 内容实际是从 [chenjunnn/ros2_mindvision_camera](https://github.com/chenjunnn/ros2_mindvision_camera) 复制来的（标题写成 `ros2_mindvision_camera`、启动命令写成 `mv_launch.py`，与本包源码不符），已按源码重写。
 
 ## 节点
 
@@ -59,10 +59,10 @@ source install/setup.bash
 ### launch 启动
 
 ```bash
-ros2 launch hik_camera hik_camera.launch.xml
+ros2 launch hik_camera hik_camera.launch.py
 ```
 
-launch 文件 `launch/hik_camera.launch.xml` 暴露的参数：
+launch 文件 `launch/hik_camera.launch.py` 暴露的参数：
 
 | launch argument | 默认值 | 作用 |
 | --- | --- | --- |
@@ -73,12 +73,12 @@ launch 文件 `launch/hik_camera.launch.xml` 暴露的参数：
 例：用 sentinel 的参数与内参文件启动（这两个文件本来就是为 bringup 准备的）：
 
 ```bash
-ros2 launch hik_camera hik_camera.launch.xml \
+ros2 launch hik_camera hik_camera.launch.py \
   params_file:=$(ros2 pkg prefix hik_camera)/share/hik_camera/config/sentinel_camera_params.yaml \
   camera_info_url:=package://hik_camera/config/sentinel_camera_info.yaml
 ```
 
-本仓库整机启动包（目录 `src/rm_DT46`，包名 `rm_vision_bringup`）里的 `sentry.launch.xml`、`hero.launch.xml` 就是用 XML `<include>` 加载本包的 `hik_camera.launch.xml`，并把 `params_file` / `camera_info_url` 指到 `sentinel_*` / `hero_*` 两个文件。
+本仓库整机启动包（目录 `src/rm_DT46`，包名 `rm_vision_bringup`）里的 `sentry.launch.py`、`hero.launch.py` 就是用 `IncludeLaunchDescription` 调本包的 `hik_camera.launch.py`，并把 `params_file` / `camera_info_url` 指到 `sentinel_*` / `hero_*` 两个文件。
 
 ### 直接 ros2 run
 
@@ -100,14 +100,21 @@ ros2 component load /ComponentManager hik_camera hik_camera::HikCameraNode \
   -p exposure_time:=2000 -p gain:=16.0
 ```
 
-也可以在自己的启动描述中通过 ROS 组件容器加载 `hik_camera::HikCameraNode` 插件（本包只提供 `hik_camera.launch.xml`，没有提供 container 的 launch 文件）。
+也可以在自己的 launch 里用 `ComposableNodeContainer` + `ComposableNode(package='hik_camera', plugin='hik_camera::HikCameraNode', parameters=[...])` 加载（本包只提供 `hik_camera.launch.py`，没有提供 container 的 launch 文件）。
 
 注意：没有相机时组件加载不会成功——节点的构造函数卡在设备枚举循环里（见「注意事项」第 5 条），`ros2 component load` 收不到响应。
 
 ### 标定
 
-节点通过 `camera_info_manager` 提供 `/set_camera_info`。本项目使用 C++ 采集与标定工具，操作见[标定工具](../../standalone/README.md#离线回放录像与标定)。工具输出 YAML，不自动调用服务或覆盖驱动配置。
+节点通过 `camera_info_manager` 提供 `/set_camera_info`，`camera_calibration` 已在 `package.xml` 里作为 `exec_depend`：
 
+```bash
+ros2 run camera_calibration cameracalibrator --size 8x6 --square 0.025 \
+  --ros-args -r image:=/image_raw -r camera:=/
+```
+
+- `cameracalibrator` 订阅相对话题 `image`，并创建 `camera/set_camera_info` 服务客户端；本节点的话题是 `/image_raw`、服务是 `/set_camera_info`，所以用 `-r image:=/image_raw -r camera:=/` 对齐即可（服务名对齐后能通过它启动时的 service check；也可以用 `--no-service-check` 跳过检查）。
+- 标定完成后 SAVE 会调用 `/set_camera_info`，由 `camera_info_manager` 写回 `camera_info_url`。默认的 `package://hik_camera/config/camera_info.yaml` 指向包内文件，标定时建议改用 `file://` 路径保存（此建议未实测）。
 - 包内已有标定文件：`config/camera_info.yaml`（`camera_name: hik_camera`）、`config/hero_camera_info.yaml`（`hero_hik_camera`）、`config/sentinel_camera_info.yaml`（`sentinel_hik_camera`），三者的 `image_width/height` 都是 1440×1080。文件里的 `camera_name` 要与 `camera_name` 参数一致。
 
 ## 依赖与前置条件
@@ -135,9 +142,9 @@ ros2 component load /ComponentManager hik_camera hik_camera::HikCameraNode \
 
 ## 注意事项 / 已知问题
 
-1. **`use_sensor_data_qos` 的默认值，代码与 launch 不一致**：代码是 `declare_parameter("use_sensor_data_qos", true)`，而 launch 里 `<arg name="use_sensor_data_qos" default="false"/>` 且**无条件**把该参数传给节点。launch_ros 会把字符串按 YAML 解析（`false` → bool false），所以用 launch 启动是 Reliable（depth 10），直接 `ros2 run` 是 BestEffort（depth 5）。
+1. **`use_sensor_data_qos` 的默认值，代码与 launch 不一致**：代码是 `declare_parameter("use_sensor_data_qos", true)`，而 launch 里 `DeclareLaunchArgument(..., default_value='false')` 且**无条件**把该参数传给节点。launch_ros 会把字符串按 YAML 解析（`false` → bool false），所以用 launch 启动是 Reliable（depth 10），直接 `ros2 run` 是 BestEffort（depth 5）。
 2. **目录名 ≠ 包名**：目录 `rm_vision_ros2_hik_camera`，包名 `hik_camera`。`colcon --packages-select`、`ros2 launch/run` 都用 `hik_camera`。
-3. **`hero_*` / `sentinel_*` 两个 config 默认 launch 不会用到**：`hik_camera.launch.xml` 的默认值是 `camera_params.yaml` + `camera_info.yaml`，要用得手动传 `params_file` / `camera_info_url`（bringup 的 sentry/hero launch 就是这么做的）。
+3. **`hero_*` / `sentinel_*` 两个 config 默认 launch 不会用到**：`hik_camera.launch.py` 的默认值是 `camera_params.yaml` + `camera_info.yaml`，要用得手动传 `params_file` / `camera_info_url`（bringup 的 sentry/hero launch 就是这么做的）。
 4. **params yaml 的顶层 key 是绝对节点名 `/hik_camera`**：如果 remap 节点名或加 namespace，这三个 yaml 里的参数**不会生效**（节点名在 C++ 里硬编码为 `hik_camera`）。
 5. **没有相机时节点不会退出**：构造函数里先枚举设备，`nDeviceNum == 0` 时每秒打印一次 `No camera found!` 并重试，构造函数不返回，也没有超时或“无相机也能起”的模式；因此连 publisher 都不会创建，话题列表里看不到 `/image_raw`。实测以组件方式加载时 `ros2 component load` 一直收不到响应（等容器被 SIGTERM 结束后才返回 `Component constructor threw an exception: no plugins found!...`，并伴随 `rcl node's context is invalid` 报错）。运行中连续取流失败超过 5 次会打印 `Camera failed!` 并 `rclcpp::shutdown()`。
 6. **运行时只能改 `exposure_time` 和 `gain`**：`parametersCallback` 只处理这两个名字，其它参数一律返回 `successful = false`、`reason = "Unknown parameter: <name>"`，所以 `ros2 param set /hik_camera camera_name ...`、`camera_info_url` 等会失败（只能在启动时通过参数文件/命令行传入）。
@@ -147,6 +154,6 @@ ros2 component load /ComponentManager hik_camera hik_camera::HikCameraNode \
 10. **`camera_info` 是同级话题** `/camera_info`（不是 `/image_raw/camera_info`），改 namespace 时 `/image_raw` 与 `/camera_info` 会一起变；订阅或录制时别只记一半。
 11. **编译期强制 `-Wall -Werror`**（`add_definitions(-Wall -Werror)`）：任何警告都会让编译失败；只支持 `x86_64` / `aarch64`，其它架构 CMake 直接报 `Unsupport host system architecture`。
 12. **安装产物的 RUNPATH 指向源码树 `hikSDK`**：`target_link_directories` 用的是源码目录，所以 `install/hik_camera/lib/libhik_camera.so` 的 RUNPATH 含 `.../rm_vision_ros2_hik_camera/hikSDK/lib/amd64`（安装目录里也拷了一份 SDK，并通过 package hook 加入 `LD_LIBRARY_PATH`）。移动或删除源码目录后运行可能找不到 SDK 库。
-13. **旧 README 与本包不符（已重写）**：原标题是 `ros2_mindvision_camera`、构建命令写 `mindvision_camera`、启动命令写 `mv_launch.xml`（本包只有 `launch/hik_camera.launch.xml`），还提到 ROS 1 的 rqt `Dynamic Reconfigure` 和 `docs/rqt.png`（该目录不存在）；本节点用的是 ROS 2 参数回调。
-14. 启动描述使用 XML；参数文件通过 `find-pkg-share` 定位已安装包。
+13. **旧 README 与本包不符（已重写）**：原标题是 `ros2_mindvision_camera`、构建命令写 `mindvision_camera`、启动命令写 `mv_launch.py`（本包只有 `launch/hik_camera.launch.py`），还提到 ROS 1 的 rqt `Dynamic Reconfigure` 和 `docs/rqt.png`（该目录不存在）；本节点用的是 ROS 2 参数回调。
+14. `launch/hik_camera.launch.py` 里 `from ament_index_python.packages import get_package_prefix` 导入了但没有使用。
 15. `package.xml` 的 `<description>` 仍是 `TODO: Package description`、`<license>` 仍是 `TODO: License declaration`（未填写）。

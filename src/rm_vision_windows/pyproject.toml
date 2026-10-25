@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rm-vision-windows"
+version = "0.1.0"
+description = "DT46 Python orchestration around the existing C++ vision core"
+requires-python = ">=3.10"
+dependencies = ["numpy==2.2.6", "PyYAML==6.0.3", "Pillow==11.3.0", "opencv-python-headless==4.12.0.88"]
+
+[project.scripts]
+dt46-vision = "rm_vision_windows.virtual_camera:main"
+dt46-debug = "rm_vision_windows.debug_window:main"
+dt46-build = "rm_vision_windows.build:main"
+
+[tool.setuptools]
+packages = ["rm_vision_windows"]

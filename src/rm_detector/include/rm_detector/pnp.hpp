@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <limits>
+#include <memory>
 #include <opencv2/calib3d.hpp>
 
 using namespace cv;
@@ -22,6 +23,17 @@ namespace DT46_VISION {
     class PNP {
     public:
         PNP() = default;
+
+        // Keep aim_test's ROS node API while the shared implementation uses ROS-free calibration.
+        template<class Logger> explicit PNP(const Logger&) {}
+        template<class CameraInfo>
+        std::tuple<double, double, double, double, double, double, double> processArmorCorners(
+            const std::shared_ptr<CameraInfo>& info, bool center, const cv::Mat& frame,
+            const Armor& armor, int id) {
+            CameraCalibration calibration{};
+            if (info) { calibration.k = info->k; calibration.d = info->d; }
+            return processArmorCorners(info ? &calibration : nullptr, center, frame, armor, id);
+        }
 
         // 处理装甲板灯点坐标并返回 (dx, dy, dz, yaw_deg, nx, ny, nz)
         // nx, ny, nz 是相机系下指向板外的法线

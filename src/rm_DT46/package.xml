@@ -10,16 +10,6 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rm_interfaces</depend>
-  <exec_depend>ros2launch</exec_depend>
-  <exec_depend>rm_serial</exec_depend>
-  <exec_depend>dm_imu</exec_depend>
-  <exec_depend>rm_detector</exec_depend>
-  <exec_depend>rm_tracker</exec_depend>
-  <exec_depend>hik_camera</exec_depend>
-  <exec_depend>mindvision_camera</exec_depend>
-  <exec_depend>usb_camera</exec_depend>
-  <exec_depend>rqt_gui</exec_depend>
-  <exec_depend>rosbag2_transport</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

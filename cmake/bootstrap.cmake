@@ -67,10 +67,14 @@ if(CMAKE_HOST_WIN32)
     ffmpeg_file(ffmpeg_version.cmake 77b6b0b0ad4e435580df4e2ae838a70f043364b8 8862c87496e2e8c375965e1277dee1c7)
 endif()
 
+set(opencv_download_options)
+if(DOWNLOAD_REGION STREQUAL "cn")
+    list(APPEND opencv_download_options -DOPENCV_DOWNLOAD_MIRROR_ID=gitcode)
+endif()
 execute_process(COMMAND "${CMAKE_COMMAND}"
     -S "${WORK_DIR}/deps/opencv-4.12.0" -B "${WORK_DIR}/opencv-build" -G Ninja
     -DCMAKE_BUILD_TYPE=Release "-DCMAKE_INSTALL_PREFIX=${WORK_DIR}/opencv"
-    -DBUILD_LIST=core,imgproc,calib3d,dnn,imgcodecs,videoio -DBUILD_SHARED_LIBS=ON
+    -DBUILD_LIST=core,imgproc,calib3d,dnn,imgcodecs,videoio -DBUILD_SHARED_LIBS=ON ${opencv_download_options}
     -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_opencv_apps=OFF
     -DOPENCV_PYTHON_SKIP_DETECTION=ON -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=OFF
     -DBUILD_JAVA=OFF -DWITH_IPP=OFF -DWITH_OPENCL=OFF -DWITH_ITT=OFF

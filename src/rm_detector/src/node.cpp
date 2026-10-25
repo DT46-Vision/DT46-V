@@ -102,7 +102,7 @@ namespace DT46_VISION {
 
             // ---------------- Detector 初始化 ----------------
             detector_ = std::make_shared<ArmorDetector>(detect_color_, display_mode_, binary_val_, params);
-            pnp_      = std::make_shared<PNP>();
+            pnp_      = std::make_shared<PNP>(this->get_logger());
 
             reload_classifier_impl_(cls_model_path_);
 
@@ -254,11 +254,6 @@ namespace DT46_VISION {
                 // 获取最新的 CameraInfo (非阻塞，取当前最新的即可)
                 sensor_msgs::msg::CameraInfo::SharedPtr caminfo_ptr;
                 { std::lock_guard<std::mutex> lock(caminfo_mtx_); caminfo_ptr = latest_caminfo_; }
-                CameraCalibration calibration{};
-                if (caminfo_ptr) {
-                    calibration.k = caminfo_ptr->k;
-                    calibration.d = caminfo_ptr->d;
-                }
 
                 if (frame_ptr->image.empty()) continue;
                 cv::Mat frame = frame_ptr->image;
@@ -298,7 +293,7 @@ namespace DT46_VISION {
 
                         // 这里的 processArmorCorners 可能会耗时，需注意优化
                         auto [dx, dy, dz, yaw, nx, ny, nz] = pnp_->processArmorCorners(
-                            caminfo_ptr ? &calibration : nullptr, use_geometric_center_, frame, armor, armor.armor_id);
+                            caminfo_ptr, use_geometric_center_, frame, armor, armor.armor_id);
 
                         armor_info.dx = dx; armor_info.dy = dy; armor_info.dz = dz;
                         armor_info.yaw = yaw;

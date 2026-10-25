@@ -24,6 +24,12 @@ int main() {
     const double error = cv::norm(cv::Vec3d(x,y,z)-position);
     if (!std::isfinite(error) || error > 2.0)
         throw std::runtime_error("PnP failed with source K/D and an off-centre principal point");
+    struct RosCameraInfo {std::array<double,9> k;std::vector<double> d;};
+    auto message=std::make_shared<RosCameraInfo>(RosCameraInfo{calibration.k,calibration.d});
+    DT46_VISION::PNP ros_api(0);ros_api.beginFrame();
+    const auto ros_result=ros_api.processArmorCorners(message,false,cv::Mat::zeros(1024,1280,CV_8UC3),armor,5);
+    if(cv::norm(cv::Vec3d(std::get<0>(ros_result),std::get<1>(ros_result),std::get<2>(ros_result))-cv::Vec3d(x,y,z))>1e-9)
+        throw std::runtime_error("aim_test ROS CameraInfo API changed the PnP input/result");
     DT46_VISION::CameraCalibration source{{1075.77876,0,649.75819,0,1075.95573,525.30871,0,0,1},
                                          {-0.454786,0.179046,-0.001430,-0.000463,0}};
     cv::Mat source_k(3,3,CV_64F,source.k.data());

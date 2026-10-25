@@ -118,3 +118,9 @@ bags/**
 !bags/RECORD_CHECKLIST.md
 *.db3
 *.mp4
+.venv/
+.deps/
+.local/
+outputs/
+*.egg-info/
+dist/

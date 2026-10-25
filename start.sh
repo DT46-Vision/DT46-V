@@ -21,4 +21,4 @@ fi
 export DISPLAY=:0
 
 # 5. 直接执行启动指令 (替代了你的 rmhik 命令)
-# ros2 launch rm_vision_bringup hik.launch.xml
+# ros2 launch rm_vision_bringup hik.launch.py
