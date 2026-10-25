@@ -21,6 +21,8 @@ rm_detector:
 
     # ---- 图像处理参数 ----
     binary_val: 120
+    color_diff: 30
+    armor_inside_max: 85
     detect_color: 2
     display_mode: false
 

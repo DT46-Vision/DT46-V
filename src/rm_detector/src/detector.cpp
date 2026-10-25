@@ -141,6 +141,14 @@ namespace DT46_VISION{
         binary_val = new_binary_val;
     }
 
+    void ArmorDetector::update_color_diff(int new_color_diff) {
+        params.color_diff = new_color_diff;
+    }
+
+    void ArmorDetector::update_armor_inside_max(int new_armor_inside_max) {
+        params.armor_inside_max = new_armor_inside_max;
+    }
+
     void ArmorDetector::update_detect_color(int new_color) {
         color = new_color;
     }
@@ -179,7 +187,59 @@ namespace DT46_VISION{
 
         cv::cvtColor(working_img, gray_img_, cv::COLOR_BGR2GRAY);
         cv::threshold(gray_img_, img_binary, binary_val, 255, cv::THRESH_BINARY);
+
+        // 白窗和反光过灰度阈值，但 R、B 接近。通道差把它们挡在灯条外面。
+        cv::Mat bgr[3];
+        cv::split(working_img, bgr);
+        cv::Mat red_diff, blue_diff, color_bin;
+        cv::subtract(bgr[2], bgr[0], red_diff);
+        cv::subtract(bgr[0], bgr[2], blue_diff);
+        cv::threshold(red_diff, red_diff, params.color_diff, 255, cv::THRESH_BINARY);
+        cv::threshold(blue_diff, blue_diff, params.color_diff, 255, cv::THRESH_BINARY);
+        if (color == 0) {
+            color_bin = red_diff;
+        } else if (color == 1) {
+            color_bin = blue_diff;
+        } else {
+            cv::bitwise_or(red_diff, blue_diff, color_bin);
+        }
+        cv::bitwise_and(img_binary, color_bin, img_binary);
+
+        // 曝光会把一根灯条切成几段，闭运算把它接回去再提轮廓。
+        cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+        cv::morphologyEx(img_binary, img_binary, cv::MORPH_CLOSE, kernel);
         return img_binary;
+    }
+
+    bool ArmorDetector::light_between(const std::vector<Light>& sorted_lights, size_t left, size_t right) const {
+        const float y_min = std::min(sorted_lights[left].up.y, sorted_lights[right].up.y);
+        const float y_max = std::max(sorted_lights[left].down.y, sorted_lights[right].down.y);
+        for (size_t mid = left + 1; mid < right; ++mid) {
+            const Light& light = sorted_lights[mid];
+            const float top = std::min(light.up.y, light.down.y);
+            const float bottom = std::max(light.up.y, light.down.y);
+            const float center_y = static_cast<float>(light.cy);
+            const bool overlaps = (top > y_min && top < y_max) ||
+                                  (center_y > y_min && center_y < y_max) ||
+                                  (bottom > y_min && bottom < y_max) ||
+                                  (top <= y_min && bottom >= y_max);
+            if (overlaps) return true;
+        }
+        return false;
+    }
+
+    bool ArmorDetector::interior_too_bright(const Light& left, const Light& right) const {
+        if (gray_img_.empty()) return false;
+        const float x0 = std::min({left.up.x, left.down.x, right.up.x, right.down.x});
+        const float y0 = std::min({left.up.y, left.down.y, right.up.y, right.down.y});
+        const float x1 = std::max({left.up.x, left.down.x, right.up.x, right.down.x});
+        const float y1 = std::max({left.up.y, left.down.y, right.up.y, right.down.y});
+        cv::Rect box(cv::Point(static_cast<int>(std::floor(x0)), static_cast<int>(std::floor(y0))),
+                     cv::Point(static_cast<int>(std::ceil(x1)) + 1, static_cast<int>(std::ceil(y1)) + 1));
+        box &= cv::Rect(0, 0, gray_img_.cols, gray_img_.rows);
+        if (box.area() <= 0) return false;
+        // 窗户轮廓会配成一对灯条，板内平均亮度明显高于真装甲。
+        return cv::mean(gray_img_(box))[0] > params.armor_inside_max;
     }
 
     std::vector<Light> ArmorDetector::find_lights(const cv::Mat& img_binary_input) {
@@ -375,7 +435,9 @@ namespace DT46_VISION{
             while (j < sorted_lights.size() &&
                    (used[j] ||
                     sorted_lights[j].color != sorted_lights[i].color ||
-                    !slopes_match(sorted_lights[i], sorted_lights[j]))) {
+                    !slopes_match(sorted_lights[i], sorted_lights[j]) ||
+                    light_between(sorted_lights, i, j) ||
+                    interior_too_bright(sorted_lights[i], sorted_lights[j]))) {
                 j++;
             }
             if (j >= sorted_lights.size() || used[j]) continue;

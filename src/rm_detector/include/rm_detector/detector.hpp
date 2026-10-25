@@ -64,6 +64,8 @@ namespace DT46_VISION {
         double col_stretch;
         bool roi_crop;
         double roi_scale;
+        int color_diff;
+        int armor_inside_max;
     };
 
     class ArmorDetector {
@@ -114,6 +116,8 @@ namespace DT46_VISION {
         void update_col_stretch(float new_col_stretch);
 
         void update_binary_val(int new_binary_val);
+        void update_color_diff(int new_color_diff);
+        void update_armor_inside_max(int new_armor_inside_max);
         void update_detect_color(int new_color);
         void update_display_mode(bool new_display_mode);
 
@@ -121,6 +125,8 @@ namespace DT46_VISION {
         void update_roi_scale(double new_roi_scale_val);
 
         cv::Mat process(const cv::Mat& img_input);
+        bool light_between(const std::vector<Light>& sorted_lights, size_t left, size_t right) const;
+        bool interior_too_bright(const Light& left, const Light& right) const;
         std::vector<Light> find_lights(const cv::Mat& img_binary_input);
         std::pair<cv::Point2f, cv::Point2f> stretch_point(const cv::Point2f& up, const cv::Point2f& down, float ratio = 0.45f) const;
         NumberClassifier::Result get_armor_result(const Light& light1, const Light& light2);

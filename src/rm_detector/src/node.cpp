@@ -61,6 +61,8 @@ namespace DT46_VISION {
 
             // 图像处理参数
             this->declare_parameter<int>("binary_val", 120);
+            this->declare_parameter<int>("color_diff", 30);
+            this->declare_parameter<int>("armor_inside_max", 85);
             this->declare_parameter<int>("detect_color", 2);
             this->declare_parameter<bool>("display_mode", false);
 
@@ -91,7 +93,9 @@ namespace DT46_VISION {
                 get_required_param<double>("row_stretch"),
                 get_required_param<double>("col_stretch"),
                 get_required_param<bool>("roi_crop"),
-                get_required_param<double>("roi_scale")
+                get_required_param<double>("roi_scale"),
+                get_required_param<int>("color_diff"),
+                get_required_param<int>("armor_inside_max")
             };
 
             detect_color_        = get_required_param<int>("detect_color");
@@ -407,6 +411,8 @@ namespace DT46_VISION {
                 } else if (name == "row_stretch") { detector_->update_row_stretch(param.as_double());
                 } else if (name == "col_stretch") { detector_->update_col_stretch(param.as_double());
                 } else if (name == "binary_val") { detector_->update_binary_val(param.as_int());
+                } else if (name == "color_diff") { detector_->update_color_diff(param.as_int());
+                } else if (name == "armor_inside_max") { detector_->update_armor_inside_max(param.as_int());
                 } else if (name == "detect_color") { detector_->update_detect_color(param.as_int());
                 } else if (name == "display_mode") { detector_->update_display_mode(param.as_bool()); display_mode_ = param.as_bool();
                 } else if (name == "print_period_ms") { print_period_ms_.store(param.as_int());
