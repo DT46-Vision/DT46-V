@@ -2,9 +2,9 @@
 
 仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与弹道 LUT 直接复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
 
-本工作树的成像配套分支为 `codex/camera-lighting`，从 `codex/sim-vision-work@b603aa8` 分出，未设置上游且未推送。原个人工作分支 `codex/sim-vision-work` 跟踪同名 `origin/codex/sim-vision-work`，原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。此分支汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
+当前工作分支为 `codex/sim-vision-work`，已快进合入成像及原生调试配套分支 `codex/camera-lighting@c242783`，本次仅本地整合。该个人工作分支跟踪同名 `origin/codex/sim-vision-work`，原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。此分支汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 
-此次汇集的验证及分支检查见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)。
+此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；本次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。
 
 ## 原始 tracker 基线
 
@@ -46,7 +46,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 未指定 `--parameters` 或文件内容为 `{}` 时，原生视觉启动会加载 [virtual_camera.json](virtual_camera.json)，通过现有相机接口应用曝光（微秒）和相对增益，并覆盖原生 tracker 叠加图的 `text_size`；两种仿真相机预设共用该启动覆盖，标定和其他成像参数仍由各自预设提供。非空 `--parameters` 文件完整替代这一默认覆盖，保持已有调参文件的行为。相机组仅用于连接后的视觉相机，不写回仿真预设或 ROS 驱动 YAML，也不作用于操作手图传；tracker 字号覆盖不改写 ROS 共用 YAML。没有启用视觉相机/DT46 的会话不会因此开启识别。离线回放仍使用已经采集的图像，调曝光须先重新采图。
 
-本配套分支降低默认相对增益，以匹配仿真曝光前的独立灯条发光强度，避免继续把背景一起放大；数值以 `virtual_camera.json` 为准，不等同于实拍海康界面的增益 16.0。当前红蓝检出、跟踪和相机预设验证由[仿真灯条成像](../../README.md#画质灯条与反光)统一维护；本次未改检测器、分类器或原 tracker。此前只提高整幅图像增益的[历史调参记录](../../outputs/led_emission_20261024/previous_gain_tuning.json)仅证明当时蓝靶成功、红靶未检出，不能代表本轮模型。
+原生启动配置降低默认相对增益，以匹配仿真曝光前的独立灯条发光强度，避免继续把背景一起放大；数值以 `virtual_camera.json` 为准，不等同于实拍海康界面的增益 16.0。当前红蓝检出、跟踪和相机预设验证由[仿真灯条成像](../../README.md#画质灯条与反光)统一维护；本次未改检测器、分类器或原 tracker。此前只提高整幅图像增益的[历史调参记录](../../outputs/led_emission_20261024/previous_gain_tuning.json)仅证明当时蓝靶成功、红靶未检出，不能代表本轮模型。
 
 调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/detector/img_armor_processed`、`/detector/bin_img`；仍可切换原始 RGB、tracking_state_img、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
 
