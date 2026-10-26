@@ -8,7 +8,7 @@
 
 ## 原始 tracker 基线
 
-按用户指定，`tracker.cpp` / `tracker.hpp`、`ekf.cpp` / `ekf.hpp`、ROS `node.cpp` 保持 GlennAde `3c41f0b` 的源码，忽略检出时的 CRLF/LF 差异。`original_tracker_baseline` 测试校验这五个文件；后续不能以修复、迁移或适配为由自动改变其逻辑。原算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护。
+2026-10-26 按用户要求，把 `aim@fd6a7c7`（优化了一下对于旋转状态下的击打选择）的 `tracker.cpp` / `tracker.hpp` 对齐到本分支。`ekf.cpp` / `ekf.hpp` 与 ROS `node.cpp` 仍保持 GlennAde `3c41f0b` 的源码，忽略检出时的 CRLF/LF 差异。`original_tracker_baseline` 测试校验这五个文件的当前摘要；后续不能以修复、迁移或适配为由自动改变其逻辑。算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护。
 
 Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走原默认路径。原 tracker 重力固定为 9.81 m/s²；配置其他重力时明确拒绝，不能声称已跟随仿真重力。弹速、阻力和枪口偏移继续读取相应反馈。每帧有效性由适配层读取原始弹道求解器的结果，不在 tracker 中新增状态或改变选板、EKF、弹道和发弹判据。
 
