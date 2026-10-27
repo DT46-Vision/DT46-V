@@ -29,7 +29,9 @@ Json VirtualCamera::request(const Json& request) {
     if(reply.metadata.contains("error"))throw std::runtime_error(reply.metadata.at("error").get<std::string>());return reply.metadata;
 }
 std::optional<VirtualFrame> VirtualCamera::next(const Json& status,const Json& result) {
-    socket.send({{"op","next"},{"after",version},{"status",status},{"result",result}});auto reply=socket.receive();
+    auto returned=result;
+    if(returned.is_object()&&returned.contains("interface_timing"))returned["interface_timing"]["return_send_s"]=camera_wall_seconds();
+    socket.send({{"op","next"},{"after",version},{"status",status},{"result",std::move(returned)}});auto reply=socket.receive();
     const double received=camera_wall_seconds();
     if(reply.metadata.contains("error"))throw std::runtime_error(reply.metadata.at("error").get<std::string>());
     version=reply.metadata.at("version");auto frame=reply.metadata.at("frame");if(frame.is_null()){if(!reply.bytes.empty())throw std::runtime_error("Unexpected camera payload");return {};}
@@ -57,6 +59,11 @@ Json aim_feedback(const Json& result) {
     if(result.is_null())return nullptr;
     Json feedback={{"schema",1}};
     for(const auto* key:{"frame_number","state_tick","reset_generation","simulation_time_s","camera","robot_id","state","tracked_id","aim"})feedback[key]=result.at(key);
+    if(result.contains("camera_timing")) {
+        const auto& timing=result.at("camera_timing");
+        feedback["interface_timing"]={{"sample_s",timing.at("sample_s")},{"image_available_s",timing.at("image_available_s")},
+            {"result_ready_s",timing.at("result_ready_s")}};
+    }
     return feedback;
 }
 Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
@@ -72,6 +79,8 @@ Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
     if(m.contains("appearance"))result["appearance"]=m.at("appearance");
     if(m.contains("camera_timing"))result["camera_timing"]=m.at("camera_timing");
     for(const char* key:{"camera_settings_version","sampling_target_hz","sampling_effective_limit_hz"})if(m.contains(key))result[key]=m.at(key);
-    result["input"]["optical_transform"]=m.at("optical");return result;
+    result["input"]["optical_transform"]=m.at("optical");
+    if(result.contains("camera_timing"))result["camera_timing"]["result_ready_s"]=camera_wall_seconds();
+    return result;
 }
 }

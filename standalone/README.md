@@ -108,8 +108,11 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `camera_ms` 此时表示 `1000 × (image_available_s - sample_s)`，包含采样后渲染、回读、等待请求和传输，不包含视觉算法耗时。回读区间为 `cpu_ready_s - readback_start_s`，包括等待 GPU、轮询调度及像素复制；`send_start_s` 到 `receive_complete_s` 包含序列化、TCP 和接收封装。`render_submitted_s` 只表示渲染命令提交返回，不表示 GPU 已完成。每帧分代、编号、时间戳一起对齐；没有 `camera_timing` 的旧帧仍沿用旧 `camera_ms` 缺省值，0 不证明零延迟。
 
-[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 rm_sim，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。
-| 请求 | 作用 |
+诊断模式还记录 `result_ready_s`（算法与结果封装完成、日志和窗口工作之前），并在下一次请求中携带 `interface_timing.return_send_s`。配套仿真记录 `received_s` 和该结果首次由物理线程消费的 `physics_consumed_s`，写入会话 `events.jsonl` 的 `interface_feedback`；只有该事件 `aim.tracking=true` 才表示已应用到云台，其他状态仅表示消费并检查。计时不参与控制、有效期或预测计算。
+
+接口对照用环境变量 `SIM_INTERFACE_NODELAY=0/1`，须同时设置在仿真和视觉进程：0 保持默认 TCP 行为，1 启用 GlennAde 提交中的 `TCP_NODELAY` 设置；两种模式都读取套接字选项确认生效，失败退出。未设置时保持原行为。此开关用于同一算法和场景下的传输对照，不改变取图、回传或线程调度结构。
+
+[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 rm_sim，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。| 请求 | 作用 |
 |---|---|
 | `describe` | 获取协议版本、相机参数及初始弹速/重力/阻力 |
 | `next(after, status, result)` | 获取指定序号后的最新帧；暂无新帧时返回空；status 回报识别/显示状态，result 返回上一张已处理帧的紧凑自瞄结果 |
