@@ -104,8 +104,11 @@ build/native/bin/dt46_vision.exe --save-debug
 
 ## 本机相机接口 v1
 
-[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 rm_sim，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。
+配套仿真启用 `SIM_CAMERA_TIMING=1` 时，接收端把 `camera_timing` 的服务器时间戳连同 `receive_complete_s`（JSON 与全部 RGB 字节收到）、`image_available_s`（图像封装完成、交给视觉算法之前）写入 `frames.jsonl`。Windows 两进程共用 QPC 时基；其他平台使用 steady_clock，跨进程计时尚未验证。
 
+`camera_ms` 此时表示 `1000 × (image_available_s - sample_s)`，包含采样后渲染、回读、等待请求和传输，不包含视觉算法耗时。回读区间为 `cpu_ready_s - readback_start_s`，包括等待 GPU、轮询调度及像素复制；`send_start_s` 到 `receive_complete_s` 包含序列化、TCP 和接收封装。`render_submitted_s` 只表示渲染命令提交返回，不表示 GPU 已完成。每帧分代、编号、时间戳一起对齐；没有 `camera_timing` 的旧帧仍沿用旧 `camera_ms` 缺省值，0 不证明零延迟。
+
+[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 rm_sim，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。
 | 请求 | 作用 |
 |---|---|
 | `describe` | 获取协议版本、相机参数及初始弹速/重力/阻力 |

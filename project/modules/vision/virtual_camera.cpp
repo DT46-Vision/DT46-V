@@ -1,8 +1,24 @@
 #include "modules/vision/virtual_camera.hpp"
 #include <chrono>
 #include <cstring>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace dt46 {
+namespace {
+double camera_wall_seconds() {
+#ifdef _WIN32
+    static const double frequency=[] {LARGE_INTEGER value;QueryPerformanceFrequency(&value);return double(value.QuadPart);}();
+    LARGE_INTEGER value;QueryPerformanceCounter(&value);return double(value.QuadPart)/frequency;
+#else
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
+}
+}
 VirtualCamera::VirtualCamera(const Json& session):socket(wire::Socket::connect(session.at("port"))) {
     socket.send({{"key",session.at("key")}});const auto hello=socket.receive();
     if(hello.metadata.value("protocol",0)!=1)throw std::runtime_error("Virtual camera authentication/protocol failed");
@@ -14,6 +30,7 @@ Json VirtualCamera::request(const Json& request) {
 }
 std::optional<VirtualFrame> VirtualCamera::next(const Json& status,const Json& result) {
     socket.send({{"op","next"},{"after",version},{"status",status},{"result",result}});auto reply=socket.receive();
+    const double received=camera_wall_seconds();
     if(reply.metadata.contains("error"))throw std::runtime_error(reply.metadata.at("error").get<std::string>());
     version=reply.metadata.at("version");auto frame=reply.metadata.at("frame");if(frame.is_null()){if(!reply.bytes.empty())throw std::runtime_error("Unexpected camera payload");return {};}
     const int width=frame.at("width"),height=frame.at("height");
@@ -21,6 +38,11 @@ std::optional<VirtualFrame> VirtualCamera::next(const Json& status,const Json& r
         throw std::runtime_error("Invalid virtual camera RGB shape");
     auto storage=std::make_shared<std::vector<std::uint8_t>>(std::move(reply.bytes));
     cv::Mat rgb(height,width,CV_8UC3,storage->data());
+    if(frame.contains("camera_timing")) {
+        auto& timing=frame["camera_timing"];timing["receive_complete_s"]=received;
+        const double available=camera_wall_seconds();timing["image_available_s"]=available;
+        frame["camera_ms"]=(available-timing.at("sample_s").get<double>())*1000;
+    }
     return VirtualFrame{std::move(rgb),std::move(frame),std::move(storage)};
 }
 void VirtualCamera::configure(const Json& parameters){
@@ -48,6 +70,7 @@ Json process_frame(AimPipeline& pipeline,const VirtualFrame& frame) {
         {"camera_ms",m.value("camera_ms",0.)},{"processing_ms",std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count()},
         {"frame_number",m.at("frame_number")},{"state_tick",m.at("state_tick")},{"sensor",m.at("sensor")},{"parameter_revision",pipeline.revision()}});
     if(m.contains("appearance"))result["appearance"]=m.at("appearance");
+    if(m.contains("camera_timing"))result["camera_timing"]=m.at("camera_timing");
     for(const char* key:{"camera_settings_version","sampling_target_hz","sampling_effective_limit_hz"})if(m.contains(key))result[key]=m.at(key);
     result["input"]["optical_transform"]=m.at("optical");return result;
 }
