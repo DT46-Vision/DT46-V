@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
@@ -43,6 +44,8 @@ void configure(Handle h) {
 #else
     const timeval timeout{2,0};setsockopt(h,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));setsockopt(h,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
 #endif
+    // Image replies are megabytes and the next request is a small JSON packet. Without this, Nagle holds that request until the image is acknowledged.
+    const int nodelay=1;setsockopt(h,IPPROTO_TCP,TCP_NODELAY,reinterpret_cast<const char*>(&nodelay),sizeof(nodelay));
 }
 void check_transfer(int count,const char* operation) {
     if(count>0)return;
