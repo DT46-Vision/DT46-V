@@ -57,7 +57,7 @@ rm_tracker:
     k_v2: 0.019                    # 平方空气阻力系数
 
     # [发射参数]
-    bullet_speed: 32.0             # 弹速 (m/s)
+    bullet_speed: 25.0             # 弹速 (m/s)
 
     # 发弹角度阈值
     shootable_dist: 10.0
