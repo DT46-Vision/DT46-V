@@ -85,7 +85,7 @@
 | `spin_enter_time` | double | `0.3` | 持续多久判定为小陀螺（s） |
 | `spin_exit_time` | double | `0.15` | 低于门限多久退出小陀螺（s） |
 
-> 表格里的"代码默认值"只是兜底。实际值以 launch 传入的 YAML 为准，例如通用 `tracker_params.yaml` 里 `bullet_speed: 32.0`、`shootable_dist: 10.0`、`min_spinning_vel: 1.0`、`ekf_QR_r_xyz_factor: 0.5`，与代码默认值差别很大。
+> 表格里的"代码默认值"只是兜底。实际值以 launch 传入的 YAML 为准，例如通用 `tracker_params.yaml` 里 `bullet_speed: 25.0`、`shootable_dist: 10.0`、`min_spinning_vel: 1.0`、`ekf_QR_r_xyz_factor: 0.5`，与代码默认值差别很大。
 
 运行时（`add_on_set_parameters_callback`）只有 3 个参数支持热改：`target_color`、`bullet_speed`（会重建弹道表）、`display`。其余参数改了不生效。
 
@@ -125,7 +125,7 @@ ros2 run rm_tracker rm_tracker_node --ros-args \
 
 ```bash
 ros2 param set /rm_tracker target_color 1     # 切蓝方，会重置状态机
-ros2 param set /rm_tracker bullet_speed 30.0  # 重建弹道表
+ros2 param set /rm_tracker bullet_speed 25.0  # 重建弹道表
 ros2 param set /rm_tracker display true       # 打开调试图
 ```
 
