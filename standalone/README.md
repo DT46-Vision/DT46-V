@@ -48,7 +48,7 @@ build/native/bin/dt46_vision.exe --close-debug
 build/native/bin/dt46_vision.exe --save-debug
 ```
 
-仿真驾驶默认启动第一条命令对应的独立进程。识别默认在后台运行，调试窗口读取同一管线；关闭、重开显示不会重建检测器或追踪器。调试命令通过本工程 `.cache/virtual_camera/session.json` 找到当前任务，可用 `--debug-session` 指定实例。退出只清理自己创建的会话。相机正常关闭后视觉结束；协议错误与超时记录为失败。视觉断开不得影响驾驶，完整边界和操作验收见 [sim_vision 项目规范](../../README.md#项目规范工程边界与使用流程)。
+仿真驾驶默认启动第一条命令对应的独立进程。识别默认在后台运行，调试窗口读取同一管线；关闭、重开显示不会重建检测器或追踪器。调试命令通过本工程 `.cache/virtual_camera/session.json` 找到当前任务，可用 `--debug-session` 指定实例。退出只清理自己创建的会话。相机正常关闭后视觉结束；协议错误与超时记录为失败。视觉断开不得影响驾驶，完整边界和操作验收见 [rm_sim 项目规范](../../README.md#项目规范工程边界与使用流程)。
 
 `--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
@@ -74,7 +74,7 @@ build/native/bin/dt46_vision.exe --save-debug
 | 相机名称/标定地址、枪口位置、IMU 安装修正 | 原生相机标识、K/D、光学姿态和枪口偏移由采样反馈提供；面板说明来源并显示当前枪口偏移。`rotation_rpy_*` 是 ROS 的 IMU 适配参数，不再次叠加；`use_geometric_center` 固定为 false，保留标定主点 |
 | ROS QoS、图像点击发布、节点选择 | 由原生相机会话和三页参数分类适配；不伪造 ROS 参数服务器或点击话题。原保存布局未启用点击发布；其他未启用的 rqt 插件不构成本页基准 |
 
-参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。原生测试和 Windows 操作流程的历史记录见[审查快照](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前的[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)包含当时的输入翻转及跟踪图关闭/恢复。这些是恢复 tracker、隔离输入翻转之前的历史结果，不代表当前功能或算法验收。本机证据不纳入 Git；当前检查使用本页构建/CTest 命令及 sim_vision 的 Windows 操作流程，界面检查使用输出目录的 `vision_parameters.json`，验证显示旋转、`tracker.display`、保存/加载以及旧翻转配置的拒绝。ROS rqt 本体未在本机运行验证。
+参数枚举依据 [相机节点](../src/rm_vision_ros2_mindvision_camera/src/mv_camera_node.cpp)、[检测节点](../src/rm_detector/src/node.cpp)、[跟踪节点](../src/rm_tracker/src/node.cpp) 的实际声明与回调，不把 YAML 中未声明的键算作 rqt 功能。原生测试和 Windows 操作流程的历史记录见[审查快照](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前的[参数文件界面检查](../../outputs/rqt_parity_20261023/save_verified/checks.json)通过 Load → Save → Load，保留模型字符串和布尔类型；[显示检查](../../outputs/rqt_parity_20261023/acceptance/checks.json)包含当时的输入翻转及跟踪图关闭/恢复。这些是恢复 tracker、隔离输入翻转之前的历史结果，不代表当前功能或算法验收。本机证据不纳入 Git；当前检查使用本页构建/CTest 命令及 rm_sim 的 Windows 操作流程，界面检查使用输出目录的 `vision_parameters.json`，验证显示旋转、`tracker.display`、保存/加载以及旧翻转配置的拒绝。ROS rqt 本体未在本机运行验证。
 
 2026-10-23 输入翻转隔离验证：6 项原生 CTest 全部通过；`native_pipeline` 检查所有 RGB 字节及 K/D、光学姿态、枪口偏移原样交付，拒绝旧翻转参数且保持当前配置，`original_tracker_baseline` 确认五个核心文件仍为原版。沿用审查快照中的 Windows 流程命令，本次 [workflow_44312](../../outputs/cpp_migration/workflow_44312/checks.json) 检查 1,016 帧，许可发弹 2 发、视觉断开后 0 发；调试开关及快照成功，保存参数不含 `flip_image`，截图保留每格显示旋转入口。未单独点击所有旋转角度及 GUI Load 文件对话框；旧参数拒绝由原生测试覆盖。本次未验证 ROS 或实车。
 
@@ -104,7 +104,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 ## 本机相机接口 v1
 
-[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 sim_vision，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。
+[transport.hpp](../project/interfaces/transport.hpp) 维护原生 TCP 消息格式：回环地址、逐会话密钥、长度受限的 JSON 和原始 RGB 二进制数据。相机服务端属于 rm_sim，客户端属于 DT46-V。`next` 的可选结果字段返回视觉解算，由仿真侧根据驾驶输入执行；本接口不连接实车执行器。
 
 | 请求 | 作用 |
 |---|---|
@@ -117,9 +117,9 @@ build/native/bin/dt46_vision.exe --save-debug
 
 `result` 为 `null` 或 `{schema:1, frame_number, state_tick, reset_generation, simulation_time_s, camera, robot_id, state, tracked_id, aim}`；具体构造入口为 [aim_feedback](../project/modules/vision/virtual_camera.cpp)。启动、上下文重建或无结果时发 `null`。旧客户端缺省该字段仍可读图，但不会提供自瞄许可。服务端要求结果与本连接最后交付帧的身份、代号、采样时间完全一致，使用服务端保留的原帧姿态，不接受客户端另传的姿态；重复帧不刷新许可，错误反馈、空结果、相机配置变更和断开清除缓存。
 
-`aim` 两个误差分别为相机 `atan2(x,z)` 和 `atan2(y,z)` 的度数，正方向为图像向右/向下，已含弹道补偿。执行端以该帧 `optical` 的旋转 `R` 计算 `d = R × [tan(yaw), tan(pitch), 1]`，再得到世界 yaw=`atan2(d.y,d.x)`、pitch=`atan2(d.z,hypot(d.x,d.y))`；三角函数输入先转弧度。它们不是两个 Euler 旋转，也不能每个物理步累加到最新云台角上。交付时间与采样时间共同限制有效期，具体门控和配置由 [sim_vision 自瞄操作](../../README.md#右键自瞄与发弹)维护。
+`aim` 两个误差分别为相机 `atan2(x,z)` 和 `atan2(y,z)` 的度数，正方向为图像向右/向下，已含弹道补偿。执行端以该帧 `optical` 的旋转 `R` 计算 `d = R × [tan(yaw), tan(pitch), 1]`，再得到世界 yaw=`atan2(d.y,d.x)`、pitch=`atan2(d.z,hypot(d.x,d.y))`；三角函数输入先转弧度。它们不是两个 Euler 旋转，也不能每个物理步累加到最新云台角上。交付时间与采样时间共同限制有效期，具体门控和配置由 [rm_sim 自瞄操作](../../README.md#右键自瞄与发弹)维护。
 
-可选 `appearance` 记录该帧的仿真画质、灯条和表面显示设置，原样保留在识别日志及调试截图元数据中，不参与识别决策。画质控制与视觉采样验收由 [sim_vision 画质说明](../../README.md#画质灯条与反光)维护。
+可选 `appearance` 记录该帧的仿真画质、灯条和表面显示设置，原样保留在识别日志及调试截图元数据中，不参与识别决策。画质控制与视觉采样验收由 [rm_sim 画质说明](../../README.md#画质灯条与反光)维护。
 
 ## 离线回放、录像与标定
 
