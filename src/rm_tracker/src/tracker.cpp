@@ -174,6 +174,11 @@ void Tracker::reset_plate(const Armor& armor) {
     spin_aim_mode_clock_ = 0.0;
     spin_front_plate_i_ = 0;
     ekf_reject_streak_ = 0;
+    yaw_rate_deg_ = 0.0;   // 清理前馈速度（让前馈速度为0）
+    yaw_rate_lpf_ = 0.0;   // 清理低通滤波i的缓存
+    v_yaw_blend_ = 1.0;    // 正常模式还是反小陀螺（1：正常；0：反小陀螺）
+    ff_hold_clock_ = 0.0;  // 用来强制前馈静默 100ms 的计时器
+    ekf_reset_this_frame_ = false;  // ekf是否重置的标志位
 }
 
 void Tracker::note_plate_jump(const Eigen::Vector3d& pred, const Eigen::Vector3d& meas,
@@ -668,6 +673,7 @@ bool Tracker::apply_armor_measurement(const Armor& armor) {
 
 void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<std::pair<std::string, std::string>>& logs) {
     if (jump_cooldown_ > 0) jump_cooldown_--;
+    ekf_reset_this_frame_ = false;
 
     update_plate(armors, dt, logs);
 
@@ -781,6 +787,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
             }
             ekf_reject_streak_ = 0;
             did_ekf_reset = true;
+            ekf_reset_this_frame_ = true;
             logs.emplace_back("state", "EKF reset from plate");
         }
     } else if (ekf_matched) {
@@ -827,6 +834,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
             if (++detect_count_ > tracking_thres) {
                 tracker_state = TrackerState::TRACKING;
                 detect_count_ = 0;
+                ff_hold_clock_ = yaw_rate_hold_after_reset_;
                 logs.emplace_back("state", "DETECTING -> TRACKING (ID: " + std::to_string(tracked_id) + ")");
             }
         } else {
@@ -852,6 +860,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
         } else {
             tracker_state = TrackerState::TRACKING;
             lost_count_ = 0;
+            ff_hold_clock_ = yaw_rate_hold_after_reset_;
             logs.emplace_back("state", "TEMP_LOST -> TRACKING (recovered)");
         }
     }
@@ -1077,7 +1086,8 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     debug_yaw_armors_cache_ = raw_armors;
 
     std::vector<std::pair<std::string, std::string>> logs;
-    std::vector<double> gimbal_control = {0.0, 0.0, 0.0}; // 映射：[yaw_deg, pitch_deg, can_fire_flag]
+    // 映射：[yaw_deg, pitch_deg, can_fire_flag, yaw_rate_deg]
+    std::vector<double> gimbal_control = {0.0, 0.0, 0.0, 0.0};
 
     // 1. 判断并调度基础状态机
     if (tracker_state == TrackerState::LOST) {
@@ -1087,6 +1097,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
             try_init_tracker(temp_armors);
             logs.emplace_back("state", "LOST -> DETECTING (ID: " + std::to_string(tracked_id) + ")");
         }
+        yaw_rate_deg_ = 0.0;
+        yaw_rate_lpf_ = 0.0;
+        v_yaw_blend_ = 1.0;
         return {gimbal_control, logs};
     } else {
         // 如果处于追踪期：灌入 EKF 进行多阶导数更新
@@ -1096,6 +1109,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     // 兜底机制：若更新判定目标大范围离群导致状态机瞬间跌落，紧急刹车退出
     if (tracker_state == TrackerState::LOST) {
         tracked_id = -1;
+        yaw_rate_deg_ = 0.0;
+        yaw_rate_lpf_ = 0.0;
+        v_yaw_blend_ = 1.0;
         logs.emplace_back("state", "TRACKING/TEMP_LOST -> LOST (target lost)");
         return {gimbal_control, logs};
     }
@@ -1105,6 +1121,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     // ==========================================================
 
     if (!plate_inited_) {
+        yaw_rate_deg_ = 0.0;
+        yaw_rate_lpf_ = 0.0;
+        v_yaw_blend_ = 1.0;
         return {gimbal_control, logs};
     }
     update_spin_aim_mode(dt);
@@ -1173,12 +1192,90 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     // 4. 转换至枪口系并打靶
     std::optional<Armor> target_muzzle = world_to_muzzle(tf, target_cam, cam_to_gun_pos, imu_rpy);
     if (!target_muzzle.has_value()) {
+        yaw_rate_deg_ = 0.0;
+        yaw_rate_lpf_ = 0.0;
+        v_yaw_blend_ = 1.0;
         return {gimbal_control, logs};
     }
 
     auto [yaw_cmd_rad, pitch_cmd_rad, isValid] = solve_ballistic(tf, target_muzzle.value(), cam_to_gun_rpy, imu_rpy);
 
-    // 5. 动态发弹许可
+    // 5. yaw 前馈：目标瞄准点的世界系视线角速度。
+    // 只用 EKF 的车心/速度/自转，不做差分；云台自身运动不进入这里。
+    const bool ff_state_ok =
+        tracker_state == TrackerState::TRACKING ||
+        tracker_state == TrackerState::TEMP_LOST;
+
+    double ff_raw = 0.0;
+    if (yaw_rate_enable_ && ff_state_ok && isValid && plate_inited_) {
+        const double xc = target_state_(0), yc = target_state_(2);
+        const double vx = target_state_(1), vy = target_state_(3);
+        const double r2 = xc * xc + yc * yc;
+
+        if (r2 > 0.09) {
+            // 车心方位角速度：瞄正前时虚拟点就在这条视线上。
+            const double omega_center = (xc * vy - yc * vx) / r2;
+
+            // 跟板时用 EKF 预测量甲板的位置/速度。
+            // 注意 dp/dt 里的切向项是 r*v_yaw，不是 v_yaw：
+            // 远距离下装甲板绕车心转，视线角速度约 (r/d)*v_yaw。
+            const double yaw = target_state_(6);
+            const double v_yaw = target_state_(7);
+            const double r = target_state_(8);
+            const double px = xc - r * std::cos(yaw);
+            const double py = yc - r * std::sin(yaw);
+            const double pvx = vx + r * v_yaw * std::sin(yaw);
+            const double pvy = vy - r * v_yaw * std::cos(yaw);
+            const double p2 = px * px + py * py;
+
+            double omega_plate = omega_center;
+            if (p2 > 0.09) {
+                omega_plate = (px * pvy - py * pvx) / p2;
+            }
+
+            // 跟板/瞄正前切换用 crossfade，避免公式切换时阶跃。
+            const double blend_target = aimed ? 0.0 : 1.0;
+            const double blend_step = yaw_rate_blend_time_ > 1e-3
+                                      ? dt / yaw_rate_blend_time_ : 1.0;
+            v_yaw_blend_ += std::clamp(blend_target - v_yaw_blend_,
+                                       -blend_step, blend_step);
+
+            const double omega_world =
+                v_yaw_blend_ * omega_plate + (1.0 - v_yaw_blend_) * omega_center;
+            ff_raw = -omega_world * RAD2DEG * yaw_rate_sign_;
+        }
+    }
+
+    // EKF 重开 / 重捕获后先保持 0，避免初始速度方差造成冲枪。
+    if (ekf_reset_this_frame_) {
+        ff_hold_clock_ = yaw_rate_hold_after_reset_;
+        ekf_reset_this_frame_ = false;
+    }
+    if (ff_hold_clock_ > 0.0) {
+        ff_raw = 0.0;
+        ff_hold_clock_ -= dt;
+    }
+
+    const double dt_ff = std::clamp(dt, 0.005, 0.05);
+
+    const double tau = yaw_rate_lpf_hz_ > 1e-3
+                       ? 1.0 / (2.0 * M_PI * yaw_rate_lpf_hz_) : 0.0;
+    const double alpha = tau > 0.0 ? dt_ff / (tau + dt_ff) : 1.0;
+    yaw_rate_lpf_ += alpha * (ff_raw - yaw_rate_lpf_);
+
+    // 斜率限幅兜住换板、模式切换、重捕获等所有阶跃。
+    const double max_step = yaw_rate_max_accel_deg_s2_ * dt_ff;
+    yaw_rate_deg_ += std::clamp(yaw_rate_lpf_ - yaw_rate_deg_,
+                                -max_step, max_step);
+    yaw_rate_deg_ = std::clamp(yaw_rate_deg_,
+                               -yaw_rate_max_deg_s_, yaw_rate_max_deg_s_);
+
+    if (!yaw_rate_enable_) {
+        yaw_rate_deg_ = 0.0;
+        yaw_rate_lpf_ = 0.0;
+    }
+
+    // 6. 动态发弹许可
     // 注意：solve_ballistic 返回的是弧度，但 can_fire 期望的是角度
     auto final_gimbal = can_fire(target_cam, {yaw_cmd_rad * RAD2DEG, pitch_cmd_rad * RAD2DEG, isValid});
 
@@ -1191,6 +1288,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     gimbal_control[0] = std::get<0>(final_gimbal); // Yaw 角度
     gimbal_control[1] = std::get<1>(final_gimbal); // Pitch 角度
     gimbal_control[2] = std::get<2>(final_gimbal) ? 1.0 : 0.0;
+    gimbal_control[3] = yaw_rate_deg_;             // Yaw 前馈角速度 (deg/s)
 
     return {gimbal_control, logs};
 }
@@ -1212,6 +1310,7 @@ RenderSnapshot Tracker::get_render_snapshot() const {
     s.pitch_tolerance_deg = pitch_tolerance_deg;
     s.gimbal_control = gimbal_control_cache_;
     s.ekf_yaw_vel = target_state_(7);
+    s.yaw_rate_deg = yaw_rate_deg_;
     s.bullet_speed = bullet_speed;
     return s;
 }

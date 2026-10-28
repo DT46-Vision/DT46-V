@@ -51,6 +51,15 @@ rm_tracker:
 
     system_delay: 0.01
 
+    # yaw 前馈：目标瞄准点世界系视线角速度 (deg/s)
+    yaw_rate_enable: false            # 是否开启前馈
+    yaw_rate_sign: 1.0                # 前馈方向
+    yaw_rate_lpf_hz: 15.0             # 低通滤波器截止频率
+    yaw_rate_max_deg_s: 720.0         # 前馈最高速度
+    yaw_rate_max_accel_deg_s2: 1500.0 # 前馈变换斜率和赋值的限制
+    yaw_rate_blend_time: 0.10         # 正常模式转换到反小陀螺的过渡时间
+    yaw_rate_hold_after_reset: 0.10   # EKF 重置后的“前馈静默期”（静默期前馈为0）
+
     # 反小陀螺
     max_spinning_frame: 10
     spinning_frame_lost: 5

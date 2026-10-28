@@ -71,7 +71,16 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.spin_enter_time_ = this->declare_parameter("spin_enter_time", 0.3);
     tracker_.spin_exit_time_ = this->declare_parameter("spin_exit_time", 0.15);
 
-    // 2.11 重新构建弹道查找表 (基于加载的弹速和k_v2)
+    // 2.11 加载 yaw 前馈参数
+    tracker_.yaw_rate_enable_ = this->declare_parameter("yaw_rate_enable", false);
+    tracker_.yaw_rate_sign_ = this->declare_parameter("yaw_rate_sign", 1.0);
+    tracker_.yaw_rate_lpf_hz_ = this->declare_parameter("yaw_rate_lpf_hz", 15.0);
+    tracker_.yaw_rate_max_deg_s_ = this->declare_parameter("yaw_rate_max_deg_s", 720.0);
+    tracker_.yaw_rate_max_accel_deg_s2_ = this->declare_parameter("yaw_rate_max_accel_deg_s2", 1500.0);
+    tracker_.yaw_rate_blend_time_ = this->declare_parameter("yaw_rate_blend_time", 0.10);
+    tracker_.yaw_rate_hold_after_reset_ = this->declare_parameter("yaw_rate_hold_after_reset", 0.10);
+
+    // 2.12 重新构建弹道查找表 (基于加载的弹速和k_v2)
     tracker_.build_ballistic_lut();
 
     // 3. 初始化日志节流器和计时器
@@ -256,6 +265,7 @@ void RmTrackerNode::processing_worker() {
 
         // 2. 线程同步锁：开始调用核心预测状态机与滤波器
         std::tuple<double, double, bool> gimbal_cmd;
+        double yaw_rate_cmd = 0.0;
         std::vector<std::pair<std::string, std::string>> tracker_logs;
         {
             std::lock_guard<std::mutex> lock(tracker_lock_);
@@ -275,6 +285,7 @@ void RmTrackerNode::processing_worker() {
             } else {
                 gimbal_cmd = std::make_tuple(0.0, 0.0, false);
             }
+            yaw_rate_cmd = (cmd_vec.size() >= 4) ? cmd_vec[3] : 0.0;
 
             // 数据拷贝：提取非阻塞式渲染快照
             std::lock_guard<std::mutex> r_lock(render_lock_);
@@ -304,6 +315,7 @@ void RmTrackerNode::processing_worker() {
         gb_msg.pitch = smooth_pitch_;
         // 显式规避 bool 隐式转换风险
         gb_msg.can_fire = static_cast<int>(can_fire);
+        gb_msg.yaw_rate = static_cast<float>(yaw_rate_cmd);
         pub_gimbal_control_->publish(gb_msg);
 
         // 4. 发布导航方所需的敌人中心数据 (相机安装系，与 TF 父帧 camera 一致)
@@ -379,8 +391,8 @@ void RmTrackerNode::processing_worker() {
                 ctr_r = render_snapshot_->target_state(8);
             }
             RCLCPP_INFO(this->get_logger(),
-                "[Tracker] FPS: %.1f | IMU offset: %.2f ms | spin: %d vyaw: %.2f | ctr: (%.2f, %.2f) r: %.3f | Gimbal - yaw: %.2f, pitch: %.2f, fire: %d",
-                current_fps, imu_offset_ms, spin_flag, vyaw, ctr_x, ctr_y, ctr_r, gb_msg.yaw, gb_msg.pitch, gb_msg.can_fire);
+                "[Tracker] FPS: %.1f | IMU offset: %.2f ms | spin: %d vyaw: %.2f | ctr: (%.2f, %.2f) r: %.3f | Gimbal - yaw: %.2f, pitch: %.2f, yaw_rate: %.2f, fire: %d",
+                current_fps, imu_offset_ms, spin_flag, vyaw, ctr_x, ctr_y, ctr_r, gb_msg.yaw, gb_msg.pitch, gb_msg.yaw_rate, gb_msg.can_fire);
         }
     }
 }
@@ -482,6 +494,20 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
             text_size_ = param.as_double();
         } else if (name == "nav_visual_display") {
             nav_visual_display_ = param.as_bool();
+        } else if (name == "yaw_rate_enable") {
+            tracker_.yaw_rate_enable_ = param.as_bool();
+        } else if (name == "yaw_rate_sign") {
+            tracker_.yaw_rate_sign_ = param.as_double();
+        } else if (name == "yaw_rate_lpf_hz") {
+            tracker_.yaw_rate_lpf_hz_ = param.as_double();
+        } else if (name == "yaw_rate_max_deg_s") {
+            tracker_.yaw_rate_max_deg_s_ = param.as_double();
+        } else if (name == "yaw_rate_max_accel_deg_s2") {
+            tracker_.yaw_rate_max_accel_deg_s2_ = param.as_double();
+        } else if (name == "yaw_rate_blend_time") {
+            tracker_.yaw_rate_blend_time_ = param.as_double();
+        } else if (name == "yaw_rate_hold_after_reset") {
+            tracker_.yaw_rate_hold_after_reset_ = param.as_double();
         }
     }
     return result;

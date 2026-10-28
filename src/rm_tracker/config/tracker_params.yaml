@@ -52,6 +52,15 @@ rm_tracker:
 
     system_delay: 0.1
 
+    # yaw 前馈：目标瞄准点世界系视线角速度 (deg/s)
+    yaw_rate_enable: false
+    yaw_rate_sign: 1.0
+    yaw_rate_lpf_hz: 15.0
+    yaw_rate_max_deg_s: 720.0
+    yaw_rate_max_accel_deg_s2: 1500.0
+    yaw_rate_blend_time: 0.10
+    yaw_rate_hold_after_reset: 0.10
+
     # 反小陀螺 — 时间累计 (秒), 帧率无关
     min_spinning_vel: 1.0          # 角速度门限 (rad/s)
     spin_enter_time: 0.3           # 进入小陀螺判定所需累计时间 (s)

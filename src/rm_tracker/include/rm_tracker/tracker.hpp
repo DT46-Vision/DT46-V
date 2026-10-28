@@ -80,6 +80,7 @@ struct RenderSnapshot {
     double pitch_tolerance_deg;
     std::tuple<double, double, bool> gimbal_control;
     double ekf_yaw_vel;
+    double yaw_rate_deg;
     double bullet_speed;
 };
 
@@ -133,6 +134,16 @@ public:
     double system_delay = 0.1;
     // 云台多出来的跟踪滞后；只加在瞄准点外推，不影响选板/正对判定（FYT controller_delay）。
     double controller_delay_ = 0.02;
+
+    // yaw 前馈：只做 yaw，不做 D。yaw_rate 为目标瞄准点的世界系视线角速度。
+    bool yaw_rate_enable_ = false;
+    double yaw_rate_sign_ = 1.0;
+    double yaw_rate_lpf_hz_ = 15.0;
+    double yaw_rate_max_deg_s_ = 720.0;
+    double yaw_rate_max_accel_deg_s2_ = 1500.0;
+    double yaw_rate_blend_time_ = 0.10;
+    double yaw_rate_hold_after_reset_ = 0.10;
+
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
     double min_spinning_vel_ = 5.0;
@@ -192,6 +203,13 @@ private:
     std::optional<Armor> plate_meas_;
     double last_plate_yaw_ = 0.0;
     int ekf_reject_streak_ = 0;
+
+    // yaw 前馈输出链路：解析视线角速度 -> LPF -> 斜率限幅
+    double yaw_rate_deg_ = 0.0;
+    double yaw_rate_lpf_ = 0.0;
+    double v_yaw_blend_ = 1.0;       // 1=跟板(叠加 v_yaw)，0=瞄正前
+    double ff_hold_clock_ = 0.0;     // reset 后保持 0 的剩余时间
+    bool ekf_reset_this_frame_ = false;
 
     // 换板锁存：切向跳变同号连续两次置上，4s 没有再跳、板也不再快移才清。
     // 正弦慢半圈里跳变间隔会超过 2s，短于这段会把标志清掉，然后按绕心速度提前。
