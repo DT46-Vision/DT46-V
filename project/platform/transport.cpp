@@ -6,7 +6,6 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
@@ -16,7 +15,6 @@
 #include <climits>
 #include <cerrno>
 #include <cstring>
-#include <cstdlib>
 #include <random>
 #include <stdexcept>
 #include <utility>
@@ -45,19 +43,6 @@ void configure(Handle h) {
 #else
     const timeval timeout{2,0};setsockopt(h,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout));setsockopt(h,SOL_SOCKET,SO_SNDTIMEO,&timeout,sizeof(timeout));
 #endif
-    const char* compare=std::getenv("SIM_INTERFACE_NODELAY");
-    if(compare) {
-        const int expected=std::strcmp(compare,"1")==0;
-        if(expected)setsockopt(h,IPPROTO_TCP,TCP_NODELAY,reinterpret_cast<const char*>(&expected),sizeof(expected));
-        int actual=0;
-#ifdef _WIN32
-        int length=sizeof(actual);
-#else
-        socklen_t length=sizeof(actual);
-#endif
-        if(getsockopt(h,IPPROTO_TCP,TCP_NODELAY,reinterpret_cast<char*>(&actual),&length)||actual!=expected)
-            throw std::runtime_error("TCP_NODELAY comparison mode was not applied");
-    }
 }
 void check_transfer(int count,const char* operation) {
     if(count>0)return;
