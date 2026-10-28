@@ -1,4 +1,4 @@
-# tracker.cpp/hpp locked to aim fd6a7c7; ekf and node.cpp locked to 3c41f0b. Line endings are normalized.
+# Lock the algorithm files to GlennAde's 3c41f0b; checkout line endings may differ.
 function(check_original path expected)
     file(READ "${DT46_ROOT}/${path}" source)
     string(REPLACE "\r\n" "\n" source "${source}")
@@ -7,9 +7,9 @@ function(check_original path expected)
         message(FATAL_ERROR "Original tracker changed: ${path}")
     endif()
 endfunction()
-check_original("src/rm_tracker/src/tracker.cpp" "e80bffaf4e821b61c4f0a5ae2a43d4d1d561c6ace387597a4a77f622be703aa8")
-check_original("src/rm_tracker/include/rm_tracker/tracker.hpp" "f83bc62d3ae2ef09f583572e62fe1fc2d05322f2f3b275ade8348f65047ff4ac")
+check_original("src/rm_tracker/src/tracker.cpp" "40212ca84ef5f936888dc9e8a8bda3e937969214ff51586d57ddf78d9ed6e98e")
+check_original("src/rm_tracker/include/rm_tracker/tracker.hpp" "99a07dedac95cbf8774fd02c36e1e4ea9005c69be18003af84aa507005311c29")
 check_original("src/rm_tracker/src/ekf.cpp" "153ecec8accb03b91de7751c28852d19eac0425e90eddc0a4f31d717cb95d331")
 check_original("src/rm_tracker/include/rm_tracker/ekf.hpp" "7d5c26d0749c8c5cab70ed1989f973d912499066e12a5ce6f437b4e4100cf767")
 check_original("src/rm_tracker/src/node.cpp" "d48003505c48424f891ee1375ac89a8566c0d75e9da7028ceb7fb5eddc26139b")
-message(STATUS "tracker.cpp/hpp match aim fd6a7c7; ekf and node.cpp match 3c41f0b")
+message(STATUS "Tracker source matches GlennAde 3c41f0b")

@@ -213,11 +213,8 @@ private:
     std::deque<XySample> obs_center_hist_;
     std::deque<XySample> plate_arc_;
     bool spin_center_valid_ = false;
-    // 双板或板轨迹拟合收敛后才信绝对车心；未收敛时 SPIN 只跟板。
-    bool spin_center_converged_ = false;
     double spin_center_x_ = 0.0;
     double spin_center_y_ = 0.0;
-    double last_center_accept_clock_ = -1.0;
     // bag 扫参用：最近一帧双板解心相对车心的距离；无双板为 -1。
     double last_dual_innov_ = -1.0;
     std::deque<XySample> fit_hist_;
@@ -273,13 +270,9 @@ private:
                          std::vector<std::pair<std::string, std::string>>& logs);
     bool apply_armor_measurement(const Armor& armor);
     void note_plate_arc(double x, double y);
-    // 用板水平轨迹拟合圆心；不依赖单帧 yaw 二义。失败返回 false。
-    bool fit_center_from_plate_arc(double& xc, double& yc, double& radius) const;
     bool center_motion_is_slow() const;
     void hold_center_when_stationary(const std::vector<Armor>& armors);
     void apply_spin_period();
-    // 最近几次换板间隔相对标准差 < 15% 才预测下一块板。
-    bool spin_period_is_stable() const;
     void update_spin_aim_mode(double dt);
     // 单板：板位 + r 解车心（yaw 二义消解）。失败返回 false。
     bool center_from_one_armor(const Armor& armor, double r, double& xc, double& yc) const;

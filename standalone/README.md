@@ -7,13 +7,13 @@
 
 ## 原始 tracker 基线
 
-2026-10-28 按用户要求，从仿真 main 固定基线逐项比较 Glenn 视觉。本次个人分支 `codex/glenn-stepwise` 先仅合入 Glenn `58235b9` 的 `tracker.cpp` / `tracker.hpp`；归一化行尾后的文件与该提交完全一致。配套源码摘要采用 Glenn `dee69bc` 的两项值，`ekf.cpp` / `ekf.hpp` 和 ROS `node.cpp` 继续锁定 `3c41f0b`。`original_tracker_baseline` 仅校验源码身份，不代表跟踪问题已修复。算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护，真实逐项验证见[本轮报告](../../outputs/glenn_integration_20261028/report.md)。
+按用户指定，`tracker.cpp` / `tracker.hpp`、`ekf.cpp` / `ekf.hpp`、ROS `node.cpp` 保持 GlennAde `3c41f0b` 的源码，忽略检出时的 CRLF/LF 差异。`original_tracker_baseline` 测试校验这五个文件；后续不能以修复、迁移或适配为由自动改变其逻辑。原算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护。
 
 Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走原默认路径。原 tracker 重力固定为 9.81 m/s²；配置其他重力时明确拒绝，不能声称已跟随仿真重力。弹速、阻力和枪口偏移继续读取相应反馈。每帧有效性由适配层读取原始弹道求解器的结果，不在 tracker 中新增状态或改变选板、EKF、弹道和发弹判据。
 
 Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
 
-2026-10-23 的交接决定曾以原 tracker 为平台大改期默认，并保留 PR3 / `codex/sim-vision-tracker-changes@032dfb1` 作为后续计划。该历史快照继续保留，不混入本轮 Glenn `58235b9` 的单项对照；当前适配层的目标颜色过滤和输入翻转隔离保持。此次用户授权的实际合入步骤与验证状态以[本轮报告](../../outputs/glenn_integration_20261028/report.md)为准。
+2026-10-23 交接访谈确认：平台大改期间以本节原 tracker 为默认基线。PR3 和 `codex/sim-vision-tracker-changes@032dfb1` 保留为后续优化计划，待平台大改完成后再开始算法优化；本次不切换默认 tracker。最终将经过优化、验证的快照算法改动整合回 `codex/sim-vision-work`，形成统一工作版本。合并结果保留当前适配层的目标颜色过滤和下文的输入翻转隔离；原快照继续作为历史对照保留。快照的算法与适配层差异记录在该分支的 `standalone/README.md`，优化验证需先统一输入与验收条件。本次仅确认后续整合方向，未执行算法合并。
 
 ## tracker 逻辑改动保留分支
 
