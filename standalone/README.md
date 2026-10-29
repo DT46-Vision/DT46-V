@@ -60,7 +60,7 @@ ctest --preset release
 
 依赖下载及校验值由 [bootstrap.cmake](../cmake/bootstrap.cmake) 维护；本工程另固定 nlohmann/json 和 GLFW。OpenCV 使用 CPU DNN，并启用图像和视频读写。Windows 运行前，将 OpenCV 安装目录下的 `x64/mingw/bin`（或相应编译器目录）加入当前进程 PATH；程序与依赖应使用兼容的编译器。FFmpeg 插件随 OpenCV 安装，录制时需要该插件。Linux 视频后端依赖本机 OpenCV/FFmpeg 构建配置。
 
-默认构建提供 10 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖后为 9 项。切板回归读取实际步兵 YAML，覆盖错误法线拒绝、漏检、重复观测、离群点及距离相关噪声；车体回归另验证正确原始法线能够纠正镜像先验。最新执行证据、同帧复核与精度边界见[静止画面复核](../outputs/pnp_static_diagnosis_20261029/report.md)及[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。ROS 节点与实机串口未验证。
+默认构建提供 11 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖后为 10 项。`detector_pairing` 使用已入库的失败帧裁剪，覆盖数字轮廓遮挡配对、相邻板、交叉候选、ROI 坐标、颜色/几何/分类拒绝和旧缓存清理；结果见[检测器精简验证](../outputs/detector_simplify_20261030/report.md)。切板回归读取实际步兵 YAML，覆盖错误法线拒绝、漏检、重复观测、离群点及距离相关噪声；车体回归另验证正确原始法线能够纠正镜像先验。相关精度边界见[静止画面复核](../outputs/pnp_static_diagnosis_20261029/report.md)及[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。ROS 节点与实机串口未验证。
 
 ## 虚拟相机与独立调试
 

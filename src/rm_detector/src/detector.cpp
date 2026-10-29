@@ -23,12 +23,6 @@ namespace DT46_VISION{
         return std::make_pair(cv::Size2f(w, h), angle);
     }
 
-    // 将角度转换为斜率的函数
-    double angle_to_slope(double angle_degrees) {
-        double angle_radians = angle_degrees * M_PI / 180.0;
-        return std::tan(angle_radians);
-    }
-
     cv::Point2f point_solver(const cv::Point2f& cropped_point, const cv::Rect& roi_rect){
         cv:: Point2f raw_point = cropped_point;
         raw_point.x = raw_point.x + roi_rect.x;
@@ -60,29 +54,9 @@ namespace DT46_VISION{
     }
 
     int Armor::get_id() const {
-        if(color == 0){
-            if(res.class_id == 0){
-                return 6;
-            }
-            if(res.class_id == 1){
-                return 8;
-            }
-            if(res.class_id == 2){
-                return 11;
-            }
-        }
-        else if(color == 1){
-            if(res.class_id == 0){
-                return 0;
-            }
-            if(res.class_id == 1){
-                return 2;
-            }
-            if(res.class_id == 2){
-                return 5;
-            }
-        }
-        return -1;
+        static constexpr int ids[2][3] = {{6, 8, 11}, {0, 2, 5}};
+        return color >= 0 && color < 2 && res.class_id >= 0 && res.class_id < 3
+            ? ids[color][res.class_id] : -1;
     }
 
     // ArmorDetector 类的实现
@@ -184,28 +158,18 @@ namespace DT46_VISION{
 
     std::vector<Light> ArmorDetector::find_lights(const cv::Mat& img_binary_input) {
         std::vector<std::vector<cv::Point>> contours;
-        std::vector<cv::RotatedRect> is_lights;
-        std::vector<Light> lights_found;
+        lights.clear();
+        const cv::Mat& raw = params.roi_crop ? crop_img : img;
 
         cv::findContours(img_binary_input, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
         for (const auto& contour : contours) {
-            if (cv::contourArea(contour) >= params.light_area_min) {
-                cv::RotatedRect min_rect = cv::minAreaRect(contour);
-                cv::Size2f w_h = min_rect.size;
-                double angle = min_rect.angle;
-                std::tie(w_h, angle) = adjust(w_h, angle);
-                if (w_h.height / w_h.width < params.light_h_w_ratio) {
-                    continue;
-                }
-                if (angle >= params.light_angle_min && angle <= params.light_angle_max) {
-                    cv::RotatedRect rect(min_rect.center, w_h, static_cast<float>(angle));
-                    is_lights.push_back(rect);
-                }
-            }
-        }
-
-        for (const auto& rect : is_lights) { // 这里的定义上下是遵守opencv规定的坐标系来描述的，y轴是竖直向下的，x轴是水平向右的
+            if (cv::contourArea(contour) < params.light_area_min) continue;
+            const auto min_rect = cv::minAreaRect(contour);
+            const auto [w_h, angle] = adjust(min_rect.size, min_rect.angle);
+            if (w_h.height / w_h.width < params.light_h_w_ratio ||
+                angle < params.light_angle_min || angle > params.light_angle_max) continue;
+            const cv::RotatedRect rect(min_rect.center, w_h, static_cast<float>(angle));
             cv::Point2f box[4];
             rect.points(box);
 
@@ -221,11 +185,6 @@ namespace DT46_VISION{
 
             if (length < 2) continue;
 
-            cv::Mat raw = img;
-            if (params.roi_crop){
-                raw = crop_img;
-            }
-
             int sum_b = 0, sum_r = 0;
             int sample_count = std::min(10, length);
             for (int i = 0; i < sample_count; ++i) {
@@ -240,13 +199,12 @@ namespace DT46_VISION{
             }
 
             if ((color == 1 || color == 2) && sum_b > sum_r * params.light_blue_ratio) {
-                lights_found.push_back(Light(up, down, 1));
+                lights.emplace_back(up, down, 1);
             } else if ((color == 0 || color == 2) && sum_r > sum_b * params.light_red_ratio) {
-                lights_found.push_back(Light(up, down, 0));
+                lights.emplace_back(up, down, 0);
             }
         }
 
-        lights = lights_found;
         return lights;
     }
 
@@ -307,16 +265,8 @@ namespace DT46_VISION{
 
     std::pair<NumberClassifier::Result, float> ArmorDetector::is_close(const Light& light1, const Light& light2) {
         NumberClassifier::Result res;
-        // 计算公共变量
-        float height_max, height_min;
-        if (std::max(light1.height, light2.height) == light1.height){
-            height_max = light1.height;
-            height_min = light2.height;
-        }
-        else{
-            height_max = light2.height;
-            height_min = light1.height;
-        }
+        const float height_max = std::max(light1.height, light2.height);
+        const float height_min = std::min(light1.height, light2.height);
 
         float height_rate = height_max / height_min;
         // 如果高度比例不符合，直接返回
@@ -332,18 +282,16 @@ namespace DT46_VISION{
         if (distance > height * params.height_multiplier_min && distance < height * params.height_multiplier_max) {
                 res = get_armor_result(light1, light2);
         }
-        else{
-            img_armor = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
-            img_armor_processed = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
-        }
         return {res, distance / height};
     }
 
     std::vector<Armor> ArmorDetector::is_armor(const std::vector<Light>& lights) {
-        std::vector<Armor> armors_found;
+        armors.clear();
+        img_armor = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
+        img_armor_processed = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
 
         if (lights.size() < 2) {
-            return armors_found;
+            return armors;
         }
 
         // 按中心 x 排序（左 → 右）
@@ -353,11 +301,7 @@ namespace DT46_VISION{
                     return a.cx < b.cx;
                 });
 
-        // 标记哪些灯条已经被使用过
-        std::vector<bool> used(sorted_lights.size(), false);
-
-        // 右侧先看斜率。断开的灯条碎片和真灯几乎垂直，连线太陡或两灯倾角差太大就跳过，
-        // 再往右才是同一块板。已经平行的灯不再继续跳，避免把两块板连成叉。
+        // 假灯条不能挡住后续真灯；只有完整通过几何与分类的配对才占用区间。
         const double slope_limit = std::abs(static_cast<double>(params.light_angle_max));
         auto light_tilt_deg = [](const Light& light) {
             return std::atan2(light.down.x - light.up.x, light.down.y - light.up.y) * 180.0 / CV_PI;
@@ -370,28 +314,19 @@ namespace DT46_VISION{
             return tilt <= slope_limit && line <= slope_limit;
         };
         for (size_t i = 0; i < sorted_lights.size(); i++) {
-            if (used[i]) continue;
+            for (size_t j = i + 1; j < sorted_lights.size(); j++) {
+                if (sorted_lights[j].color != sorted_lights[i].color ||
+                    !slopes_match(sorted_lights[i], sorted_lights[j])) continue;
+                const auto [res, height_multiplier] = is_close(sorted_lights[i], sorted_lights[j]);
+                if (res.class_id < 0 || res.class_id >= 3) continue;
 
-            size_t j = i + 1;
-            while (j < sorted_lights.size() &&
-                   (used[j] ||
-                    sorted_lights[j].color != sorted_lights[i].color ||
-                    !slopes_match(sorted_lights[i], sorted_lights[j]))) {
-                j++;
+                armors.emplace_back(height_multiplier, sorted_lights[i], sorted_lights[j], res, params.roi_crop, roi_rect);
+                // 跳过已接受配对内部的假灯，防止重复、嵌套或交叉配对。
+                i = j;
+                break;
             }
-            if (j >= sorted_lights.size() || used[j]) continue;
-
-            NumberClassifier::Result res;
-            float height_multiplier;
-            std::tie(res, height_multiplier) = is_close(sorted_lights[i], sorted_lights[j]);
-            if (res.class_id < 0 || res.class_id >= 3) continue;
-
-            armors_found.emplace_back(height_multiplier, sorted_lights[i], sorted_lights[j], res, params.roi_crop, roi_rect);
-            used[i] = true;
-            used[j] = true;
         }
 
-        armors = armors_found;
         return armors;
     }
 
@@ -547,11 +482,11 @@ namespace DT46_VISION{
 
     std::vector<Armor> ArmorDetector::detect_armors(const cv::Mat& img_input) {
         if (img_input.empty()){
-            return {};
+            lights.clear();
+            return is_armor(lights);
         }
-        img_binary = process(img_input);
-        lights = find_lights(img_binary);
-        armors = is_armor(lights);
-        return armors;
+        process(img_input);
+        find_lights(img_binary);
+        return is_armor(lights);
     }
 } // namespace DT46_VISION

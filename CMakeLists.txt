@@ -68,6 +68,14 @@ if(BUILD_TESTING)
     target_include_directories(dt46_pnp_check PRIVATE src/rm_detector/include ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(dt46_pnp_check PRIVATE nlohmann_json::nlohmann_json ${OpenCV_LIBS})
     target_compile_definitions(dt46_pnp_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
+    add_executable(dt46_detector_check tests/detector_check.cpp
+        src/rm_detector/src/detector.cpp src/rm_detector/src/classifier.cpp)
+    target_include_directories(dt46_detector_check PRIVATE src/rm_detector/include ${OpenCV_INCLUDE_DIRS})
+    target_link_libraries(dt46_detector_check PRIVATE ${OpenCV_LIBS})
+    target_compile_definitions(dt46_detector_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
+    add_test(NAME detector_pairing COMMAND dt46_detector_check
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/data/detector_digit_obstruction.png"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/rm_detector/model/RM_Armor_CNN_sim.onnx")
     add_executable(dt46_armor_geometry_check tools/check_armor_geometry.cpp)
     target_include_directories(dt46_armor_geometry_check PRIVATE ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(dt46_armor_geometry_check PRIVATE nlohmann_json::nlohmann_json ${OpenCV_LIBS})

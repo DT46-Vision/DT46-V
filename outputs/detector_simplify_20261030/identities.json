@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\dt46_vision.exe",
+    "Hash": "73FED12667C0C9549902664CB3831179AEFE1774B36BD38ECC45D045FBF4AB60"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_vision.exe",
+    "Hash": "73FED12667C0C9549902664CB3831179AEFE1774B36BD38ECC45D045FBF4AB60"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\standalone\\dt46_aim.dll",
+    "Hash": "DD335111043D8E35CDD4A4832EBA492E2F63B5F6E49B96AAF949E7C128F1F4C2"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_aim.dll",
+    "Hash": "DD335111043D8E35CDD4A4832EBA492E2F63B5F6E49B96AAF949E7C128F1F4C2"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\tests\\data\\detector_digit_obstruction.png",
+    "Hash": "B99F17D19E76B2D35AACC54EF726D14F336C7C882C1349701B1BFCCC6B3A7793"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\src\\rm_detector\\model\\RM_Armor_CNN_sim.onnx",
+    "Hash": "1EE00ED3EB13E8F141D744942C973F75D0FAFD9BBC1EE715BAD2E40C5CDB2205"
+  }
+]

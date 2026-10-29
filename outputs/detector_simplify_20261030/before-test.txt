@@ -1,0 +1,14 @@
+Test project D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+    Start 5: detector_pairing
+1/1 Test #5: detector_pairing .................***Failed    0.66 sec
+saved_frame lights=4 armors=0
+Digit contour blocked or replaced the real armor pair
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.70 sec
+
+The following tests FAILED:
+	  5 - detector_pairing (Failed)
+Errors while running CTest

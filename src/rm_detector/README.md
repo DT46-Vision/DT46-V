@@ -39,12 +39,14 @@
 
 1. `process()`：灰度 → 固定阈值二值化（`binary_val`）；`roi_crop: true` 时先按 `roi_scale` 取图像中心区域，后续只在 ROI 上处理。
 2. `find_lights()`：轮廓面积 ≥ `light_area_min`、minAreaRect 的 高/宽 ≥ `light_h_w_ratio`、角度在 `[light_angle_min, light_angle_max]` 内；再沿灯条中心线采样最多 10 个像素做红蓝判决。
-3. `is_armor()`：按中心 x 排序，选择右侧首个同色且灯条夹角、中心连线角通过限制的候选，再检查高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内。灯条夹角按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒；每条灯条只用一次。
+3. `is_armor()`：按中心 x 排序，依次检查右侧同色候选的灯条夹角、中心连线角、高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内，再进行分类；几何或分类失败就继续检查后续右灯。接受首个完整通过的配对后，从右灯之后继续，避免重复、嵌套或交叉配对；投影区间重叠的多块板不会同时输出。灯条夹角仍按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。
 5. `Armor::get_id()`：颜色 + `class_id` 映射成 `armor_id`（见下表）；`is_armor()` 只接受 `class_id ∈ {0,1,2}`。
 6. `PNP::processArmorCorners()`：`cv::solvePnPGeneric(..., cv::SOLVEPNP_IPPE)`，剔除角点不在相机前方或误差非有限的解，再按当前四角重投影均方误差选择解；上一帧法线不再压过当前图像证据，输出 `dx/dy/dz`（mm）、`yaw`（deg）和相机系单位法线 `nx/ny/nz`。当前尺寸与 id 无关，由 `pnp_light_spacing_mm` / `pnp_light_height_mm` 配置；灯条矩形中线端点保留浮点精度，颜色采样才转整数。
 
 原生跟踪图把检测端点（黄色）、原始 PnP 重投影与 120 mm 法线箭头（品红）和 EKF 模型（青/绿/橙）分开显示；PnP 行显示深度和像素 RMS。重投影贴合只说明位姿解释了输入角点，不能证明尺寸、角点与真实物体一致。完整平面法线在近正视或小像素目标上仍可能不可靠，本次静止及旋转的离线检查见[底层 PnP 复核](../../outputs/pnp_scene_cleanup_20261029/report.md)。
+
+每轮配对清空上一轮装甲结果与分类预览；没有候选时显示占位图，空输入也清空灯条与装甲缓存。灰度阈值和红蓝比例保持原配置，白字仍可能成为灯条候选；配对修复不等于颜色误检或 PnP 精度已经解决。保存帧回归、相邻板/交叉反例、同输入耗时及三场闭环结果见[检测器精简验证](../../outputs/detector_simplify_20261030/report.md)。
 
 ## 参数
 

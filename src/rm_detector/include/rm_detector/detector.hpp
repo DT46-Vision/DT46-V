@@ -15,7 +15,6 @@ namespace DT46_VISION {
 
     double calculate_distance(const cv::Point2f& p1, const cv::Point2f& p2);
     std::pair<cv::Size2f, double> adjust(const cv::Size2f& w_h, double angle);
-    double angle_to_slope(double angle_degrees);
     cv::Point2f point_solver(const cv::Point2f& cropped_point, const cv::Rect& roi_rect);
 
     class Light {
