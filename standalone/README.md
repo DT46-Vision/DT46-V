@@ -131,7 +131,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 非 `LOST` 帧的只读 `tracker_debug.ekf_state` 顺序为 `[xc,vx,yc,vy,za,vz,yaw,vyaw,r]`，位置单位米、速度米/秒、角度弧度、角速度弧度/秒。车心 XY 与装甲基准高度 za 均以采样时的相机光心为原点、按世界轴表达；转换世界位置只加 `input.optical_transform` 的平移，不能再次旋转。速度包含相机原点运动的影响。适配层同时导出原 `RenderSnapshot` 的 `ekf_second_radius_m`（另一对板半径）与 `ekf_alternate_height_m`（相邻板高度差 dz）。完整十一维共享状态、板序号与几何定义以 [tracker](../src/rm_tracker/README.md) 为准。`position_camera_origin_world_axes_m` / `velocity_world_axes_m_s` 来自该共享模型的当前观测板，含旋转切向速度。此状态重建与最终弹道目标不同；仿真同帧真值和评测流程见[自瞄验证场景](../../README.md#自瞄运动与预测验证场景)。
 
-`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。适配层在调用 `track` 前清空仅供渲染的目标缓存；若本帧产生枪口目标，再调用原本无状态的 `solve_ballistic` 读取有效标记并检查有限角度。提前退出时不会导出旧帧有效性；额外调用只有原查表和三角运算，不修改核心状态。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
+`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。Tracker 每帧开始清空目标缓存和有效性，适配层直接读取本帧解算结果；提前退出不会导出旧帧有效性，也不重复求弹道。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
 图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，板位姿解算使用原始像素和 K/D，在 IPPE 或倾角约束直接解中补偿畸变；原生步兵当前使用后者，详见 detector 说明。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
 

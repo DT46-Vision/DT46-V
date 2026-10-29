@@ -1,0 +1,36 @@
+{
+  "base_commit": "f81260c",
+  "branch": "codex/vision-five-meter-accuracy",
+  "runtime_changes": "Two infantry YAML noise parameters; no C++ changes",
+  "live_cases": 34,
+  "live_smoke_passed": 34,
+  "invalid_fire_frames": 0,
+  "static_unexplained_shots": 0,
+  "native_tests": {
+    "passed": 12,
+    "total": 12,
+    "execution": "Full suite: 11 passed; noisy_switching_actual_yaml failed for q=0.5/r=0.05, then passed with final q=0.3/r=0.05. Existing assertions unchanged."
+  },
+  "candidate_rejections": [
+    {
+      "q_xyz": 0.5,
+      "r_xyz_factor": 0.05,
+      "center_max_m": 0.153145,
+      "limit_m": 0.15
+    },
+    {
+      "q_xyz": 0.4,
+      "r_xyz_factor": 0.05,
+      "center_max_m": 0.150117,
+      "limit_m": 0.15
+    }
+  ],
+  "final_geometry_regression_max_m": 0.133733,
+  "files": {
+    "src/rm_tracker/config/tracker_params_infantry.yaml": "111bd8f8b55b0a92c72592cf818b3963c21f38380aa8f47d875bbb35278b0d79",
+    "build/native/bin/dt46_vision.exe": "0efbfe3f04a680f5638b7e0f7ebd0d0449344b405f8a66d609f62ce11a927699",
+    "build/native/bin/dt46_aim.dll": "fbaf705cf7f2267f7a43328ff625c38133adda29a78ad81524ea67105852081b",
+    "build/aim-validation-full/dt46_vision.exe": "0efbfe3f04a680f5638b7e0f7ebd0d0449344b405f8a66d609f62ce11a927699",
+    "build/aim-validation-full/standalone/dt46_aim.dll": "fbaf705cf7f2267f7a43328ff625c38133adda29a78ad81524ea67105852081b"
+  }
+}

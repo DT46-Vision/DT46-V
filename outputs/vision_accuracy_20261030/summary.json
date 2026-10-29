@@ -1,0 +1,1406 @@
+[
+  {
+    "run": "accepted-motion-seed42-20261030-032522\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 100,
+    "damaging": 38,
+    "damaging_per_second": 1.9,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 521,
+      "acquiring": 4,
+      "lost": 1,
+      "unmatched": 513,
+      "arrival_probability": 694,
+      "insufficient_updates": 14,
+      "flight_consistency": 8,
+      "alignment_or_facing": 764
+    },
+    "mature_shots": 99,
+    "mature_damaging": 37,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-motion-seed42-20261030-032522\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 138,
+    "damaging": 52,
+    "damaging_per_second": 2.6,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 375,
+      "acquiring": 1,
+      "unmatched": 372,
+      "arrival_probability": 422,
+      "insufficient_updates": 7,
+      "alignment_or_facing": 554
+    },
+    "mature_shots": 136,
+    "mature_damaging": 51,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-motion-seed43-20261030-032611\\5_constant",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 88,
+    "damaging": 32,
+    "damaging_per_second": 1.6,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 467,
+      "lost": 1,
+      "arrival_probability": 715,
+      "unmatched": 463,
+      "acquiring": 2,
+      "insufficient_updates": 30,
+      "flight_consistency": 1,
+      "alignment_or_facing": 782
+    },
+    "mature_shots": 87,
+    "mature_damaging": 32,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-motion-seed43-20261030-032611\\5_off",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 126,
+    "damaging": 44,
+    "damaging_per_second": 2.2,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 341,
+      "acquiring": 1,
+      "unmatched": 336,
+      "arrival_probability": 467,
+      "insufficient_updates": 7,
+      "alignment_or_facing": 626
+    },
+    "mature_shots": 123,
+    "mature_damaging": 43,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-spin-seed43-20261030-032950\\5_constant",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "constant",
+    "shots": 88,
+    "damaging": 87,
+    "damaging_per_second": 4.35,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 853,
+      "acquiring": 6,
+      "arrival_probability": 769,
+      "lost": 2,
+      "not_tracking": 663,
+      "unmatched": 654,
+      "insufficient_updates": 25
+    },
+    "mature_shots": 87,
+    "mature_damaging": 87,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-spread-motion-seed42-20261030-032745\\5_constant",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 108,
+    "damaging": 17,
+    "damaging_per_second": 0.85,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 385,
+      "arrival_probability": 679,
+      "unmatched": 382,
+      "acquiring": 1,
+      "insufficient_updates": 17,
+      "flight_consistency": 12,
+      "alignment_or_facing": 749
+    },
+    "mature_shots": 107,
+    "mature_damaging": 17,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-spread-motion-seed42-20261030-032745\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 151,
+    "damaging": 29,
+    "damaging_per_second": 1.45,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 212,
+      "acquiring": 2,
+      "lost": 1,
+      "unmatched": 207,
+      "arrival_probability": 358,
+      "insufficient_updates": 14,
+      "alignment_or_facing": 511
+    },
+    "mature_shots": 149,
+    "mature_damaging": 28,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-spread-static-seed42-20261030-032832\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 171,
+    "damaging": 65,
+    "damaging_per_second": 3.25,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 506,
+      "acquiring": 1,
+      "unmatched": 503,
+      "arrival_probability": 39,
+      "insufficient_updates": 7
+    },
+    "mature_shots": 169,
+    "mature_damaging": 65,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 169,
+      "mean": -0.007737550108128199,
+      "std": 0.06642196393385728,
+      "abs_p95": 0.1093406662547757,
+      "abs_max": 0.12629053790787365
+    },
+    "landing_vertical_m": {
+      "count": 169,
+      "mean": -0.0109605214353891,
+      "std": 0.06947567604769708,
+      "abs_p95": 0.11690352534845017,
+      "abs_max": 0.1339654843868478
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 795,
+      "mean": 0.10846550819523677,
+      "std": 0.08796665312730952,
+      "abs_p95": 0.23735991105375331,
+      "abs_max": 0.6082630136380718
+    },
+    "observation_lateral_m": {
+      "count": 795,
+      "mean": -0.0002982364572254846,
+      "std": 0.0009112774215456139,
+      "abs_p95": 0.0017216450667426003,
+      "abs_max": 0.006428100418734945
+    },
+    "observation_vertical_m": {
+      "count": 795,
+      "mean": -0.006319819943429056,
+      "std": 0.0048518088672553136,
+      "abs_p95": 0.012961088164995967,
+      "abs_max": 0.03643431640267136
+    },
+    "aim_depth_m": {
+      "count": 795,
+      "mean": 0.10962913248776734,
+      "std": 0.05219587135852327,
+      "abs_p95": 0.17321918441997913,
+      "abs_max": 0.2243887877899641
+    },
+    "aim_lateral_m": {
+      "count": 795,
+      "mean": -0.00037077886773025456,
+      "std": 0.002901426828909818,
+      "abs_p95": 0.0053819922511540545,
+      "abs_max": 0.020829367059049225
+    },
+    "aim_vertical_m": {
+      "count": 795,
+      "mean": -0.006363896700243014,
+      "std": 0.004199134308895211,
+      "abs_p95": 0.011470751233467318,
+      "abs_max": 0.024803719376287142
+    }
+  },
+  {
+    "run": "accepted-stationary-seed42-20261030-032659\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "constant",
+    "shots": 73,
+    "damaging": 73,
+    "damaging_per_second": 3.65,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 627,
+      "acquiring": 7,
+      "lost": 1,
+      "unmatched": 619,
+      "arrival_probability": 839,
+      "insufficient_updates": 16,
+      "flight_consistency": 2,
+      "alignment_or_facing": 963
+    },
+    "mature_shots": 71,
+    "mature_damaging": 71,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "accepted-stationary-seed42-20261030-032659\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 161,
+    "damaging": 160,
+    "damaging_per_second": 8.0,
+    "q_xyz": 0.3,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "not_tracking": 892,
+      "acquiring": 7,
+      "lost": 1,
+      "unmatched": 884,
+      "arrival_probability": 79,
+      "insufficient_updates": 14
+    },
+    "mature_shots": 160,
+    "mature_damaging": 160,
+    "censored": 1,
+    "landing_lateral_m": {
+      "count": 160,
+      "mean": 0.0004045672628544896,
+      "std": 0.0021618391965599172,
+      "abs_p95": 0.003921280140186253,
+      "abs_max": 0.0067319211687077675
+    },
+    "landing_vertical_m": {
+      "count": 160,
+      "mean": -0.00722636893255039,
+      "std": 0.0074682534323591565,
+      "abs_p95": 0.019375879603998416,
+      "abs_max": 0.03256169960360791
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 431,
+      "mean": 0.12487214097782644,
+      "std": 0.05354051946127732,
+      "abs_p95": 0.2385519937061394,
+      "abs_max": 0.2584346810700613
+    },
+    "observation_lateral_m": {
+      "count": 431,
+      "mean": -0.00030584411000477915,
+      "std": 0.0006628823818353402,
+      "abs_p95": 0.0013918517825491318,
+      "abs_max": 0.0017588189382505897
+    },
+    "observation_vertical_m": {
+      "count": 431,
+      "mean": -0.007187183948413367,
+      "std": 0.0028008972141030596,
+      "abs_p95": 0.01302587151711812,
+      "abs_max": 0.014269615378625783
+    },
+    "aim_depth_m": {
+      "count": 431,
+      "mean": 0.12507992028672815,
+      "std": 0.03447653959335934,
+      "abs_p95": 0.18305243545342273,
+      "abs_max": 0.22329334769848141
+    },
+    "aim_lateral_m": {
+      "count": 431,
+      "mean": -0.00037704175102488713,
+      "std": 0.0021773566180759672,
+      "abs_p95": 0.004276413781068415,
+      "abs_max": 0.007209379598624602
+    },
+    "aim_vertical_m": {
+      "count": 431,
+      "mean": -0.00723486891918721,
+      "std": 0.0023937097878297758,
+      "abs_p95": 0.011069197165039846,
+      "abs_max": 0.013758068588026112
+    }
+  },
+  {
+    "run": "baseline-motion-seed43-20261030-032057\\5_constant",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 98,
+    "damaging": 26,
+    "damaging_per_second": 1.3,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 663,
+      "not_tracking": 432,
+      "flight_consistency": 1,
+      "unmatched": 427,
+      "alignment_or_facing": 757,
+      "lost": 1,
+      "insufficient_updates": 21,
+      "acquiring": 2
+    },
+    "mature_shots": 98,
+    "mature_damaging": 26,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "baseline-motion-seed43-20261030-032057\\5_off",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 117,
+    "damaging": 30,
+    "damaging_per_second": 1.5,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 535,
+      "not_tracking": 419,
+      "unmatched": 400,
+      "alignment_or_facing": 636,
+      "lost": 6,
+      "insufficient_updates": 49,
+      "acquiring": 7
+    },
+    "mature_shots": 114,
+    "mature_damaging": 29,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "baseline-spin-seed43-20261030-032926\\5_constant",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "constant",
+    "shots": 92,
+    "damaging": 91,
+    "damaging_per_second": 4.55,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 857,
+      "acquiring": 2,
+      "arrival_probability": 724,
+      "lost": 1,
+      "not_tracking": 678,
+      "unmatched": 669,
+      "insufficient_updates": 23
+    },
+    "mature_shots": 91,
+    "mature_damaging": 90,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "baseline-spread-motion-seed42-20261030-032258\\5_constant",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 108,
+    "damaging": 9,
+    "damaging_per_second": 0.45,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 775,
+      "flight_consistency": 1,
+      "not_tracking": 323,
+      "insufficient_updates": 7,
+      "unmatched": 319,
+      "arrival_probability": 639,
+      "acquiring": 7
+    },
+    "mature_shots": 107,
+    "mature_damaging": 9,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "baseline-spread-motion-seed42-20261030-032258\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 134,
+    "damaging": 19,
+    "damaging_per_second": 0.95,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 535,
+      "lost": 6,
+      "not_tracking": 291,
+      "insufficient_updates": 49,
+      "unmatched": 268,
+      "arrival_probability": 423,
+      "acquiring": 7
+    },
+    "mature_shots": 133,
+    "mature_damaging": 19,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "combined-noangle-seed42-20261030-030518\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 105,
+    "damaging": 26,
+    "damaging_per_second": 1.3,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 632,
+      "flight_consistency": 6,
+      "insufficient_updates": 12,
+      "unmatched": 461,
+      "not_tracking": 463,
+      "acquiring": 1,
+      "alignment_or_facing": 759
+    },
+    "mature_shots": 104,
+    "mature_damaging": 26,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "final-spread-motion-seed42-20261030-032346\\5_constant",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 104,
+    "damaging": 24,
+    "damaging_per_second": 1.2,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 715,
+      "flight_consistency": 11,
+      "not_tracking": 427,
+      "insufficient_updates": 10,
+      "unmatched": 422,
+      "arrival_probability": 814,
+      "acquiring": 1
+    },
+    "mature_shots": 102,
+    "mature_damaging": 24,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "final-spread-motion-seed42-20261030-032346\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 157,
+    "damaging": 39,
+    "damaging_per_second": 1.95,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "alignment_or_facing": 407,
+      "not_tracking": 282,
+      "insufficient_updates": 7,
+      "unmatched": 278,
+      "arrival_probability": 403,
+      "acquiring": 1
+    },
+    "mature_shots": 154,
+    "mature_damaging": 38,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "final-spread-static-seed42-20261030-032434\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 170,
+    "damaging": 61,
+    "damaging_per_second": 3.05,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "lost": 1,
+      "not_tracking": 505,
+      "insufficient_updates": 14,
+      "unmatched": 500,
+      "arrival_probability": 197,
+      "acquiring": 3
+    },
+    "mature_shots": 168,
+    "mature_damaging": 61,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 168,
+      "mean": -0.007814153878618765,
+      "std": 0.06645601875035215,
+      "abs_p95": 0.10970185415218582,
+      "abs_max": 0.13306754200081383
+    },
+    "landing_vertical_m": {
+      "count": 168,
+      "mean": -0.010909771549892207,
+      "std": 0.06965639072150798,
+      "abs_p95": 0.11604973329768174,
+      "abs_max": 0.13883434389968596
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 827,
+      "mean": 0.11208838925699689,
+      "std": 0.08747686530175466,
+      "abs_p95": 0.2365768749362752,
+      "abs_max": 0.7181292359116696
+    },
+    "observation_lateral_m": {
+      "count": 827,
+      "mean": -0.00017776404871206857,
+      "std": 0.0009236499602882202,
+      "abs_p95": 0.0017242681803545405,
+      "abs_max": 0.004770557513558255
+    },
+    "observation_vertical_m": {
+      "count": 827,
+      "mean": -0.0065098389692715575,
+      "std": 0.004756853680453886,
+      "abs_p95": 0.012947759995049575,
+      "abs_max": 0.04242370619379457
+    },
+    "aim_depth_m": {
+      "count": 827,
+      "mean": 0.11045384551717266,
+      "std": 0.059467364348338804,
+      "abs_p95": 0.19194415962062986,
+      "abs_max": 0.36431869642456366
+    },
+    "aim_lateral_m": {
+      "count": 827,
+      "mean": -0.00025398392870108896,
+      "std": 0.003223699762808273,
+      "abs_p95": 0.0069156286570404265,
+      "abs_max": 0.013571294635752271
+    },
+    "aim_vertical_m": {
+      "count": 827,
+      "mean": -0.006433221523023483,
+      "std": 0.004541584612026387,
+      "abs_p95": 0.01272119752954812,
+      "abs_max": 0.027783588206317184
+    }
+  },
+  {
+    "run": "lateral-translate-seed42-20261030-031640\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 102,
+    "damaging": 44,
+    "damaging_per_second": 2.2,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 304,
+      "not_tracking": 305,
+      "insufficient_updates": 7,
+      "arrival_probability": 599,
+      "alignment_or_facing": 658,
+      "acquiring": 1
+    },
+    "mature_shots": 102,
+    "mature_damaging": 44,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "noangle-seed42-20261030-025843\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 161,
+    "damaging": 160,
+    "damaging_per_second": 8.0,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 869,
+      "not_tracking": 875,
+      "lost": 1,
+      "insufficient_updates": 14,
+      "acquiring": 4,
+      "arrival_probability": 57
+    },
+    "mature_shots": 160,
+    "mature_damaging": 160,
+    "censored": 1,
+    "landing_lateral_m": {
+      "count": 160,
+      "mean": -0.0001990076841186115,
+      "std": 0.0005945756082642859,
+      "abs_p95": 0.0012230201150443376,
+      "abs_max": 0.0015061301405985112
+    },
+    "landing_vertical_m": {
+      "count": 160,
+      "mean": -0.00842035607352937,
+      "std": 0.007354449726874007,
+      "abs_p95": 0.02067377874234467,
+      "abs_max": 0.031280383467103094
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 414,
+      "mean": 0.08830360323527364,
+      "std": 0.0347297762601881,
+      "abs_p95": 0.14083112153835942,
+      "abs_max": 0.2319485577823411
+    },
+    "observation_lateral_m": {
+      "count": 414,
+      "mean": 0.00016217646136306235,
+      "std": 0.00037766441277892296,
+      "abs_p95": 0.000734453847178687,
+      "abs_max": 0.001108158493753937
+    },
+    "observation_vertical_m": {
+      "count": 414,
+      "mean": -0.005286900261367087,
+      "std": 0.0018867504758010292,
+      "abs_p95": 0.00808521742144157,
+      "abs_max": 0.012836286677013892
+    },
+    "aim_depth_m": {
+      "count": 414,
+      "mean": 0.08548750382787268,
+      "std": 0.02015088313074456,
+      "abs_p95": 0.11916257375088526,
+      "abs_max": 0.1424599714916515
+    },
+    "aim_lateral_m": {
+      "count": 414,
+      "mean": 0.00013701062105853627,
+      "std": 0.0006583374164357544,
+      "abs_p95": 0.0012393147755635856,
+      "abs_max": 0.002239554557775097
+    },
+    "aim_vertical_m": {
+      "count": 414,
+      "mean": -0.005123492877760393,
+      "std": 0.0012990009641368283,
+      "abs_p95": 0.007291429014439884,
+      "abs_max": 0.008715925035264832
+    }
+  },
+  {
+    "run": "noangle-seed43-20261030-025931\\5_off",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 167,
+    "damaging": 165,
+    "damaging_per_second": 8.25,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 907,
+      "not_tracking": 912,
+      "insufficient_updates": 7,
+      "acquiring": 1,
+      "arrival_probability": 48
+    },
+    "mature_shots": 165,
+    "mature_damaging": 165,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 165,
+      "mean": -0.00022057257685317624,
+      "std": 0.000457877339330067,
+      "abs_p95": 0.0009916125534059424,
+      "abs_max": 0.0015271039226756366
+    },
+    "landing_vertical_m": {
+      "count": 165,
+      "mean": -0.008232858358960982,
+      "std": 0.007083172659189744,
+      "abs_p95": 0.020239268007523827,
+      "abs_max": 0.025361047978379538
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 419,
+      "mean": 0.09055020060605219,
+      "std": 0.03234380633349646,
+      "abs_p95": 0.14328831276896284,
+      "abs_max": 0.23621094424216957
+    },
+    "observation_lateral_m": {
+      "count": 419,
+      "mean": 0.00019962397479749843,
+      "std": 0.00036100696637795,
+      "abs_p95": 0.0007030520365352601,
+      "abs_max": 0.0014629162431934479
+    },
+    "observation_vertical_m": {
+      "count": 419,
+      "mean": -0.005311553260405634,
+      "std": 0.0016907164391780597,
+      "abs_p95": 0.008116435415139116,
+      "abs_max": 0.01197583252530618
+    },
+    "aim_depth_m": {
+      "count": 419,
+      "mean": 0.08924401023218875,
+      "std": 0.017107709798675156,
+      "abs_p95": 0.11184961065840435,
+      "abs_max": 0.16410779118728952
+    },
+    "aim_lateral_m": {
+      "count": 419,
+      "mean": 0.00022747000021588549,
+      "std": 0.00044064970779869237,
+      "abs_p95": 0.0009351968514396135,
+      "abs_max": 0.002165595007882375
+    },
+    "aim_vertical_m": {
+      "count": 419,
+      "mean": -0.005228489456439118,
+      "std": 0.0010443512360143212,
+      "abs_p95": 0.006904450362690551,
+      "abs_max": 0.009043508280528328
+    }
+  },
+  {
+    "run": "noangle-seed44-20261030-030018\\5_off",
+    "seed": 44,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 164,
+    "damaging": 162,
+    "damaging_per_second": 8.1,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 880,
+      "not_tracking": 885,
+      "lost": 1,
+      "insufficient_updates": 14,
+      "acquiring": 5,
+      "arrival_probability": 45
+    },
+    "mature_shots": 162,
+    "mature_damaging": 162,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 162,
+      "mean": -0.00021926319878818205,
+      "std": 0.0005262577071410762,
+      "abs_p95": 0.0010721993684834799,
+      "abs_max": 0.002472892451509547
+    },
+    "landing_vertical_m": {
+      "count": 162,
+      "mean": -0.008409988494291152,
+      "std": 0.006096415801487138,
+      "abs_p95": 0.01767497983170432,
+      "abs_max": 0.021507112976810336
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 412,
+      "mean": 0.08932833946906571,
+      "std": 0.02997396194147982,
+      "abs_p95": 0.1390467757488794,
+      "abs_max": 0.18619629892092693
+    },
+    "observation_lateral_m": {
+      "count": 412,
+      "mean": 0.0002019253264363546,
+      "std": 0.00034778288558689774,
+      "abs_p95": 0.0007169119520445145,
+      "abs_max": 0.0015813168153469795
+    },
+    "observation_vertical_m": {
+      "count": 412,
+      "mean": -0.005291117193998124,
+      "std": 0.0015494497402236585,
+      "abs_p95": 0.007850437683064856,
+      "abs_max": 0.009854401902277016
+    },
+    "aim_depth_m": {
+      "count": 412,
+      "mean": 0.088129791759902,
+      "std": 0.017344289735392218,
+      "abs_p95": 0.11704384470145117,
+      "abs_max": 0.13969822403286997
+    },
+    "aim_lateral_m": {
+      "count": 412,
+      "mean": 0.00021664238089722721,
+      "std": 0.0005491592143912629,
+      "abs_p95": 0.0010554535712957028,
+      "abs_max": 0.002503813022508682
+    },
+    "aim_vertical_m": {
+      "count": 412,
+      "mean": -0.005286715287889013,
+      "std": 0.0012532701978932232,
+      "abs_p95": 0.007148665624176756,
+      "abs_max": 0.00973792958753425
+    }
+  },
+  {
+    "run": "normal-seed42-20261030-025819\\5_off",
+    "seed": 42,
+    "spread_deg": 1.5,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 172,
+    "damaging": 63,
+    "damaging_per_second": 3.15,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 519,
+      "not_tracking": 519,
+      "insufficient_updates": 7,
+      "acquiring": 1,
+      "arrival_probability": 9
+    },
+    "mature_shots": 170,
+    "mature_damaging": 63,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 170,
+      "mean": -0.008693558607242132,
+      "std": 0.0665609075583614,
+      "abs_p95": 0.10937880628505652,
+      "abs_max": 0.12145907602277473
+    },
+    "landing_vertical_m": {
+      "count": 170,
+      "mean": -0.01147407362882462,
+      "std": 0.06938253311966873,
+      "abs_p95": 0.11709166998181933,
+      "abs_max": 0.13654727136313008
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 851,
+      "mean": 0.08534600676977876,
+      "std": 0.09571438205218273,
+      "abs_p95": 0.23093371540594482,
+      "abs_max": 0.6511114686357642
+    },
+    "observation_lateral_m": {
+      "count": 851,
+      "mean": 1.144282259368691e-05,
+      "std": 0.0008810024734215085,
+      "abs_p95": 0.0015262981280532977,
+      "abs_max": 0.005546694770017413
+    },
+    "observation_vertical_m": {
+      "count": 851,
+      "mean": -0.005160630349508977,
+      "std": 0.005215077243865619,
+      "abs_p95": 0.012587907782133645,
+      "abs_max": 0.038191405452498106
+    },
+    "aim_depth_m": {
+      "count": 851,
+      "mean": 0.0822741282402864,
+      "std": 0.05014072516353943,
+      "abs_p95": 0.13676393140892815,
+      "abs_max": 0.2819854179583454
+    },
+    "aim_lateral_m": {
+      "count": 851,
+      "mean": -2.1439826751237372e-05,
+      "std": 0.0013370149164452945,
+      "abs_p95": 0.0026383237553051038,
+      "abs_max": 0.00695565688262623
+    },
+    "aim_vertical_m": {
+      "count": 851,
+      "mean": -0.00494750508915829,
+      "std": 0.002776595707349861,
+      "abs_p95": 0.008338751591268928,
+      "abs_max": 0.013343957095202669
+    }
+  },
+  {
+    "run": "normal-seed43-20261030-025907\\5_off",
+    "seed": 43,
+    "spread_deg": 1.5,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 176,
+    "damaging": 63,
+    "damaging_per_second": 3.15,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 508,
+      "not_tracking": 512,
+      "insufficient_updates": 7,
+      "acquiring": 1,
+      "arrival_probability": 14
+    },
+    "mature_shots": 174,
+    "mature_damaging": 63,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 174,
+      "mean": 0.004638073348124784,
+      "std": 0.06454173501062865,
+      "abs_p95": 0.11558674481041883,
+      "abs_max": 0.1229332390900271
+    },
+    "landing_vertical_m": {
+      "count": 174,
+      "mean": -0.005566777925041377,
+      "std": 0.07385113155791449,
+      "abs_p95": 0.11842597457532854,
+      "abs_max": 0.13463253508177703
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 880,
+      "mean": 0.09095627899523348,
+      "std": 0.06605142229749471,
+      "abs_p95": 0.1651868898954746,
+      "abs_max": 0.5084229622897277
+    },
+    "observation_lateral_m": {
+      "count": 880,
+      "mean": 0.00011577633126421698,
+      "std": 0.0006059108593504216,
+      "abs_p95": 0.001109825886939037,
+      "abs_max": 0.004160696914549298
+    },
+    "observation_vertical_m": {
+      "count": 880,
+      "mean": -0.005468010958293832,
+      "std": 0.003499852581858322,
+      "abs_p95": 0.009641864634527958,
+      "abs_max": 0.02756761741301375
+    },
+    "aim_depth_m": {
+      "count": 880,
+      "mean": 0.09037141961350376,
+      "std": 0.03628669650833282,
+      "abs_p95": 0.14967779497655526,
+      "abs_max": 0.24719784354984473
+    },
+    "aim_lateral_m": {
+      "count": 880,
+      "mean": 0.00013652770974474535,
+      "std": 0.000871300832565068,
+      "abs_p95": 0.0016895745656881418,
+      "abs_max": 0.00528940847039287
+    },
+    "aim_vertical_m": {
+      "count": 880,
+      "mean": -0.005409851224348765,
+      "std": 0.0021841235983116143,
+      "abs_p95": 0.008910681968140434,
+      "abs_max": 0.014145556705428303
+    }
+  },
+  {
+    "run": "normal-seed44-20261030-025954\\5_off",
+    "seed": 44,
+    "spread_deg": 1.5,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 170,
+    "damaging": 64,
+    "damaging_per_second": 3.2,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 521,
+      "not_tracking": 526,
+      "lost": 1,
+      "insufficient_updates": 22,
+      "acquiring": 2,
+      "arrival_probability": 21
+    },
+    "mature_shots": 168,
+    "mature_damaging": 64,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 168,
+      "mean": -0.001460141854098989,
+      "std": 0.06709144497802325,
+      "abs_p95": 0.11118602533897064,
+      "abs_max": 0.12065719165781008
+    },
+    "landing_vertical_m": {
+      "count": 168,
+      "mean": -0.010050177380881178,
+      "std": 0.07161378488451078,
+      "abs_p95": 0.1233992388306925,
+      "abs_max": 0.14220656149810643
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 884,
+      "mean": 0.0909399125842054,
+      "std": 0.07924588492353545,
+      "abs_p95": 0.21047042099284172,
+      "abs_max": 0.5113214260686928
+    },
+    "observation_lateral_m": {
+      "count": 884,
+      "mean": 6.163525466946395e-07,
+      "std": 0.0008347531356989156,
+      "abs_p95": 0.001579075125787744,
+      "abs_max": 0.00661495259130408
+    },
+    "observation_vertical_m": {
+      "count": 884,
+      "mean": -0.005522064287542118,
+      "std": 0.0042894239132394195,
+      "abs_p95": 0.01207369125444659,
+      "abs_max": 0.031027764316545886
+    },
+    "aim_depth_m": {
+      "count": 884,
+      "mean": 0.09198961720256307,
+      "std": 0.044477853170404216,
+      "abs_p95": 0.15914101611365028,
+      "abs_max": 0.2774812465239379
+    },
+    "aim_lateral_m": {
+      "count": 884,
+      "mean": 5.6623576535970945e-06,
+      "std": 0.00127887901751213,
+      "abs_p95": 0.002459514793765979,
+      "abs_max": 0.008578438771404776
+    },
+    "aim_vertical_m": {
+      "count": 884,
+      "mean": -0.005580330433283619,
+      "std": 0.00253844299248845,
+      "abs_p95": 0.00946325172606828,
+      "abs_max": 0.016130503819522773
+    }
+  },
+  {
+    "run": "responsive-combined-seed42-20261030-032000\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 93,
+    "damaging": 30,
+    "damaging_per_second": 1.5,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 480,
+      "arrival_probability": 920,
+      "insufficient_updates": 7,
+      "acquiring": 6,
+      "flight_consistency": 16,
+      "not_tracking": 484,
+      "alignment_or_facing": 816
+    },
+    "mature_shots": 92,
+    "mature_damaging": 30,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "responsive-motion-seed43-20261030-032145\\5_constant",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "constant",
+    "shots": 103,
+    "damaging": 37,
+    "damaging_per_second": 1.85,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 866,
+      "not_tracking": 504,
+      "flight_consistency": 2,
+      "unmatched": 501,
+      "alignment_or_facing": 751,
+      "insufficient_updates": 7,
+      "acquiring": 8
+    },
+    "mature_shots": 101,
+    "mature_damaging": 36,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "responsive-motion-seed43-20261030-032145\\5_off",
+    "seed": 43,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 139,
+    "damaging": 55,
+    "damaging_per_second": 2.75,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 527,
+      "not_tracking": 396,
+      "unmatched": 394,
+      "alignment_or_facing": 508,
+      "insufficient_updates": 7,
+      "acquiring": 1
+    },
+    "mature_shots": 136,
+    "mature_damaging": 53,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "responsive-stationary-seed42-20261030-031912\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "constant",
+    "shots": 83,
+    "damaging": 82,
+    "damaging_per_second": 4.1,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 686,
+      "arrival_probability": 987,
+      "insufficient_updates": 55,
+      "acquiring": 4,
+      "not_tracking": 700,
+      "alignment_or_facing": 875,
+      "lost": 3
+    },
+    "mature_shots": 81,
+    "mature_damaging": 81,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "responsive-stationary-seed42-20261030-031912\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "off",
+    "shots": 156,
+    "damaging": 154,
+    "damaging_per_second": 7.7,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 868,
+      "insufficient_updates": 28,
+      "arrival_probability": 376,
+      "not_tracking": 882,
+      "acquiring": 14,
+      "lost": 3
+    },
+    "mature_shots": 154,
+    "mature_damaging": 154,
+    "censored": 2,
+    "landing_lateral_m": {
+      "count": 154,
+      "mean": 0.00021568607699421247,
+      "std": 0.002244563028551121,
+      "abs_p95": 0.0044346941315593635,
+      "abs_max": 0.0060914169661474594
+    },
+    "landing_vertical_m": {
+      "count": 154,
+      "mean": -0.00742759140611535,
+      "std": 0.007591816746445667,
+      "abs_p95": 0.019512269505322095,
+      "abs_max": 0.03439684340983241
+    },
+    "requires_review": [],
+    "observation_depth_m": {
+      "count": 464,
+      "mean": 0.12244825385222773,
+      "std": 0.04888486928204758,
+      "abs_p95": 0.23326761399178061,
+      "abs_max": 0.25846044751821995
+    },
+    "observation_lateral_m": {
+      "count": 464,
+      "mean": -0.0002165604302357549,
+      "std": 0.0006212172141685308,
+      "abs_p95": 0.0012217641030174964,
+      "abs_max": 0.0017756386673592008
+    },
+    "observation_vertical_m": {
+      "count": 464,
+      "mean": -0.007080319209963128,
+      "std": 0.0025793407947362246,
+      "abs_p95": 0.01265149526029307,
+      "abs_max": 0.014196636652781452
+    },
+    "aim_depth_m": {
+      "count": 464,
+      "mean": 0.12199845625315156,
+      "std": 0.036282659641813236,
+      "abs_p95": 0.18115193866609314,
+      "abs_max": 0.21507055325257754
+    },
+    "aim_lateral_m": {
+      "count": 464,
+      "mean": -0.00020669381671008846,
+      "std": 0.0022839667802454287,
+      "abs_p95": 0.0045756326806335864,
+      "abs_max": 0.00693992681585361
+    },
+    "aim_vertical_m": {
+      "count": 464,
+      "mean": -0.007081987598280791,
+      "std": 0.002489631355771801,
+      "abs_p95": 0.011018827111989767,
+      "abs_max": 0.014425516192564297
+    }
+  },
+  {
+    "run": "responsive-translate-seed42-20261030-031704\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 141,
+    "damaging": 57,
+    "damaging_per_second": 2.85,
+    "q_xyz": 0.5,
+    "r_xyz_factor": 0.05,
+    "invalid_permits": 0,
+    "blockers": {
+      "unmatched": 418,
+      "not_tracking": 420,
+      "insufficient_updates": 7,
+      "arrival_probability": 566,
+      "alignment_or_facing": 526,
+      "acquiring": 1
+    },
+    "mature_shots": 139,
+    "mature_damaging": 56,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "spin-noangle-seed42-20261030-030454\\5_constant",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "stationary",
+    "rotation": "constant",
+    "shots": 83,
+    "damaging": 82,
+    "damaging_per_second": 4.1,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 749,
+      "insufficient_updates": 32,
+      "lost": 3,
+      "unmatched": 670,
+      "not_tracking": 682,
+      "acquiring": 9,
+      "alignment_or_facing": 826
+    },
+    "mature_shots": 81,
+    "mature_damaging": 81,
+    "maturity_method": "launch before end minus 0.35 s"
+  },
+  {
+    "run": "translate-noangle-seed42-20261030-030430\\5_off",
+    "seed": 42,
+    "spread_deg": 0.0,
+    "translation": "constant",
+    "rotation": "off",
+    "shots": 116,
+    "damaging": 37,
+    "damaging_per_second": 1.85,
+    "q_xyz": 0.1,
+    "r_xyz_factor": 0.5,
+    "invalid_permits": 0,
+    "blockers": {
+      "arrival_probability": 528,
+      "insufficient_updates": 63,
+      "lost": 8,
+      "unmatched": 357,
+      "not_tracking": 381,
+      "acquiring": 9,
+      "alignment_or_facing": 623
+    },
+    "mature_shots": 114,
+    "mature_damaging": 37,
+    "maturity_method": "launch before end minus 0.35 s"
+  }
+]
