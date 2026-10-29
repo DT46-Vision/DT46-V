@@ -9,6 +9,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "body_ekf.hpp"
+#include "ballistics.hpp"
 #include "rm_tf_tools.hpp"
 
 namespace dt46_vision {
@@ -101,7 +102,7 @@ public:
     // 弹道求解
     std::tuple<double, double, bool> solve_ballistic(RmTF& tf, const Armor& muzzle_target,
                                                     const Eigen::Vector3d& cam_to_gun_rpy,
-                                                    const Eigen::Vector3d& imu_rpy);
+                                                    const Eigen::Vector3d& imu_rpy, double* flight_time = nullptr);
 
     // 判断是否允许开火
     std::tuple<double, double, bool> can_fire(const Armor& target, std::tuple<double, double, bool> gimbal_control);
@@ -153,7 +154,7 @@ public:
     Eigen::Vector3d plate_velocity() const;
     bool spinning() const { return spin_; }
 
-    void build_ballistic_lut();
+    bool aim_valid() const { return aim_valid_; }
 
 private:
     BodyEkf body_ekf_;
@@ -172,23 +173,10 @@ private:
     bool spin_ = false;
     double aim_hit_probability_ = 0;
 
-    // 弹道查找表
-    static constexpr int LUT_DIST_BINS = 25;
-    static constexpr int LUT_HEIGHT_BINS = 15;
-    static constexpr double LUT_DIST_MIN = 0.1;
-    static constexpr double LUT_DIST_MAX = 12.0;
-    static constexpr double LUT_DIST_STEP = 0.5;
-    static constexpr double LUT_HEIGHT_MIN = -3.5;
-    static constexpr double LUT_HEIGHT_MAX = 3.5;
-    static constexpr double LUT_HEIGHT_STEP = 0.5;
-    double ballistic_lut_[LUT_DIST_BINS][LUT_HEIGHT_BINS];
-    double tof_lut_[LUT_DIST_BINS][LUT_HEIGHT_BINS]; // 对应 (距离, 高度) 的子弹飞行时间 (s)
-
-    inline double lut_lookup(double dist_h, double z) const;
-    inline double lut_lookup_tof(double dist_h, double z) const;
+    bool aim_valid_ = false;
 
     // =============== 内部逻辑函数 ===============
-    void try_init_tracker(std::vector<Armor>& armors);
+    void try_init_tracker(const std::vector<Armor>& armors);
     void lock_target(const Armor& armor);
     void init_ekf(const Armor& armor);
     // FaterYU：装甲左右端点相对视线的角窗。delta_yaw 落在 (min,max) 内才允许打。

@@ -11,20 +11,14 @@ Tracker::Tracker() {
     tracked_id = -1;
     target_state_.setZero();
 
-    build_ballistic_lut();
 }
 
-void Tracker::try_init_tracker(std::vector<Armor>& armors) {
+void Tracker::try_init_tracker(const std::vector<Armor>& armors) {
     if (armors.empty()) return;
 
-    // Inputs are already in stabilized axes; Z is height, not camera depth.
-    std::sort(armors.begin(), armors.end(), [](const Armor& a, const Armor& b) {
+    lock_target(*std::min_element(armors.begin(), armors.end(), [](const Armor& a, const Armor& b) {
         return a.dist < b.dist;
-    });
-
-    Armor chosen_armor = armors[0];
-
-    lock_target(chosen_armor);
+    }));
 }
 
 void Tracker::init_ekf(const Armor& armor) {
@@ -181,102 +175,21 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
 }
 
 // =====================================================================
-// 5.5 弹道查找表预计算与查询
+// 5.5 直接弹道解算与枪口角度转换
 // =====================================================================
-void Tracker::build_ballistic_lut() {
-    const double g = 9.81;
-    const double v_init = bullet_speed > 0 ? bullet_speed : 28.0;
-    const double sim_dt = 0.001; // 积分步长；比 5ms 细，保证飞行时间有 ms 级精度
-
-    for (int i = 0; i < LUT_DIST_BINS; ++i) {
-        for (int j = 0; j < LUT_HEIGHT_BINS; ++j) {
-            double dist_h = LUT_DIST_MIN + i * LUT_DIST_STEP;
-            double z_target = LUT_HEIGHT_MIN + j * LUT_HEIGHT_STEP;
-
-            double pitch = std::atan2(z_target, dist_h);
-            double tof = 0.0;
-
-            for (int iter = 0; iter < 5; ++iter) {
-                double sim_x = 0.0, sim_z = 0.0;
-                double v_x = v_init * std::cos(pitch);
-                double v_z = v_init * std::sin(pitch);
-                double t = 0.0;
-
-                while (sim_x < dist_h && t < 2.0) {
-                    double v = std::hypot(v_x, v_z);
-                    double a_x = -k_v2 * v * v_x;
-                    double a_z = -g - k_v2 * v * v_z;
-
-                    sim_x += v_x * sim_dt;
-                    sim_z += v_z * sim_dt;
-                    v_x += a_x * sim_dt;
-                    v_z += a_z * sim_dt;
-                    t += sim_dt;
-                }
-                tof = t;
-
-                double z_error = z_target - sim_z;
-                if (std::abs(z_error) < 0.005) break;
-                pitch += z_error / std::max(dist_h, 0.1);
-            }
-
-            ballistic_lut_[i][j] = pitch;
-            tof_lut_[i][j] = tof;
-        }
-    }
-}
-
-double Tracker::lut_lookup(double dist_h, double z) const {
-    double di = std::clamp((dist_h - LUT_DIST_MIN) / LUT_DIST_STEP,0.0,double(LUT_DIST_BINS-1));
-    double dj = std::clamp((z - LUT_HEIGHT_MIN) / LUT_HEIGHT_STEP,0.0,double(LUT_HEIGHT_BINS-1));
-
-    int i0 = std::clamp(static_cast<int>(di), 0, LUT_DIST_BINS - 1);
-    int j0 = std::clamp(static_cast<int>(dj), 0, LUT_HEIGHT_BINS - 1);
-    int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
-    int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
-
-    double fi = di - i0;
-    double fj = dj - j0;
-
-    return (1.0 - fi) * (1.0 - fj) * ballistic_lut_[i0][j0]
-         + fi * (1.0 - fj) * ballistic_lut_[i1][j0]
-         + (1.0 - fi) * fj * ballistic_lut_[i0][j1]
-         + fi * fj * ballistic_lut_[i1][j1];
-}
-
-double Tracker::lut_lookup_tof(double dist_h, double z) const {
-    double di = std::clamp((dist_h - LUT_DIST_MIN) / LUT_DIST_STEP,0.0,double(LUT_DIST_BINS-1));
-    double dj = std::clamp((z - LUT_HEIGHT_MIN) / LUT_HEIGHT_STEP,0.0,double(LUT_HEIGHT_BINS-1));
-
-    int i0 = std::clamp(static_cast<int>(di), 0, LUT_DIST_BINS - 1);
-    int j0 = std::clamp(static_cast<int>(dj), 0, LUT_HEIGHT_BINS - 1);
-    int i1 = std::min(i0 + 1, LUT_DIST_BINS - 1);
-    int j1 = std::min(j0 + 1, LUT_HEIGHT_BINS - 1);
-
-    double fi = di - i0;
-    double fj = dj - j0;
-
-    return (1.0 - fi) * (1.0 - fj) * tof_lut_[i0][j0]
-         + fi * (1.0 - fj) * tof_lut_[i1][j0]
-         + (1.0 - fi) * fj * tof_lut_[i0][j1]
-         + fi * fj * tof_lut_[i1][j1];
-}
-
-// -------------------------------------------------------------
-// 6. 弹道打靶法 (重力与空气阻力积分)
-// -------------------------------------------------------------
 std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor& muzzle_target,
                                                         const Eigen::Vector3d& cam_to_gun_rpy,
-                                                        const Eigen::Vector3d& imu_rpy) {
+                                                        const Eigen::Vector3d& imu_rpy, double* flight_time) {
+    if (flight_time) *flight_time = 0;
     if (bullet_speed < 1e-3) return {0.0, 0.0, false};
 
     double x = muzzle_target.pos(0), y = muzzle_target.pos(1), z = muzzle_target.pos(2);
     double dist_h = std::hypot(x, y);
 
-    if (dist_h < 0.2 || std::isnan(dist_h)) return {0.0, 0.0, false};
-
-    if(!std::isfinite(z)||!std::isfinite(dist_h)||dist_h>LUT_DIST_MAX||z<LUT_HEIGHT_MIN||z>LUT_HEIGHT_MAX)return {0,0,false};
-    double pitch_rad = lut_lookup(dist_h, z);
+    const auto solution = solve_projectile(dist_h, z, bullet_speed, k_v2);
+    if (!solution.valid) return {0, 0, false};
+    if (flight_time) *flight_time = solution.flight_time;
+    const double pitch_rad = solution.pitch;
 
     double z_aim = dist_h * std::tan(pitch_rad);
     Eigen::Vector3d aim_point_world(x, y, z_aim);
@@ -286,10 +199,11 @@ std::tuple<double, double, bool> Tracker::solve_ballistic(RmTF& tf, const Armor&
     double delta_yaw = std::atan2(aim_point_cam(0), aim_point_cam(2));
     double delta_pitch = std::atan2(aim_point_cam(1), aim_point_cam(2));
 
+    const bool reachable = aim_point_cam.z() > 0 && std::abs(delta_yaw) <= 1 && std::abs(delta_pitch) <= 1;
     delta_yaw = std::clamp(delta_yaw, -1.0, 1.0) + cam_to_gun_rpy(2) * DEG2RAD;
     delta_pitch = std::clamp(delta_pitch, -1.0, 1.0) + cam_to_gun_rpy(1) * DEG2RAD;
 
-    return {delta_yaw, delta_pitch, true};
+    return {delta_yaw, delta_pitch, reachable};
 }
 
 // =====================================================================
@@ -303,7 +217,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
 
     std::vector<std::pair<std::string, std::string>> logs;
     std::vector<double> gimbal_control = {0.0, 0.0, 0.0}; // 映射：[yaw_deg, pitch_deg, can_fire_flag]
-    target_cam_cache_.reset();target_muzzle_cache_.reset();gimbal_control_cache_={0,0,false};
+    target_cam_cache_.reset();target_muzzle_cache_.reset();gimbal_control_cache_={0,0,false};aim_valid_=false;
     fire_blockers_.clear();aim_lateral_sigma_=aim_vertical_sigma_=aim_hit_probability_=0;
     body_matched_=false;
     fire_yaw_tolerance_deg_=fire_pitch_tolerance_deg_=0;
@@ -314,9 +228,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     if (tracker_state == TrackerState::LOST) {
         fire_blockers_.push_back("acquiring");
         if (!raw_armors.empty()) {
-            // 拷贝一份用于排序，避免破坏传入的 const raw_armors
-            std::vector<Armor> temp_armors = raw_armors;
-            try_init_tracker(temp_armors);
+            try_init_tracker(raw_armors);
             logs.emplace_back("state", "LOST -> DETECTING (ID: " + std::to_string(tracked_id) + ")");
         }
         return {gimbal_control, logs};
@@ -341,7 +253,8 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     const double center_range=std::hypot(body[0],body[2]);
     // The selected board is on the near half of the body. A near-surface seed
     // avoids adding an entire chassis radius to the initial flight distance.
-    const double flight=lut_lookup_tof(std::max(.2,center_range-std::min(body[8],body[9])),body[4]);
+    const double flight=solve_projectile(std::max(.2,center_range-std::min(body[8],body[9])),
+        body[4],bullet_speed,k_v2).flight_time;
     const double ahead=flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_);
     int chosen=body_plate_index_;double best_score=std::numeric_limits<double>::infinity();
     for(int i=0;i<4;++i){
@@ -360,13 +273,14 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
         return {gimbal_control, logs};
     }
 
-    auto [yaw_cmd_rad, pitch_cmd_rad, isValid] = solve_ballistic(tf, target_muzzle.value(), cam_to_gun_rpy, imu_rpy);
+    double actual_flight = 0;
+    auto [yaw_cmd_rad, pitch_cmd_rad, isValid] = solve_ballistic(tf, *target_muzzle, cam_to_gun_rpy, imu_rpy, &actual_flight);
+    aim_valid_ = isValid;
 
     // 5. 动态发弹许可
     // 注意：solve_ballistic 返回的是弧度，但 can_fire 期望的是角度
     auto final_gimbal = can_fire(*target_muzzle, {yaw_cmd_rad * RAD2DEG, pitch_cmd_rad * RAD2DEG, isValid});
 
-    const double actual_flight=lut_lookup_tof(std::hypot(target_muzzle->pos[0],target_muzzle->pos[1]),target_muzzle->pos[2]);
     const auto arrival=body_ekf_.plate(chosen,actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_));
     const bool prediction_consistent=(arrival.head<3>()-target_cam.pos).norm()<.025;
     const auto forecast=body_ekf_.forecast(actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_));

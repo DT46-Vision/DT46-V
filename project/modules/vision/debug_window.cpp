@@ -59,6 +59,7 @@ struct VisionDebug::Impl {
     Json theme_config;int theme_choice=1;
     VirtualFrame last_frame;Json last_result=nullptr,last_parameters;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
     std::array<int,4> choices{3,1,2,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
+    std::array<cv::Size,4> texture_sizes{};
     struct ViewOptions {int smooth=0,zoom=0,grid=0,rotation=0;};std::array<ViewOptions,4> view_options;
     std::map<std::string,std::map<std::string,std::array<char,256>>> fields;Json field_types;
     std::string status="Starting",message;std::deque<std::string> logs;int tab=0;std::filesystem::path pending_screenshot;
@@ -151,7 +152,11 @@ struct VisionDebug::Impl {
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,filter);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,filter);
                 if(dirty||texture_views[index]!=choices[index]||previous.rotation!=options.rotation) {
                     glBindTexture(GL_TEXTURE_2D,textures[index]);glPixelStorei(GL_UNPACK_ALIGNMENT,1);glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
-                    glTexImage2D(GL_TEXTURE_2D,0,GL_RGB8,image.cols,image.rows,0,GL_RGB,GL_UNSIGNED_BYTE,image.data);texture_views[index]=choices[index];
+                    if(texture_sizes[index]!=image.size()) {
+                        glTexImage2D(GL_TEXTURE_2D,0,GL_RGB8,image.cols,image.rows,0,GL_RGB,GL_UNSIGNED_BYTE,nullptr);
+                        texture_sizes[index]=image.size();
+                    }
+                    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,image.cols,image.rows,GL_RGB,GL_UNSIGNED_BYTE,image.data);texture_views[index]=choices[index];
                 }
                 const float available_w=std::max(1.f,width-scaled(28)),available_h=std::max(1.f,height-scaled(87)),scale=options.zoom?1.f:std::min(available_w/image.cols,available_h/image.rows);
                 nk_layout_row_dynamic(ui,available_h,1);const std::string group=title+" image";

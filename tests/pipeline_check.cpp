@@ -84,6 +84,16 @@ int main(int argc, char** argv) {
             if(!rejected||pipeline.context()!=configured||pipeline.revision()!=configured_revision)throw std::runtime_error("Invalid model/display/color replaced context");
         }
         camera_raw_frame_check();
+        pipeline.configure({{"detector",{{"display_mode",true}}}});
+        cv::Mat colors(64,64,CV_8UC3,cv::Scalar(3,7,13));
+        const auto expected=colors.clone();cv::Mat gray;
+        cv::cvtColor(expected,gray,cv::COLOR_RGB2GRAY);
+        pipeline.process(colors,0,k,{},cv::Matx33d::eye(),{},1);
+        colors.setTo(cv::Scalar());
+        if(cv::norm(pipeline.debug_image("img_debug"),expected,cv::NORM_INF)!=0 ||
+           pipeline.debug_image("result").at<cv::Vec3b>(0,0)!=expected.at<cv::Vec3b>(0,0) ||
+           cv::norm(pipeline.debug_image("gray"),gray,cv::NORM_INF)!=0)
+            throw std::runtime_error("RGB debug colors or input buffer ownership changed");
         std::cout << "Native configuration, colors, raw camera geometry, retired flip rejection, monotonic timestamps and reset passed\n";
         return 0;
     } catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }

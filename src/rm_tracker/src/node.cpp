@@ -72,9 +72,6 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.spin_enter_time_ = this->declare_parameter("spin_enter_time", 0.3);
     tracker_.spin_exit_time_ = this->declare_parameter("spin_exit_time", 0.15);
 
-    // 2.11 重新构建弹道查找表 (基于加载的弹速和k_v2)
-    tracker_.build_ballistic_lut();
-
     // 3. 初始化日志节流器和计时器
 
     logger_throttler_ = std::make_unique<LogThrottler>(this->get_logger(), 1000);
@@ -375,12 +372,11 @@ void RmTrackerNode::cb_opponent_color(const rm_interfaces::msg::Decision::Shared
             RCLCPP_INFO(this->get_logger(), "收到中央裁判系统下发决策，追踪颜色已重置切换为: %d", target_color_);
         }
     }
-    // 弹速实时更新逻辑：若场上发生热枪管衰减或突发切射速，直接底层打靶数值积分器无缝同步
+    // 直接解算使用当前弹速，不需要重建弹道表。
     if (msg->bullet_speed > 10.0) {
         if (std::abs(msg->bullet_speed - tracker_.bullet_speed) > 0.1) {
             std::lock_guard<std::mutex> lock(tracker_lock_);
             tracker_.bullet_speed = msg->bullet_speed;
-            tracker_.build_ballistic_lut();
         }
     }
 }
@@ -403,7 +399,6 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
             tracker_.tracked_id = -1;
         } else if (name == "bullet_speed") {
             tracker_.bullet_speed = param.as_double();
-            tracker_.build_ballistic_lut(); // 确保弹速更新和重建 LUT 在一起
         } else if (name == "display") {
             display_ = param.as_bool();
         }

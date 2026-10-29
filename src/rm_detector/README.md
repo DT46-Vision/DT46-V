@@ -37,7 +37,7 @@
 
 ## 处理流程
 
-1. `process()`：灰度 → 固定阈值二值化（`binary_val`）；`roi_crop: true` 时先按 `roi_scale` 取图像中心区域，后续只在 ROI 上处理。
+1. `process()`：默认接受 BGR；原生入口显式指定 RGB，灰度化和红蓝采样直接按输入通道读取，省去整帧 RGB→BGR。灰度 → 固定阈值二值化（`binary_val`）；`roi_crop: true` 时先按 `roi_scale` 取图像中心区域，后续只在 ROI 上处理。
 2. `find_lights()`：轮廓面积 ≥ `light_area_min`、minAreaRect 的 高/宽 ≥ `light_h_w_ratio`、角度在 `[light_angle_min, light_angle_max]` 内；再沿灯条中心线采样最多 10 个像素做红蓝判决。默认配置要求红蓝强度比超过 1.3，排除接近无色的白字。端点沿中心线在 ±2 px 内固定采样局部灰度剖面，线性插值半对比度边界，避免直接把轮廓像素中心当作物理端点；对比度不足或贴边时保留原端点。
 3. `is_armor()`：按中心 x 排序，依次检查右侧同色候选的灯条夹角、中心连线角、高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内，再进行分类；几何或分类失败就继续检查后续右灯。接受首个完整通过的配对后，占用两根灯条和实际二维板面；候选板面有面积重叠时拒绝，横向区间重叠但上下分离的板可以同时输出。灯条夹角仍按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。

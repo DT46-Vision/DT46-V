@@ -47,7 +47,12 @@ int main(int argc,char** argv){try{
     auto no_frame=tracker.track(tf,{},Eigen::Vector3d::Zero(),0);require(std::get<0>(no_frame)[2]==0&&!tracker.target_cam_cache_,"zero dt reused aim");
     auto gap=tracker.track(tf,{},Eigen::Vector3d::Zero(),.8);require(std::get<0>(gap)[2]==0&&tracker.tracker_state==TrackerState::LOST,"gap did not invalidate tracking");
     const auto [yaw,pitch,valid]=tracker.solve_ballistic(tf,Armor(8,20,0,0,0),Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
-    require(!valid,"outside LUT accepted geometric fallback");
+    require(!valid,"outside ballistic domain accepted geometric fallback");
+    RmTF forward_tf;Eigen::Matrix3d forward_rotation;
+    forward_rotation<<0,0,1,-1,0,0,0,-1,0;forward_tf.set_optical_rotation(forward_rotation);
+    for(const auto& target:{Armor(8,-3,0,0,0),Armor(8,.3,3,0,0)})
+        require(!std::get<2>(tracker.solve_ballistic(forward_tf,target,Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero())),
+                "Clamped or rearward command marked ballistically valid");
     const auto stale=tracker.get_render_snapshot();require(stale.observed_plate<0&&stale.body_matched_mask==0,"invalid frame retained a measurement match");
     Tracker gate;gate.shootable_dist=10;
     require(std::get<2>(gate.can_fire(Armor(8,3,0,0,.6),{0,0,true})),

@@ -145,12 +145,13 @@ namespace DT46_VISION{
         display_mode = new_display_mode;
     }
 
-    cv::Mat ArmorDetector::process(const cv::Mat& img_input) {
+    cv::Mat ArmorDetector::process(const cv::Mat& img_input, bool rgb) {
         if (img_input.empty()) {
             std::cerr << "Input image is empty!" << std::endl;
             return cv::Mat();
         }
         img = img_input;
+        input_is_rgb = rgb;
         cv::Mat working_img = img;
         crop_img = cv::Mat(1, 1, CV_8UC1, cv::Scalar(0));
 
@@ -173,12 +174,12 @@ namespace DT46_VISION{
             }
         }
 
-        cv::cvtColor(working_img, gray_img_, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(working_img, gray_img_, input_is_rgb ? cv::COLOR_RGB2GRAY : cv::COLOR_BGR2GRAY);
         cv::threshold(gray_img_, img_binary, binary_val, 255, cv::THRESH_BINARY);
         return img_binary;
     }
 
-    std::vector<Light> ArmorDetector::find_lights(const cv::Mat& img_binary_input) {
+    const std::vector<Light>& ArmorDetector::find_lights(const cv::Mat& img_binary_input) {
         std::vector<std::vector<cv::Point>> contours;
         lights.clear();
         const cv::Mat& raw = params.roi_crop ? crop_img : img;
@@ -215,8 +216,8 @@ namespace DT46_VISION{
                 int cy = static_cast<int>(up_y + (down_y - up_y) * t);
                 if (cx >= 0 && cx < raw.cols && cy >= 0 && cy < raw.rows) {
                     cv::Vec3b p = raw.at<cv::Vec3b>(cy, cx);
-                    sum_b += p[0];
-                    sum_r += p[2];
+                    sum_b += p[input_is_rgb ? 2 : 0];
+                    sum_r += p[input_is_rgb ? 0 : 2];
                 }
             }
 
@@ -276,7 +277,7 @@ namespace DT46_VISION{
         if (!roi.empty() && classifier_) {
             cv::Mat gray, binary;
 
-            cv::cvtColor(roi, gray, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(roi, gray, input_is_rgb ? cv::COLOR_RGB2GRAY : cv::COLOR_BGR2GRAY);
 
             // --- Otsu 阈值二值化 ---
             cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
@@ -498,7 +499,9 @@ namespace DT46_VISION{
 
 
     cv::Mat ArmorDetector::draw_img() {
-        cv::Mat img_draw = img.clone();  // 回退
+        cv::Mat img_draw;
+        if (input_is_rgb) cv::cvtColor(img, img_draw, cv::COLOR_RGB2BGR);
+        else img_draw = img.clone();
         // 原有绘制
         img_draw = draw_rect(img_draw);
         img_draw = draw_lights(img_draw);
@@ -516,12 +519,12 @@ namespace DT46_VISION{
         return std::make_tuple(empty_mat, empty_mat, empty_mat, empty_mat, empty_mat);
     }
 
-    std::vector<Armor> ArmorDetector::detect_armors(const cv::Mat& img_input) {
+    std::vector<Armor> ArmorDetector::detect_armors(const cv::Mat& img_input, bool rgb) {
         if (img_input.empty()){
             lights.clear();
             return is_armor(lights);
         }
-        process(img_input);
+        process(img_input, rgb);
         find_lights(img_binary);
         return is_armor(lights);
     }

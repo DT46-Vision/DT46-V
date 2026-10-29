@@ -119,8 +119,8 @@ namespace DT46_VISION {
         void update_roi_crop(bool new_roi_crop_val);
         void update_roi_scale(double new_roi_scale_val);
 
-        cv::Mat process(const cv::Mat& img_input);
-        std::vector<Light> find_lights(const cv::Mat& img_binary_input);
+        cv::Mat process(const cv::Mat& img_input, bool rgb = false);
+        const std::vector<Light>& find_lights(const cv::Mat& img_binary_input);
         std::pair<cv::Point2f, cv::Point2f> stretch_point(const cv::Point2f& up, const cv::Point2f& down, float ratio = 0.45f) const;
         NumberClassifier::Result get_armor_result(const Light& light1, const Light& light2);
         std::pair<NumberClassifier::Result, float> is_close(const Light& light1, const Light& light2);
@@ -130,7 +130,8 @@ namespace DT46_VISION {
         cv::Mat draw_armors(cv::Mat img_draw);
         cv::Mat draw_img();
         std::tuple<cv::Mat, cv::Mat, cv::Mat, cv::Mat, cv::Mat> display();
-        std::vector<Armor> detect_armors(const cv::Mat& img_input);
+        std::vector<Armor> detect_armors(const cv::Mat& img_input, bool rgb = false);
+        bool input_is_rgb = false;
 
         std::shared_ptr<NumberClassifier> classifier_;
     };

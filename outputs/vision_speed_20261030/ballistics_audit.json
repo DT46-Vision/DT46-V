@@ -1,0 +1,12 @@
+{
+  "cases":15631,
+  "old_max_height_error_m":23.7758,
+  "old_unreachable_cases":1813,
+  "new_max_height_error_m":0.00483785,
+  "new_max_time_error_s":0.0005215,
+  "mujoco_version":"3.13.0",
+  "mujoco_cases":36,
+  "mujoco_vs_rk4_max_height_m":1.22527e-06,
+  "mujoco_vs_rk4_max_time_s":6.83369e-08,
+  "mujoco_forward_mean_us":1006.51
+}

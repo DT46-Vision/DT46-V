@@ -4,11 +4,16 @@
 #include "rm_tracker/tracker.hpp"
 #include "rm_tracker/frame_clock.hpp"
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 
 namespace {
 thread_local std::string last_error;
+using Clock = std::chrono::steady_clock;
+double elapsed_ms(Clock::time_point start) {
+    return std::chrono::duration<double, std::milli>(Clock::now() - start).count();
+}
 
 double parameter(const cv::FileNode& node, const char* key, double fallback) {
     return node[key].empty() ? fallback : static_cast<double>(node[key]);
@@ -44,11 +49,10 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
     PARAM(spin_exit_time_, "spin_exit_time");
 #undef PARAM
     if (parameter(config, "gravity", 9.81) != 9.81)
-        throw std::invalid_argument("Original tracker requires gravity = 9.81 m/s^2");
+        throw std::invalid_argument("Ballistic model requires gravity = 9.81 m/s^2");
     tracker.cam_to_gun_rpy << parameter(config, "cam_to_gun_rpy_r", 0.0),
                               parameter(config, "cam_to_gun_rpy_p", 0.0),
                               parameter(config, "cam_to_gun_rpy_y", 0.0);
-    tracker.build_ballistic_lut();
 }
 
 struct Pipeline {
@@ -66,8 +70,9 @@ struct Pipeline {
     int detect_color = -1;
     double smooth_yaw = 0.0, smooth_pitch = 0.0;
     bool smooth_ready = false;
-    cv::Mat bgr;
+    cv::Mat rgb_frame;
     std::string snapshot = "{}";
+    double stage_ms[5]{};
     std::vector<Eigen::Vector3d> observed_normals_camera;
     std::vector<DT46_VISION::PNP::Pose> observed_poses;
 
@@ -108,7 +113,10 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
     pipeline.detector->img_drawn.release();
     pipeline.detector->img_armor.release();
     pipeline.detector->img_armor_processed.release();
-    const auto detected = pipeline.detector->detect_armors(frame);
+    const auto begin_detection = Clock::now();
+    const auto detected = pipeline.detector->detect_armors(frame, true);
+    pipeline.stage_ms[1] = elapsed_ms(begin_detection);
+    const auto begin_pnp = Clock::now();
     if (detected.size() > 64) throw std::runtime_error("More than 64 armor candidates");
     result.light_count = static_cast<int>(pipeline.detector->lights.size());
     for (const auto& armor : detected) {
@@ -140,6 +148,7 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
             (pipeline.tracker.target_color == 1 && armor.armor_id >= 6)) continue;
         armors.emplace_back(armor.armor_id, world.x(), world.y(), world.z(), world_yaw);
     }
+    pipeline.stage_ms[2] = elapsed_ms(begin_pnp);
 }
 
 void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
@@ -248,7 +257,7 @@ int dt46_debug_image(void* context, int kind, uint8_t* pixels, int capacity,
         if (!pixels || !size) return size;
         if (capacity < size) throw std::invalid_argument("Debug image buffer too small");
         cv::Mat destination(frame.rows, frame.cols, frame.type(), pixels);
-        if (frame.channels()==3) cv::cvtColor(frame, destination, cv::COLOR_BGR2RGB);
+        if (frame.channels()==3 && (kind==0 || !detector.input_is_rgb)) cv::cvtColor(frame, destination, cv::COLOR_BGR2RGB);
         else frame.copyTo(destination);
         return size;
     } catch (const std::exception& error) { last_error=error.what(); return -1; }
@@ -271,6 +280,7 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
                  const double* optical_rotation, const double* muzzle_offset,
                  int target_color, double measured_speed, AimResult* result) {
     try {
+        const auto begin_frame = Clock::now();
         last_error.clear();
         auto& pipeline = *static_cast<Pipeline*>(context);
         if (!(timestamp > pipeline.previous_time)) throw std::invalid_argument("Frame timestamps must increase");
@@ -284,7 +294,6 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         pipeline.detector->update_detect_color(pipeline.detect_color < 0 ? target_color : pipeline.detect_color);
         if (measured_speed > 10.0 && std::abs(measured_speed-pipeline.tracker.bullet_speed) > 0.1) {
             pipeline.tracker.bullet_speed = measured_speed;
-            pipeline.tracker.build_ballistic_lut();
         }
         DT46_VISION::CameraCalibration calibration;
         std::copy(k, k+9, calibration.k.begin());
@@ -301,29 +310,26 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         pipeline.transform.set_optical_rotation(rotation);
         pipeline.tracker.cam_to_gun_pos = Eigen::Vector3d(muzzle_offset[0], muzzle_offset[1], muzzle_offset[2]);
         cv::Mat source(height, width, CV_8UC3, const_cast<uint8_t*>(rgb));
-        cv::cvtColor(source, pipeline.bgr, cv::COLOR_RGB2BGR);
+        // Debug images outlive the caller's input buffer. Keep one owned RGB copy.
+        source.copyTo(pipeline.rgb_frame);
+        pipeline.stage_ms[0] = elapsed_ms(begin_frame);
         std::vector<dt46_vision::Armor> armors;
-        observe(pipeline, *result, pipeline.bgr, rotation, armors);
+        observe(pipeline, *result, pipeline.rgb_frame, rotation, armors);
         const auto step=pipeline.frame_clock.advance(timestamp);
         if(!step.accepted)throw std::invalid_argument("Frame timestamps must increase");
         if(step.reset){pipeline.tracker.tracker_state=dt46_vision::TrackerState::LOST;pipeline.smooth_ready=false;}
         const double dt=step.dt;
         pipeline.frame_interval_s=dt;pipeline.frame_reinitialized=step.reset;
         pipeline.previous_time = timestamp;
-        // These public caches only feed rendering; clear them so an early return cannot export an old aim.
-        pipeline.tracker.target_cam_cache_.reset();
-        pipeline.tracker.target_muzzle_cache_.reset();
-        pipeline.tracker.gimbal_control_cache_ = {0.0, 0.0, false};
+        const auto begin_track = Clock::now();
         const auto tracked = pipeline.tracker.track(pipeline.transform, armors, Eigen::Vector3d::Zero(), dt);
+        pipeline.stage_ms[3] = elapsed_ms(begin_track);
+        const auto begin_snapshot = Clock::now();
         save_snapshot(pipeline, rotation, std::get<1>(tracked));
+        pipeline.stage_ms[4] = elapsed_ms(begin_snapshot);
         const auto& command = std::get<0>(tracked);
         const double raw_yaw = command[0], raw_pitch = command[1];
-        if (const auto& target = pipeline.tracker.target_muzzle_cache_; target) {
-            // Read validity through the original, stateless solver instead of changing Tracker.
-            const auto [yaw, pitch, valid] = pipeline.tracker.solve_ballistic(
-                pipeline.transform, *target, pipeline.tracker.cam_to_gun_rpy, Eigen::Vector3d::Zero());
-            result->aim_valid = valid && std::isfinite(yaw) && std::isfinite(pitch);
-        }
+        result->aim_valid = pipeline.tracker.aim_valid();
         result->yaw_command_deg = raw_yaw;
         result->pitch_command_deg = raw_pitch;
         result->can_fire = command[2] != 0.0;
@@ -339,4 +345,9 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         last_error = error.what();
         return -1;
     }
+}
+
+void dt46_stage_times(void* context, double* milliseconds) {
+    const auto& pipeline = *static_cast<Pipeline*>(context);
+    std::copy(std::begin(pipeline.stage_ms), std::end(pipeline.stage_ms), milliseconds);
 }

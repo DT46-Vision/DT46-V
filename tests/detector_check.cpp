@@ -91,6 +91,13 @@ int main(int argc, char** argv) {
         require(detector.detect_armors(white).empty() && detector.lights.empty(),
                 "Achromatic white contours passed the color gate");
         detector.params = parameters();
+        cv::Mat rgb_input;
+        cv::cvtColor(input, rgb_input, cv::COLOR_BGR2RGB);
+        const auto rgb_detected = detector.detect_armors(rgb_input, true);
+        require(rgb_detected.size() == detected.size() && rgb_detected[0].armor_id == detected[0].armor_id &&
+                cv::norm(rgb_detected[0].light1_up-detected[0].light1_up)<1e-6 &&
+                rgb_detected[0].res.confidence == detected[0].res.confidence,
+                "RGB path changed detection or classification");
         cv::Mat padded(input.rows * 2, input.cols * 2, CV_8UC3, cv::Scalar());
         input.copyTo(padded(cv::Rect(input.cols / 2, input.rows / 2, input.cols, input.rows)));
         detector.params.roi_crop = true;

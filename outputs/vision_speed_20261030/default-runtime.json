@@ -1,0 +1,21 @@
+{
+  "backup": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\backup-vision-speed-20261030-023233",
+  "files": [
+    {
+      "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\dt46_vision.exe",
+      "Hash": "0EFBFE3F04A680F5638B7E0F7EBD0D0449344B405F8A66D609F62CE11A927699"
+    },
+    {
+      "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_vision.exe",
+      "Hash": "0EFBFE3F04A680F5638B7E0F7EBD0D0449344B405F8A66D609F62CE11A927699"
+    },
+    {
+      "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\standalone\\dt46_aim.dll",
+      "Hash": "FBAF705CF7F2267F7A43328FF625C38133ADDA29A78AD81524EA67105852081B"
+    },
+    {
+      "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_aim.dll",
+      "Hash": "FBAF705CF7F2267F7A43328FF625C38133ADDA29A78AD81524EA67105852081B"
+    }
+  ]
+}

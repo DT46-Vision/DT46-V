@@ -1,0 +1,11 @@
+{
+  "samples": 14993,
+  "max_height_error_m": 0.017056881512977906,
+  "p95_height_error_m": 0.002859652579270388,
+  "max_time_error_s": 0.0025651970662151635,
+  "worst": {
+    "range_m": 12.0,
+    "height_m": 3.5,
+    "speed_m_s": 20.0
+  }
+}

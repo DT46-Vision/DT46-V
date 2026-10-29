@@ -53,7 +53,7 @@ int main(int argc,char** argv){try{
         for(int i=0;i<3;++i)for(int j=0;j<3;++j)rotation(i,j)=sensor.at("optical_rotation").at(i).at(j);
         tf.set_optical_rotation(rotation);for(int i=0;i<3;++i)tracker.cam_to_gun_pos[i]=sensor.at("muzzle_offset_camera_m").at(i);
         tracker.target_color=sensor.at("target_color");const double speed=source.value("bullet_speed_m_s",25.);
-        if(std::abs(speed-tracker.bullet_speed)>1e-6){tracker.bullet_speed=speed;tracker.build_ballistic_lut();}
+        if(std::abs(speed-tracker.bullet_speed)>1e-6){tracker.bullet_speed=speed;}
         std::vector<Armor> observations;for(const auto& a:source.at("observations")){
             const int id=a.at("armor_id");if((tracker.target_color==0&&id<6)||(tracker.target_color==1&&id>=6))continue;
             Eigen::Vector3d camera;for(int i=0;i<3;++i)camera[i]=a.at("position_camera_m").at(i);

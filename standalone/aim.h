@@ -34,6 +34,8 @@ struct AimResult {
 DT46_API const char* dt46_error();
 DT46_API int dt46_result_size();
 DT46_API const char* dt46_snapshot(void* context);
+// Last frame: preparation, detector, PnP, tracker (including ballistics), snapshot; milliseconds.
+DT46_API void dt46_stage_times(void* context, double* milliseconds);
 DT46_API int dt46_debug_image(void* context, int kind, uint8_t* pixels, int capacity,
                               int* width, int* height, int* channels);
 DT46_API void* dt46_create(const char* model, const char* parameters);

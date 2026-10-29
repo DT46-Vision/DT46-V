@@ -26,7 +26,7 @@ int main(int argc,char** argv){try{
         params["radius_r_min"]>>tracker.radius_params.r_min;params["radius_r_max"]>>tracker.radius_params.r_max;
         params["tracking_thres"]>>tracker.tracking_thres;params["lost_thres"]>>tracker.lost_thres;
         params["yaw_tolerance_deg"]>>tracker.yaw_tolerance_deg;params["pitch_tolerance_deg"]>>tracker.pitch_tolerance_deg;
-        params["bullet_speed"]>>tracker.bullet_speed;tracker.build_ballistic_lut();
+        params["bullet_speed"]>>tracker.bullet_speed;
         params["min_spinning_vel"]>>tracker.min_spinning_vel_;
         std::ofstream diagnostic(out/("case-"+std::to_string(mode)+".csv"));
         diagnostic<<"frame,time,phase,omega,cx,cy,rA,rB,matched,fire,lateral_sigma,vertical_sigma,blockers\n";
