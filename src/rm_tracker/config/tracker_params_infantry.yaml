@@ -36,7 +36,7 @@ rm_tracker:
     lost_thres: 20 # 连续丢失帧数 (进入 LOST) - int
 
     # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
-    ekf_QR_q_xyz: 0.02 # 相对平移加速度谱密度 (m²/s³)，验证记录见 tracker README
+    ekf_QR_q_xyz: 0.1 # 相对平移加速度谱密度 (m²/s³)，验证记录见 tracker README
     ekf_QR_q_yaw: 0.5 # 角加速度谱密度 (rad²/s³)
     ekf_QR_q_r: 0.000001 # 刚性车体几何的缓慢游走 (m²/s)
 
@@ -62,6 +62,7 @@ rm_tracker:
     bullet_speed: 25.0 # 弹速 (m/s)
 
     # 发弹角度阈值
+    min_hit_probability: 0.25 # 到达板面高斯近似概率门限；不代表实测命中率
     shootable_dist: 10.0
     distance_decress_ratio: 0.60
     yaw_tolerance_deg: 7.0 # 允许发射的 yaw 角度阈值

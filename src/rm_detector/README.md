@@ -4,7 +4,7 @@
 
 装甲板检测与三维解算节点（C++ / ROS 2 Humble）。输入相机图像与内参，输出每帧装甲板在**相机系**下的坐标 `(dx, dy, dz)`（单位 mm）与相对偏航角 `yaw`（单位度）。
 
-灯条提取 → 双灯条配对 → 透视校正 + Otsu 二值化 → CNN 数字分类 → 颜色/类别映射出 `armor_id` → IPPE PnP 解算位姿。
+灯条提取 → 双灯条配对 → 透视校正 + Otsu 二值化 → CNN 数字分类 → 颜色/类别映射出 `armor_id` → 板位姿解算 解算位姿。
 
 ## 节点与可执行文件
 
@@ -38,15 +38,15 @@
 ## 处理流程
 
 1. `process()`：灰度 → 固定阈值二值化（`binary_val`）；`roi_crop: true` 时先按 `roi_scale` 取图像中心区域，后续只在 ROI 上处理。
-2. `find_lights()`：轮廓面积 ≥ `light_area_min`、minAreaRect 的 高/宽 ≥ `light_h_w_ratio`、角度在 `[light_angle_min, light_angle_max]` 内；再沿灯条中心线采样最多 10 个像素做红蓝判决。
-3. `is_armor()`：按中心 x 排序，依次检查右侧同色候选的灯条夹角、中心连线角、高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内，再进行分类；几何或分类失败就继续检查后续右灯。接受首个完整通过的配对后，从右灯之后继续，避免重复、嵌套或交叉配对；投影区间重叠的多块板不会同时输出。灯条夹角仍按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒。
+2. `find_lights()`：轮廓面积 ≥ `light_area_min`、minAreaRect 的 高/宽 ≥ `light_h_w_ratio`、角度在 `[light_angle_min, light_angle_max]` 内；再沿灯条中心线采样最多 10 个像素做红蓝判决。默认配置要求红蓝强度比超过 1.3，排除接近无色的白字。端点沿中心线在 ±2 px 内固定采样局部灰度剖面，线性插值半对比度边界，避免直接把轮廓像素中心当作物理端点；对比度不足或贴边时保留原端点。
+3. `is_armor()`：按中心 x 排序，依次检查右侧同色候选的灯条夹角、中心连线角、高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内，再进行分类；几何或分类失败就继续检查后续右灯。接受首个完整通过的配对后，占用两根灯条和实际二维板面；候选板面有面积重叠时拒绝，横向区间重叠但上下分离的板可以同时输出。灯条夹角仍按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。
 5. `Armor::get_id()`：颜色 + `class_id` 映射成 `armor_id`（见下表）；`is_armor()` 只接受 `class_id ∈ {0,1,2}`。
-6. `PNP::processArmorCorners()`：`cv::solvePnPGeneric(..., cv::SOLVEPNP_IPPE)`，剔除角点不在相机前方或误差非有限的解，再按当前四角重投影均方误差选择解；上一帧法线不再压过当前图像证据，输出 `dx/dy/dz`（mm）、`yaw`（deg）和相机系单位法线 `nx/ny/nz`。当前尺寸与 id 无关，由 `pnp_light_spacing_mm` / `pnp_light_height_mm` 配置；灯条矩形中线端点保留浮点精度，颜色采样才转整数。
+6. `PNP::processArmorCorners()`：未设置姿态约束时沿用 IPPE 双解并按当前四角重投影均方误差选择。原生步兵配置 `pnp_armor_tilt_deg: 15`，复用相机光学旋转，将板的两个面内方向写成 yaw 正余弦的线性式；用去畸变后的四条射线解 8×5 线性系统，归一化 yaw，再解一次 8×3 平移系统。没有迭代搜索、历史法线覆盖或目标真值输入；背面、负深度、不合理角向量及 RMS > 2 px 的受约束解被拒绝。安装倾角假设不适用的目标应移除此配置，不能用它代替真实姿态测量。输出仍为 `dx/dy/dz`（mm）、`yaw`（deg）与相机系向外单位法线；灯距/灯高由配置给出，与车辆编号、车体半径和对角组高差无关。ROS 检测节点尚未接入该相机姿态约束，仍使用 IPPE。
 
 原生跟踪图把检测端点（黄色）、原始 PnP 重投影与 120 mm 法线箭头（品红）和 EKF 模型（青/绿/橙）分开显示；PnP 行显示深度和像素 RMS。重投影贴合只说明位姿解释了输入角点，不能证明尺寸、角点与真实物体一致。完整平面法线在近正视或小像素目标上仍可能不可靠，本次静止及旋转的离线检查见[底层 PnP 复核](../../outputs/pnp_scene_cleanup_20261029/report.md)。
 
-每轮配对清空上一轮装甲结果与分类预览；没有候选时显示占位图，空输入也清空灯条与装甲缓存。灰度阈值和红蓝比例保持原配置，白字仍可能成为灯条候选；配对修复不等于颜色误检或 PnP 精度已经解决。保存帧回归、相邻板/交叉反例、同输入耗时及三场闭环结果见[检测器精简验证](../../outputs/detector_simplify_20261030/report.md)。
+每轮配对清空上一轮装甲结果与分类预览；空输入清空灯条与装甲缓存。保存帧回归覆盖白字、灰度假灯、相邻板、上下重叠区间、交叉反例、亚像素边界、ROI 和缓存清理。当前实验与剩余精度边界见[视觉追踪优化记录](../../outputs/vision_tracking_20261030/report.md)；前一阶段证据保留在[检测器精简验证](../../outputs/detector_simplify_20261030/report.md)。部分可见灯条仍只是候选，不虚构缺失端点或强制拼成完整装甲；多车独立跟踪由 tracker 的能力边界决定。
 
 ## 参数
 
@@ -58,14 +58,15 @@
 | `cls_model_file` | string | `mlp.onnx` | `RM_Armor_CNN_sim.onnx` | ONNX 文件名（相对 `share/rm_detector/model/`）；置空字符串可禁用分类器 |
 | `pnp_light_spacing_mm` | double | `135.0` | 步兵 `135.0`，其余使用默认 | 两灯条中心距，必须为正有限数；不是装甲板整体宽度 |
 | `pnp_light_height_mm` | double | `58.0` | 步兵 `58.0`，其余使用默认 | 与检测端点对应的有效灯条长度，必须为正有限数；实际硬件须标定 |
+| `pnp_armor_tilt_deg` | double | 未设置 | 原生步兵 `15.0` | 板外法线仰角，范围 (-60,60)；配置存在且有相机姿态时使用直接约束解 |
 | `roi_crop` | bool | `false` | `false` | 是否只处理图像中心 ROI |
 | `roi_scale` | double | `0.5` | `0.4` | ROI 占整图的比例 |
 | `light_area_min` | int | `5` | `5` | 灯条轮廓最小面积（像素） |
 | `light_h_w_ratio` | double | `5.0` | `2.0` | 灯条高/宽比下限，小于它直接丢弃 |
 | `light_angle_min` | int | `-35` | `-35` | 灯条倾角下限（度） |
 | `light_angle_max` | int | `35` | `35` | 灯条倾角上限（度） |
-| `light_red_ratio` | double | `2.0` | `1.0` | 红判定阈值：`sum_r > sum_b * light_red_ratio` |
-| `light_blue_ratio` | double | `2.0` | `1.0` | 蓝判定阈值：`sum_b > sum_r * light_blue_ratio` |
+| `light_red_ratio` | double | `2.0` | `1.3` | 红判定阈值：`sum_r > sum_b * light_red_ratio` |
+| `light_blue_ratio` | double | `2.0` | `1.3` | 蓝判定阈值：`sum_b > sum_r * light_blue_ratio` |
 | `height_rate_tol` | double | `1.3` | `1.8` | 两灯条高度比上限 |
 | `height_multiplier_min` | double | `1.8` | `1.0` | 中心距/平均灯条高 的下限 |
 | `height_multiplier_max` | double | `3.0` | `3.0` | 中心距/平均灯条高 的上限 |

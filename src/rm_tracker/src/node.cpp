@@ -65,6 +65,7 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.shootable_dist = this->declare_parameter("shootable_dist", 3.0);
     tracker_.yaw_tolerance_deg = this->declare_parameter("yaw_tolerance_deg", 5.0);
     tracker_.pitch_tolerance_deg = this->declare_parameter("pitch_tolerance_deg", 2.0);
+    tracker_.min_hit_probability = this->declare_parameter("min_hit_probability", 0.5);
 
     // 2.10 加载小陀螺检测参数
     tracker_.min_spinning_vel_ = this->declare_parameter("min_spinning_vel", 5.0);

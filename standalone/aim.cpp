@@ -38,6 +38,7 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
     PARAM(shootable_dist, "shootable_dist");
     PARAM(yaw_tolerance_deg, "yaw_tolerance_deg");
     PARAM(pitch_tolerance_deg, "pitch_tolerance_deg");
+    PARAM(min_hit_probability, "min_hit_probability");
     PARAM(min_spinning_vel_, "min_spinning_vel");
     PARAM(spin_enter_time_, "spin_enter_time");
     PARAM(spin_exit_time_, "spin_exit_time");
@@ -54,6 +55,7 @@ struct Pipeline {
     std::unique_ptr<DT46_VISION::ArmorDetector> detector;
     DT46_VISION::PNP pnp;
     DT46_VISION::CameraCalibration calibration{};
+    std::optional<double> armor_tilt_deg;
     dt46_vision::Tracker tracker;
     dt46_vision::RmTF transform;
     double previous_time = -1.0;
@@ -89,6 +91,7 @@ struct Pipeline {
         detector->set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(model));
         detect_color = int(parameter(source,"detect_color",-1));
         configure_tracker(tracker, config["tracker"]);
+        if(!source["pnp_armor_tilt_deg"].empty())armor_tilt_deg=double(source["pnp_armor_tilt_deg"]);
         pnp.setArmorGeometry(parameter(source,"pnp_light_spacing_mm",135.),parameter(source,"pnp_light_height_mm",58.));
     }
 };
@@ -96,6 +99,10 @@ struct Pipeline {
 void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
              const Eigen::Matrix3d& rotation, std::vector<dt46_vision::Armor>& armors) {
     pipeline.pnp.beginFrame();
+    if(pipeline.armor_tilt_deg){
+        cv::Matx33d optical;for(int i=0;i<3;++i)for(int j=0;j<3;++j)optical(i,j)=rotation(i,j);
+        pipeline.pnp.setUprightConstraint(optical,*pipeline.armor_tilt_deg);
+    }
     pipeline.observed_normals_camera.clear();
     pipeline.observed_poses.clear();
     pipeline.detector->img_drawn.release();
@@ -156,6 +163,7 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
     for(int i=0;i<11;++i)json<<s.body_state[i];json<<"]"<<"body_covariance_diagonal"<<"[";
     for(int i=0;i<11;++i)json<<s.body_covariance(i,i);json<<"]";
     json<<"observed_plate"<<s.observed_plate<<"matched_plate_mask"<<int(s.body_matched_mask);
+    json<<"aim_hit_probability"<<s.aim_hit_probability;
     json<<"aim_lateral_sigma_m"<<s.aim_lateral_sigma<<"aim_vertical_sigma_m"<<s.aim_vertical_sigma;
     json<<"fire_blockers"<<"[";for(const auto& reason:s.fire_blockers)json<<reason;json<<"]";
     if(s.tracker_state!=dt46_vision::TrackerState::LOST){

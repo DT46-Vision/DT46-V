@@ -1,6 +1,38 @@
 #include "rm_detector/pnp.hpp"
 #include <stdexcept>
 
+namespace {
+// P = C + X*(sin(theta),-cos(theta),0) + Y*(sin(tilt)*cos(theta),
+// sin(tilt)*sin(theta),cos(tilt)). Ray cross-products are linear in C, cos, sin.
+// Solve once, normalize the angle pair, then solve translation with that rotation.
+bool upright_pose(const std::vector<cv::Point2f>& corners,const cv::Matx33d& k,
+    const cv::Mat& distortion,const cv::Matx33d& camera_to_world,double spacing,double height,double tilt,cv::Mat& rvec,cv::Mat& tvec) {
+    std::vector<cv::Point2f> rays;cv::undistortPoints(corners,rays,k,distortion);
+    cv::Mat a=cv::Mat::zeros(8,5,CV_64F),b(8,1,CV_64F);
+    const double sp=std::sin(tilt),cp=std::cos(tilt);
+    const auto r=camera_to_world.t();
+    for(int i=0;i<4;++i){
+        const double x=(i<2?-.5:.5)*spacing,y=(i%2?.5:-.5)*height;
+        const cv::Vec3d c=r*cv::Vec3d(y*sp,-x,0),s=r*cv::Vec3d(x,y*sp,0),z=r*cv::Vec3d(0,0,y*cp);
+        for(int j=0;j<2;++j){const double u=j?rays[i].y:rays[i].x;
+            a.at<double>(2*i+j,j)=1;a.at<double>(2*i+j,2)=-u;
+            a.at<double>(2*i+j,3)=c[j]-u*c[2];a.at<double>(2*i+j,4)=s[j]-u*s[2];
+            b.at<double>(2*i+j)=-z[j]+u*z[2];}
+    }
+    cv::Mat solution;cv::solve(a,b,solution,cv::DECOMP_SVD);
+    const double norm=std::hypot(solution.at<double>(3),solution.at<double>(4));
+    if(!std::isfinite(norm)||norm<.3||norm>2)return false;
+    const double c=solution.at<double>(3)/norm,s=solution.at<double>(4)/norm;
+    cv::Mat position;cv::Mat rhs=b-a.col(3)*c-a.col(4)*s;
+    cv::solve(a.colRange(0,3),rhs,position,cv::DECOMP_SVD);
+    const cv::Matx33d board_to_world(s,sp*c,-cp*c,-c,sp*s,-cp*s,0,cp,sp);
+    cv::Rodrigues(r*board_to_world,rvec);tvec=position;
+    const cv::Vec3d outward=r*cv::Vec3d(-cp*c,-cp*s,sp);
+    return cv::checkRange(tvec)&&tvec.at<double>(2)>0&&outward.dot(cv::Vec3d(tvec))<0;
+
+}
+}
+
 namespace DT46_VISION {
     void PNP::setArmorGeometry(double spacing,double height) {
         if(!std::isfinite(spacing+height)||spacing<=0||height<=0)throw std::invalid_argument("Armor light geometry must be positive finite millimeters");
@@ -56,11 +88,6 @@ namespace DT46_VISION {
             armor.light2_down
         };
 
-        if (imagePoints.size() != 4) {
-            std::cerr << "Invalid armor corner count: " << imagePoints.size() << '\n';
-            return {0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0};
-        }
-
         // 获取相机参数
         cv::Mat cameraMatrix, distCoeffs;
         parseCameraInfo(cam_info);
@@ -69,16 +96,11 @@ namespace DT46_VISION {
             return {0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0};
         }
 
-        if (has_cached_caminfo_) {
-            cameraMatrix = cached_K_.clone();
-            distCoeffs = cached_D_;
-        }
+        cameraMatrix = cached_K_.clone();
+        distCoeffs = cached_D_;
 
         // 强制使用图像几何中心 (仅在特定裁切策略下使用)
         if (use_geometric_center) {
-            if (!has_cached_caminfo_) {
-                cameraMatrix = cv::Mat_<double>(3, 3);
-            }
             cameraMatrix.at<double>(0,2) = frame.cols / 2.0;
             cameraMatrix.at<double>(1,2) = frame.rows / 2.0;
         }
@@ -88,10 +110,15 @@ namespace DT46_VISION {
         // 3. IPPE returns two planar pose candidates.
         //    Reprojection distinguishes them when the image has enough perspective information.
         std::vector<cv::Mat> rvecs, tvecs;
-        int nsol = cv::solvePnPGeneric(objectPoints, imagePoints,
-                                       cameraMatrix, distCoeffs,
-                                       rvecs, tvecs,
-                                       false, cv::SOLVEPNP_IPPE);
+        if(camera_to_world_){
+            cv::Mat rvec,tvec;
+            if(!upright_pose(imagePoints,cameraMatrix,distCoeffs,*camera_to_world_,light_spacing_mm_,
+                light_height_mm_,armor_tilt_rad_,rvec,tvec))return {0,0,-1,0,0,0,0};
+            rvecs.push_back(rvec);tvecs.push_back(tvec);
+        }else{
+            cv::solvePnPGeneric(objectPoints,imagePoints,cameraMatrix,distCoeffs,rvecs,tvecs,false,cv::SOLVEPNP_IPPE);
+        }
+        const int nsol=static_cast<int>(rvecs.size());
 
         if (nsol <= 0 || rvecs.empty() || tvecs.empty()) {
             std::cerr << "solvePnPGeneric failed\n";
@@ -120,7 +147,7 @@ namespace DT46_VISION {
             }
             if (std::isfinite(score) && score < best_score) { best_score = score; best = i; }
         }
-        if (best < 0) return {0, 0, -1, 0, 0, 0, 0};
+        if (best < 0 || (camera_to_world_ && best_score>4*2.0*2.0)) return {0, 0, -1, 0, 0, 0, 0};
         const cv::Mat rvec = rvecs[best], tvec = tvecs[best];
         cv::Mat R_best;
         cv::Rodrigues(rvec, R_best);
@@ -134,11 +161,8 @@ namespace DT46_VISION {
         double dz = tvec.at<double>(2);
 
         // 4. 计算绝对 Yaw
-        cv::Mat R;
-        cv::Rodrigues(rvec, R);
-
-        double r13 = R.at<double>(0, 2);
-        double r33 = R.at<double>(2, 2);
+        double r13 = R_best.at<double>(0, 2);
+        double r33 = R_best.at<double>(2, 2);
         double pnp_yaw_rad = atan2(r13, r33); // 此时是绝对角度
 
         // 归一化逻辑 (正对时 yaw 为 0)

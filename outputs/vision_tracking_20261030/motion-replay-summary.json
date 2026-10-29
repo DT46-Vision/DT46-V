@@ -1,0 +1,151 @@
+[
+  {
+    "case": "3_off",
+    "q": 0.02,
+    "tracking": 248,
+    "fire": 70,
+    "center_rmse": 0.19868778885334495,
+    "association": {
+      "geometry_bound": 24,
+      "innovation": 17,
+      "matched": 261,
+      "no_candidate": 19,
+      "no_observations": 11
+    }
+  },
+  {
+    "case": "3_off",
+    "q": 0.1,
+    "tracking": 290,
+    "fire": 70,
+    "center_rmse": 0.18950447321595404,
+    "association": {
+      "geometry_bound": 27,
+      "innovation": 3,
+      "matched": 295,
+      "no_candidate": 3,
+      "no_observations": 11
+    }
+  },
+  {
+    "case": "3_off",
+    "q": 0.2,
+    "tracking": 311,
+    "fire": 61,
+    "center_rmse": 0.18797206628057184,
+    "association": {
+      "geometry_bound": 17,
+      "matched": 313,
+      "no_observations": 11
+    }
+  },
+  {
+    "case": "3_off",
+    "q": 0.5,
+    "tracking": 325,
+    "fire": 21,
+    "center_rmse": 0.15194393860868521,
+    "association": {
+      "geometry_bound": 4,
+      "matched": 326,
+      "no_candidate": 1,
+      "no_observations": 11
+    }
+  },
+  {
+    "case": "3_constant",
+    "q": 0.02,
+    "tracking": 359,
+    "fire": 60,
+    "center_rmse": 0.12929781016348132,
+    "association": {
+      "innovation": 21,
+      "matched": 376,
+      "no_candidate": 38,
+      "no_observations": 25
+    }
+  },
+  {
+    "case": "3_constant",
+    "q": 0.1,
+    "tracking": 443,
+    "fire": 65,
+    "center_rmse": 0.10861002150857337,
+    "association": {
+      "matched": 444,
+      "no_observations": 25
+    }
+  },
+  {
+    "case": "3_constant",
+    "q": 0.2,
+    "tracking": 443,
+    "fire": 54,
+    "center_rmse": 0.098252149212024,
+    "association": {
+      "matched": 444,
+      "no_observations": 25
+    }
+  },
+  {
+    "case": "3_constant",
+    "q": 0.5,
+    "tracking": 443,
+    "fire": 23,
+    "center_rmse": 0.0898766144033943,
+    "association": {
+      "matched": 444,
+      "no_observations": 25
+    }
+  },
+  {
+    "case": "5_constant",
+    "q": 0.02,
+    "tracking": 275,
+    "fire": 14,
+    "center_rmse": 0.2362184459099151,
+    "association": {
+      "geometry_bound": 9,
+      "innovation": 5,
+      "matched": 294,
+      "no_candidate": 52,
+      "no_observations": 94
+    }
+  },
+  {
+    "case": "5_constant",
+    "q": 0.1,
+    "tracking": 355,
+    "fire": 1,
+    "center_rmse": 0.24257676048518811,
+    "association": {
+      "matched": 357,
+      "no_candidate": 12,
+      "no_observations": 95
+    }
+  },
+  {
+    "case": "5_constant",
+    "q": 0.2,
+    "tracking": 354,
+    "fire": 0,
+    "center_rmse": 0.23334505477179315,
+    "association": {
+      "matched": 356,
+      "no_candidate": 13,
+      "no_observations": 95
+    }
+  },
+  {
+    "case": "5_constant",
+    "q": 0.5,
+    "tracking": 354,
+    "fire": 0,
+    "center_rmse": 0.22765216321821688,
+    "association": {
+      "matched": 356,
+      "no_candidate": 13,
+      "no_observations": 95
+    }
+  }
+]

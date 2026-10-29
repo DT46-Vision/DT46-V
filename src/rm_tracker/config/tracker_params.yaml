@@ -60,6 +60,7 @@ rm_tracker:
     bullet_speed: 25.0             # 弹速 (m/s)
 
     # 发弹角度阈值
+    min_hit_probability: 0.5 # 到达板面高斯近似概率门限
     shootable_dist: 10.0
     distance_decress_ratio: 0.60
     yaw_tolerance_deg: 5.0     # 允许发射的 yaw 角度阈值

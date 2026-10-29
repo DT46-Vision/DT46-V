@@ -66,6 +66,26 @@ int main() {
             throw std::runtime_error("Original PnP distortion compensation failed the centre/periphery control");
     }
     dt46_vision::RmTF tf;
+    // Independent forward projection covers range, view angle and camera roll/pitch.
+    for(double range:{1400.,3000.,5000.})for(double heading:{-.9,0.,.9})for(double roll:{-.2,.2}){
+        const double theta=CV_PI/2+heading,tilt=CV_PI/12;
+        const cv::Matx33d board(std::sin(theta),std::sin(tilt)*std::cos(theta),-std::cos(tilt)*std::cos(theta),
+            -std::cos(theta),std::sin(tilt)*std::sin(theta),-std::cos(tilt)*std::sin(theta),0,std::cos(tilt),std::sin(tilt));
+        const cv::Matx33d base(1,0,0,0,0,1,0,-1,0);
+        cv::Matx33d perturbation;cv::Rodrigues(cv::Vec3d(.1,0,roll),perturbation);
+        const auto optical=base*perturbation;
+        cv::Matx33d rotation=optical.t()*board;cv::Vec3d rvec;cv::Rodrigues(rotation,rvec);
+        const cv::Vec3d expected_position=optical.t()*cv::Vec3d(80,range,-100);
+        cv::projectPoints(object,rvec,expected_position,k,d,image);
+        armor.light1_up=image[0];armor.light1_down=image[1];armor.light2_up=image[2];armor.light2_down=image[3];
+        DT46_VISION::PNP constrained;constrained.setUprightConstraint(optical,15);
+        const auto pose=constrained.processArmorCorners(&calibration,false,cv::Mat(),armor,5);
+        const cv::Vec3d measured_position(std::get<0>(pose),std::get<1>(pose),std::get<2>(pose));
+        const cv::Vec3d measured_normal(std::get<4>(pose),std::get<5>(pose),std::get<6>(pose));
+        const cv::Vec3d expected_normal(rotation(0,2),rotation(1,2),rotation(2,2));
+        if(cv::norm(measured_position-expected_position)>1.0 || cv::norm(measured_normal-expected_normal)>.001)
+            throw std::runtime_error("Upright direct pose failed across range / camera attitude / board heading");
+    }
     tf.set_camera_info(k, d, 1280, 1024, false);
     if (std::get<0>(tf.project_point(Eigen::Vector3d(0,0,2))) != cv::Point2i(612,493))
         throw std::runtime_error("Tracker projection replaced the calibrated principal point");

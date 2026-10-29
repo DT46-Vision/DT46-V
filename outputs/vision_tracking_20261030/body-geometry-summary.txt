@@ -1,0 +1,9 @@
+frames=1200
+matched=1190
+center_rmse_m=0.00144882
+center_max_m=0.00545773
+rA=0.220073
+rB=0.319861
+hB=0.0692154
+acceleration_center_rmse_m=0.000894819
+acceleration_center_max_m=0.00109026

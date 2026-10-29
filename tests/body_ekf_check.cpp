@@ -68,12 +68,35 @@ int main(int argc,char** argv){try{
     const double rmse=std::sqrt(sum/count);
     require(matched>1100&&rmse<.015&&maxerr<.04,"shared center continuity failed");
     require(std::abs(f.state()[8]-.22)<.015&&std::abs(f.state()[9]-.32)<.015&&std::abs(f.state()[10]-.07)<.01,"independent geometry failed");
+    for(const auto& geometry:std::vector<Eigen::Vector3d>{{.17,.37,.14},{.37,.17,-.14},{.25,.25,0}}){
+        auto estimate=initial();
+        for(int frame=1;frame<=600;++frame){
+            auto state=truth(frame*.01);state.tail<3>()=geometry;
+            BodyEkf actual;actual.init(state,BodyEkf::Covariance::Identity());
+            estimate.predict(.01,2.5,15,.0001);
+            std::vector<BodyEkf::Observation> observations;
+            for(int j=0;j<2;++j){const auto plate=actual.plate((frame/9+j)%4);
+                Eigen::Vector3d position=plate.head<3>();
+                for(int k=0;k<3;++k)position[k]+=noise(random);
+                observations.push_back({position,plate[3]+noise(random)});}
+            estimate.update(observations,.008,.0025);
+        }
+        require((estimate.state().tail<3>()-geometry).cwiseAbs().maxCoeff()<.015,
+                "Independent radii / signed group height did not converge from common prior");
+        std::cout<<"geometry truth "<<geometry.transpose()<<" estimated "<<estimate.state().tail<3>().transpose()<<'\n';
+    }
     auto before=f.state();auto covariance=f.covariance();
     require(f.update({{{100,100,100},0}},.008,.0025)<0,"outlier accepted");
     require((f.state()-before).norm()==0&&(f.covariance()-covariance).norm()==0,"rejected measurement changed state");
     require(f.ready(),"geometry never became ready");
     auto mirrored=f,ordinary=f;
     const auto observed=f.plate(0);
+    const Eigen::Vector3d depth_direction=observed.head<3>().normalized();
+    auto depth_noisy=f,lateral_outlier=f;
+    require(depth_noisy.update({{observed.head<3>()+.3*depth_direction,observed[3]}},.008,.0025,.2)>=0,
+            "Hard distance gate rejected depth noise permitted by measurement covariance");
+    require(lateral_outlier.update({{observed.head<3>()+.3*depth_direction.cross(Eigen::Vector3d::UnitZ()).normalized(),observed[3]}},.008,.0025,.2)<0,
+            "Depth tolerance leaked into transverse association");
     ordinary.update({{observed.head<3>(),observed[3]}},.008,.0025);
     require(mirrored.update({{observed.head<3>(),observed[3]+3.141592653589793}},.008,.0025)<0,"reversed normal was silently repaired");
     require((mirrored.state()-f.state()).norm()==0,"rejected reversed normal changed state");

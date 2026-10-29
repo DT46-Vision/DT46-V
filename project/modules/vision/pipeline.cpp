@@ -10,12 +10,12 @@ namespace {
 const std::set<std::string> detector_parameters = {
     "light_area_min", "light_h_w_ratio", "light_angle_min", "light_angle_max", "light_red_ratio", "light_blue_ratio",
     "height_rate_tol", "height_multiplier_min", "height_multiplier_max", "row_stretch", "col_stretch", "roi_crop",
-    "roi_scale", "binary_val", "display_mode", "detect_color", "print_period_ms", "pnp_light_spacing_mm", "pnp_light_height_mm"};
+    "roi_scale", "binary_val", "display_mode", "detect_color", "print_period_ms", "pnp_light_spacing_mm", "pnp_light_height_mm", "pnp_armor_tilt_deg"};
 const std::set<std::string> tracker_parameters = {
     "max_match_distance", "max_match_yaw_diff", "jump_cooldown_max", "tracking_thres", "lost_thres", "dist_tol",
     "ekf_QR_q_xyz", "ekf_QR_q_yaw", "ekf_QR_q_r", "ekf_QR_r_xyz_factor", "ekf_QR_r_depth_factor", "ekf_QR_r_yaw", "ekf_QR_stable_dist",
     "radius_r_min", "radius_r_max", "system_delay", "controller_delay", "bullet_speed", "k_v2", "gravity", "shootable_dist",
-    "yaw_tolerance_deg", "pitch_tolerance_deg", "min_spinning_vel", "spin_enter_time", "spin_exit_time",
+    "yaw_tolerance_deg", "pitch_tolerance_deg", "min_hit_probability", "min_spinning_vel", "spin_enter_time", "spin_exit_time",
     "cam_to_gun_rpy_r", "cam_to_gun_rpy_p", "cam_to_gun_rpy_y", "target_color", "follow_decision",
     "display", "display_fps_limit", "text_size"};
 const std::vector<std::string> debug_images = {"result", "crop_img", "bin_img", "img_armor", "img_armor_processed", "img_debug", "gray"};
@@ -52,12 +52,16 @@ void validate_settings(const Json& settings) {
         if (!(number(d.at(key)) > 0)) throw std::invalid_argument(std::string(key)+" must be positive");
     for(const char* key:{"pnp_light_spacing_mm","pnp_light_height_mm"})
         if(d.contains(key)&&number(d.at(key))<=0)throw std::invalid_argument(std::string(key)+" must be positive");
+    if(d.contains("pnp_armor_tilt_deg") && std::abs(number(d.at("pnp_armor_tilt_deg")))>=60)
+        throw std::invalid_argument("pnp_armor_tilt_deg must be inside (-60,60)");
     if (number(d.at("light_area_min")) < 0 || number(d.at("light_angle_min")) > number(d.at("light_angle_max")) ||
         number(d.at("height_multiplier_min")) < 0 || number(d.at("height_multiplier_min")) > number(d.at("height_multiplier_max")))
         throw std::invalid_argument("Invalid light/armor bounds");
     if (!(number(t.at("bullet_speed")) > 0 && number(t.at("gravity")) > 0) || number(t.at("k_v2")) < 0 ||
         !(number(t.at("radius_r_min")) > 0) || number(t.at("radius_r_min")) > number(t.at("radius_r_max")))
         throw std::invalid_argument("Invalid tracker physics/radius");
+    if(t.contains("min_hit_probability") && (number(t.at("min_hit_probability"))<=0 || number(t.at("min_hit_probability"))>1))
+        throw std::invalid_argument("min_hit_probability must be in (0,1]");
     for (const char* key : {"tracking_thres", "lost_thres", "jump_cooldown_max"}) {
         const double value = number(t.at(key));
         if (value < 0 || value != std::floor(value)) throw std::invalid_argument(std::string(key)+" must be a nonnegative integer");

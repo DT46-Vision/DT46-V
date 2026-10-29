@@ -31,20 +31,31 @@ int main(int argc,char** argv){try{
         std::vector<Eigen::Vector3d> boards;for(const auto& a:tr.at("armors"))boards.push_back(vec(a.at("position_world_m")));
         double obs_error=-1,model_error=-1;for(const auto& obs:f.at("observations")){
             if(obs.at("armor_id")!=f.at("tracked_id"))continue;
-            const auto measured=(origin+rotation*vec(obs.at("position_camera_m"))).eval();double error=1e9;Eigen::Vector3d closest=boards.front();
-            for(const auto& board:boards)if((board-measured).norm()<error){error=(board-measured).norm();closest=board;}
+            const auto measured=(origin+rotation*vec(obs.at("position_camera_m"))).eval();
+            double ray_error=1e9;Eigen::Vector3d closest=boards.front();
+            for(const auto& board:boards){
+                Eigen::Vector3d outward=board-vec(tr.at("centre_world_m"));outward.z()=0;
+                outward.normalize();outward*=std::cos(3.141592653589793/12);outward.z()=std::sin(3.141592653589793/12);
+                if(outward.dot(board-origin)>=0)continue;
+                const double angle=((board-origin).normalized()-(measured-origin).normalized()).norm();
+                if(angle<ray_error){ray_error=angle;closest=board;}
+            }
+            const double error=(closest-measured).norm();
             metrics["observation_error_m"].push_back(error);obs_error=std::max(obs_error,error);
-            if(error<.1){
+            if(ray_error<.01){
                 const Eigen::Vector3d inward=vec(tr.at("centre_world_m"))-closest;
                 const double expected=std::atan2(inward.y(),inward.x());
                 double raw=std::atan2(rotation(1,2),rotation(0,2))-obs.at("yaw_deg").get<double>()*3.141592653589793/180;
                 if(obs.contains("normal_camera")){const Eigen::Vector3d n=rotation*vec(obs.at("normal_camera"));if(n.head<2>().norm()>1e-6)raw=std::atan2(-n.y(),-n.x());}
                 const double bearing=std::atan2(measured.y()-origin.y(),measured.x()-origin.x());double yaw_error=1e9;
+                metrics["raw_observation_yaw_error_rad"].push_back(std::abs(std::remainder(raw-expected,2*3.141592653589793)));
                 for(double candidate:{raw,2*bearing-raw,raw+3.141592653589793,2*bearing-raw+3.141592653589793})yaw_error=std::min(yaw_error,std::abs(std::remainder(candidate-expected,2*3.141592653589793)));
                 metrics["best_branch_observation_yaw_error_rad"].push_back(yaw_error);
             }
         }
         std::string association;for(const auto& log:d.at("logs"))if(log.at("name")=="body_association")association=log.at("value");
+        if(f.at("state")=="TRACKING"||f.at("state")=="TEMP_LOST")
+            metrics["active_center_error_m"].push_back(center_error);
         if(d.at("observed_plate").get<int>()>=0&&f.at("state")=="TRACKING"){
             metrics["tracking_center_error_m"].push_back(center_error);metrics["tracking_omega_error_rad_s"].push_back(omega_error);
             metrics["tracking_relative_center_error"].push_back(center_error/std::max(.2,range));

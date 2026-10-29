@@ -1,6 +1,28 @@
 #include "rm_detector/detector.hpp"
 
 namespace DT46_VISION{
+    namespace {
+    cv::Point2f refine_light_end(const cv::Mat& gray, cv::Point2f end, cv::Point2f outward) {
+        // Locate the local half-contrast edge; contour vertices are pixel centers,
+        // which otherwise shorten small lights by roughly one pixel.
+        float values[9];
+        for(int i=0;i<9;++i){
+            const auto p=end+outward*(i*.5f-2.f);
+            const int x=int(std::floor(p.x)),y=int(std::floor(p.y));
+            if(x<0||y<0||x+1>=gray.cols||y+1>=gray.rows)return end;
+            const float fx=p.x-x,fy=p.y-y;
+            values[i]=(1-fy)*((1-fx)*gray.at<uchar>(y,x)+fx*gray.at<uchar>(y,x+1))+
+                fy*((1-fx)*gray.at<uchar>(y+1,x)+fx*gray.at<uchar>(y+1,x+1));
+        }
+        if(values[0]-values[8]<20)return end;
+        const float threshold=(values[0]+values[8])*.5f;
+        for(int i=0;i<8;++i)if(values[i]>=threshold&&values[i+1]<threshold){
+            const float fraction=(values[i]-threshold)/(values[i]-values[i+1]);
+            return end+outward*((i+fraction)*.5f-2.f);
+        }
+        return end;
+    }
+    }
     // 计算两个点之间的距离
     double calculate_distance(const cv::Point2f& p1, const cv::Point2f& p2) {
         return cv::norm(p1 - p2);
@@ -198,6 +220,9 @@ namespace DT46_VISION{
                 }
             }
 
+            const cv::Point2f direction=(up-down)/float(cv::norm(up-down));
+            up=refine_light_end(gray_img_,up,direction);
+            down=refine_light_end(gray_img_,down,-direction);
             if ((color == 1 || color == 2) && sum_b > sum_r * params.light_blue_ratio) {
                 lights.emplace_back(up, down, 1);
             } else if ((color == 0 || color == 2) && sum_r > sum_b * params.light_red_ratio) {
@@ -301,7 +326,9 @@ namespace DT46_VISION{
                     return a.cx < b.cx;
                 });
 
-        // 假灯条不能挡住后续真灯；只有完整通过几何与分类的配对才占用区间。
+        // 只占用已确认的灯条与板面；同一 x 区间内仍可存在上下分离的装甲。
+        std::vector<bool> used(sorted_lights.size(), false);
+        std::vector<std::vector<cv::Point2f>> accepted_polygons;
         const double slope_limit = std::abs(static_cast<double>(params.light_angle_max));
         auto light_tilt_deg = [](const Light& light) {
             return std::atan2(light.down.x - light.up.x, light.down.y - light.up.y) * 180.0 / CV_PI;
@@ -314,15 +341,24 @@ namespace DT46_VISION{
             return tilt <= slope_limit && line <= slope_limit;
         };
         for (size_t i = 0; i < sorted_lights.size(); i++) {
+            if (used[i]) continue;
             for (size_t j = i + 1; j < sorted_lights.size(); j++) {
-                if (sorted_lights[j].color != sorted_lights[i].color ||
+                if (used[j] || sorted_lights[j].color != sorted_lights[i].color ||
                     !slopes_match(sorted_lights[i], sorted_lights[j])) continue;
+                const std::vector<cv::Point2f> polygon{sorted_lights[i].up, sorted_lights[j].up,
+                    sorted_lights[j].down, sorted_lights[i].down};
+                const bool overlaps = std::any_of(accepted_polygons.begin(), accepted_polygons.end(),
+                    [&](const auto& accepted) {
+                        std::vector<cv::Point2f> intersection;
+                        return cv::intersectConvexConvex(polygon, accepted, intersection) > 0;
+                    });
+                if (overlaps) continue;
                 const auto [res, height_multiplier] = is_close(sorted_lights[i], sorted_lights[j]);
                 if (res.class_id < 0 || res.class_id >= 3) continue;
 
                 armors.emplace_back(height_multiplier, sorted_lights[i], sorted_lights[j], res, params.roi_crop, roi_rect);
-                // 跳过已接受配对内部的假灯，防止重复、嵌套或交叉配对。
-                i = j;
+                used[i] = used[j] = true;
+                accepted_polygons.push_back(polygon);
                 break;
             }
         }

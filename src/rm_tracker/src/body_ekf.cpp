@@ -80,7 +80,14 @@ int BodyEkf::update(const std::vector<Observation>& observations,double sigma,do
             // PnP already selected a pose from the image. Reflecting its normal to fit
             // our prediction creates a different measurement and can lock a wrong body.
             const double yaw=obs.yaw;
-            if(residual.head<3>().norm()>match_distance_||std::abs(residual[3])>match_yaw_)continue;
+            const Eigen::Vector3d ray=obs.position.normalized();
+            const double depth_error=residual.head<3>().dot(ray);
+            const double transverse_error=(residual.head<3>()-depth_error*ray).norm();
+            // A hard Euclidean gate must not reject depth noise that R explicitly permits.
+            const bool position_outside=depth_sigma>sigma ?
+                transverse_error>match_distance_||std::abs(depth_error)>std::max(match_distance_,3*depth_sigma) :
+                residual.head<3>().norm()>match_distance_;
+            if(position_outside||std::abs(residual[3])>match_yaw_)continue;
             const Eigen::Matrix4d s=h*p_*h.transpose()+measurement_covariance(obs.position,sigma,yaw_variance,depth_sigma);const auto ldlt=s.ldlt();
             if(ldlt.info()!=Eigen::Success||!ldlt.isPositive())continue;
             const double cost=residual.dot(ldlt.solve(residual));

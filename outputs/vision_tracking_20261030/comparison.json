@@ -1,0 +1,2664 @@
+[
+  {
+    "case": "3_constant",
+    "frames": 185,
+    "tracking": 166,
+    "fire_frames": 0,
+    "invalid_fire_frames": 0,
+    "model_frames": 184,
+    "window_errors": 0,
+    "shots": 0,
+    "hits": 0,
+    "target_hp": 100000,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 15,
+      "acquiring": 3,
+      "lost": 1,
+      "not_tracking": 15,
+      "alignment_or_facing": 176,
+      "arrival_uncertainty": 138,
+      "insufficient_updates": 22
+    },
+    "passed": false,
+    "batch": "baseline-open-20261030-005458",
+    "unique_damaging_shots": 0,
+    "processing_ms_median": 10.2508,
+    "processing_ms_p95": 19.6988,
+    "truth": {
+      "active_center_error_m": {
+        "count": 180,
+        "max": 0.3163598768574763,
+        "p50": 0.14279780261061706,
+        "p95": 0.24795447725862801,
+        "rmse": 0.15517844220737947
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 196,
+        "max": 0.24750204691723576,
+        "p50": 0.05810838440993593,
+        "p95": 0.14644197477701582,
+        "rmse": 0.07690357103062082
+      },
+      "matched_model_plate_error_m": {
+        "count": 170,
+        "max": 0.18553150473270222,
+        "p50": 0.13349858769326436,
+        "p95": 0.16975038025470826,
+        "rmse": 0.13637311669226115
+      },
+      "near_tracking_center_error_m": {
+        "count": 166,
+        "max": 0.2847570167646972,
+        "p50": 0.1419649334797402,
+        "p95": 0.1878172811303418,
+        "rmse": 0.14836812435570548
+      },
+      "observation_error_m": {
+        "count": 196,
+        "max": 0.5663827161427798,
+        "p50": 0.12016375038769223,
+        "p95": 0.3215693677609473,
+        "rmse": 0.17659340994669998
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 196,
+        "max": 0.6952519071056762,
+        "p50": 0.06481611021617883,
+        "p95": 0.22070951176534082,
+        "rmse": 0.1309435320595388
+      },
+      "tracking_center_error_m": {
+        "count": 166,
+        "max": 0.2847570167646972,
+        "p50": 0.1419649334797402,
+        "p95": 0.1878172811303418,
+        "rmse": 0.14836812435570548
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 166,
+        "max": 7.353216290666704,
+        "p50": 0.04503874742053693,
+        "p95": 1.2677984690778867,
+        "rmse": 1.4166793332500132
+      },
+      "tracking_relative_center_error": {
+        "count": 166,
+        "max": 0.09951603989878377,
+        "p50": 0.0496110213734085,
+        "p95": 0.06562975337101828,
+        "rmse": 0.05184859860026427
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 171,
+    "tracking": 105,
+    "fire_frames": 59,
+    "invalid_fire_frames": 0,
+    "model_frames": 168,
+    "window_errors": 0,
+    "shots": 39,
+    "hits": 180,
+    "target_hp": 99220,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 57,
+      "acquiring": 5,
+      "lost": 3,
+      "not_tracking": 58,
+      "alignment_or_facing": 2,
+      "arrival_uncertainty": 97,
+      "insufficient_updates": 32
+    },
+    "passed": true,
+    "batch": "baseline-open-20261030-005458",
+    "unique_damaging_shots": 39,
+    "processing_ms_median": 11.0749,
+    "processing_ms_p95": 22.7517,
+    "truth": {
+      "active_center_error_m": {
+        "count": 162,
+        "max": 0.17111500149695472,
+        "p50": 0.13836707105830798,
+        "p95": 0.15205977286806746,
+        "rmse": 0.13931182382524213
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 112,
+        "max": 0.5299972052054127,
+        "p50": 0.005625973563536446,
+        "p95": 0.1183335206022238,
+        "rmse": 0.0743376071651464
+      },
+      "fire_center_error_m": {
+        "count": 59,
+        "max": 0.1551806132504289,
+        "p50": 0.13759940400794066,
+        "p95": 0.1470553246259323,
+        "rmse": 0.13774243109177878
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 59,
+        "max": 0.10231105377010345,
+        "p50": 0.08653981562504855,
+        "p95": 0.09611930981255941,
+        "rmse": 0.08583521425575684
+      },
+      "fire_omega_error_rad_s": {
+        "count": 59,
+        "max": 0.14164712548088004,
+        "p50": 0.03124757680752424,
+        "p95": 0.09713864427560459,
+        "rmse": 0.048284978163559464
+      },
+      "matched_model_plate_error_m": {
+        "count": 105,
+        "max": 0.11761426495067817,
+        "p50": 0.08778689039522512,
+        "p95": 0.0999814641615904,
+        "rmse": 0.08732925021999977
+      },
+      "near_tracking_center_error_m": {
+        "count": 105,
+        "max": 0.17111500149695472,
+        "p50": 0.13962827683351883,
+        "p95": 0.1503936632030279,
+        "rmse": 0.13974269840677872
+      },
+      "observation_error_m": {
+        "count": 112,
+        "max": 0.26028547208514063,
+        "p50": 0.09059352730579515,
+        "p95": 0.11761426495067907,
+        "rmse": 0.09228425995035484
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 112,
+        "max": 0.5299972052054127,
+        "p50": 0.005625973563536446,
+        "p95": 0.1183335206022238,
+        "rmse": 0.07447039243447841
+      },
+      "tracking_center_error_m": {
+        "count": 105,
+        "max": 0.17111500149695472,
+        "p50": 0.13962827683351883,
+        "p95": 0.1503936632030279,
+        "rmse": 0.13974269840677872
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 105,
+        "max": 0.5144197001285415,
+        "p50": 0.02803453010632677,
+        "p95": 0.1305958078944764,
+        "rmse": 0.10229504770491635
+      },
+      "tracking_relative_center_error": {
+        "count": 105,
+        "max": 0.059747892954534934,
+        "p50": 0.04879847525347171,
+        "p95": 0.05255951632270292,
+        "rmse": 0.048836315735724715
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 193,
+    "tracking": 45,
+    "fire_frames": 0,
+    "invalid_fire_frames": 0,
+    "model_frames": 179,
+    "window_errors": 0,
+    "shots": 0,
+    "hits": 0,
+    "target_hp": 100000,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 111,
+      "acquiring": 16,
+      "lost": 11,
+      "not_tracking": 121,
+      "alignment_or_facing": 130,
+      "arrival_uncertainty": 166,
+      "insufficient_updates": 126
+    },
+    "passed": false,
+    "batch": "baseline-open-20261030-005458",
+    "unique_damaging_shots": 0,
+    "processing_ms_median": 11.0564,
+    "processing_ms_p95": 20.4704,
+    "truth": {
+      "active_center_error_m": {
+        "count": 110,
+        "max": 0.7155818291545714,
+        "p50": 0.450404181350603,
+        "p95": 0.6519903132889661,
+        "rmse": 0.4625088888240684
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 153,
+        "max": 0.42948035984726896,
+        "p50": 0.128646105928083,
+        "p95": 0.32424050157307605,
+        "rmse": 0.17282018464223955
+      },
+      "far_tracking_center_error_m": {
+        "count": 45,
+        "max": 0.6707019526997928,
+        "p50": 0.44765291113124905,
+        "p95": 0.585090679445506,
+        "rmse": 0.4324380893533799
+      },
+      "matched_model_plate_error_m": {
+        "count": 45,
+        "max": 0.2912089270190123,
+        "p50": 0.16958754092061212,
+        "p95": 0.23031005588627387,
+        "rmse": 0.17848304801171247
+      },
+      "observation_error_m": {
+        "count": 153,
+        "max": 1.1832198626120938,
+        "p50": 0.3552871984843036,
+        "p95": 0.7202041541548854,
+        "rmse": 0.4258301094863394
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 153,
+        "max": 0.7541013543091666,
+        "p50": 0.13830684326935128,
+        "p95": 0.4376822860764449,
+        "rmse": 0.21980794240122534
+      },
+      "tracking_center_error_m": {
+        "count": 45,
+        "max": 0.6707019526997928,
+        "p50": 0.44765291113124905,
+        "p95": 0.585090679445506,
+        "rmse": 0.4324380893533799
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 45,
+        "max": 12.11947515072293,
+        "p50": 0.4292811248260886,
+        "p95": 9.305269900741337,
+        "rmse": 4.308874102362797
+      },
+      "tracking_relative_center_error": {
+        "count": 45,
+        "max": 0.13788780499001518,
+        "p50": 0.09203412418719933,
+        "p95": 0.1202882848032015,
+        "rmse": 0.08890502879273422
+      }
+    }
+  },
+  {
+    "case": "5_off",
+    "frames": 202,
+    "tracking": 200,
+    "fire_frames": 0,
+    "invalid_fire_frames": 0,
+    "model_frames": 202,
+    "window_errors": 0,
+    "shots": 0,
+    "hits": 0,
+    "target_hp": 100000,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "arrival_uncertainty": 200,
+      "acquiring": 2,
+      "insufficient_updates": 14
+    },
+    "passed": false,
+    "batch": "baseline-open-20261030-005458",
+    "unique_damaging_shots": 0,
+    "processing_ms_median": 14.05735,
+    "processing_ms_p95": 18.9571,
+    "truth": {
+      "active_center_error_m": {
+        "count": 200,
+        "max": 0.23529622671084158,
+        "p50": 0.1785244733670111,
+        "p95": 0.21189152755260382,
+        "rmse": 0.18236891804050387
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 202,
+        "max": 0.08332702984271867,
+        "p50": 0.051744150794774235,
+        "p95": 0.08321675015853236,
+        "rmse": 0.045024397887456484
+      },
+      "far_tracking_center_error_m": {
+        "count": 200,
+        "max": 0.23529622671084158,
+        "p50": 0.1785244733670111,
+        "p95": 0.21189152755260382,
+        "rmse": 0.18236891804050387
+      },
+      "matched_model_plate_error_m": {
+        "count": 200,
+        "max": 0.18146084059614592,
+        "p50": 0.12644739271661593,
+        "p95": 0.15869365672682034,
+        "rmse": 0.13017144930993302
+      },
+      "observation_error_m": {
+        "count": 202,
+        "max": 0.1831426333871958,
+        "p50": 0.09990944487645063,
+        "p95": 0.18313043976414667,
+        "rmse": 0.13344130602181262
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 202,
+        "max": 0.08401349319547924,
+        "p50": 0.05245611501411407,
+        "p95": 0.0838670402374182,
+        "rmse": 0.0453617897446261
+      },
+      "tracking_center_error_m": {
+        "count": 200,
+        "max": 0.23529622671084158,
+        "p50": 0.1785244733670111,
+        "p95": 0.21189152755260382,
+        "rmse": 0.18236891804050387
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 200,
+        "max": 0.2424007284119338,
+        "p50": 0.014117059553488999,
+        "p95": 0.09361784588687852,
+        "rmse": 0.043701302205598994
+      },
+      "tracking_relative_center_error": {
+        "count": 200,
+        "max": 0.048376254720723766,
+        "p50": 0.036704168320144025,
+        "p95": 0.04356439063834638,
+        "rmse": 0.03749462789098183
+      }
+    }
+  },
+  {
+    "case": "3_constant",
+    "frames": 440,
+    "tracking": 376,
+    "fire_frames": 25,
+    "invalid_fire_frames": 0,
+    "model_frames": 440,
+    "window_errors": 0,
+    "shots": 23,
+    "hits": 113,
+    "target_hp": 99540,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 60,
+      "not_tracking": 62,
+      "alignment_or_facing": 401,
+      "insufficient_updates": 14,
+      "acquiring": 2,
+      "arrival_probability": 408
+    },
+    "passed": true,
+    "batch": "gate-color-20261030-010740",
+    "unique_damaging_shots": 23,
+    "processing_ms_median": 3.24235,
+    "processing_ms_p95": 7.624,
+    "truth": {
+      "active_center_error_m": {
+        "count": 435,
+        "max": 0.23338628888636986,
+        "p50": 0.14462389712671708,
+        "p95": 0.18715102434873118,
+        "rmse": 0.14829929198180714
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 399,
+        "max": 0.27149403574602293,
+        "p50": 0.05652850038674573,
+        "p95": 0.14874304851167253,
+        "rmse": 0.07784279153094402
+      },
+      "fire_center_error_m": {
+        "count": 25,
+        "max": 0.19331025492939102,
+        "p50": 0.1433211679767465,
+        "p95": 0.18525769760308516,
+        "rmse": 0.14904908549694154
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 25,
+        "max": 0.17820911147959712,
+        "p50": 0.13650245431840127,
+        "p95": 0.17016420707264754,
+        "rmse": 0.13874386220277501
+      },
+      "fire_omega_error_rad_s": {
+        "count": 25,
+        "max": 0.11500108259158992,
+        "p50": 0.051020147025755413,
+        "p95": 0.1014444947754436,
+        "rmse": 0.0629281019490432
+      },
+      "matched_model_plate_error_m": {
+        "count": 383,
+        "max": 0.19751028455618974,
+        "p50": 0.13570937528485288,
+        "p95": 0.17357438869606698,
+        "rmse": 0.1377228531724613
+      },
+      "near_tracking_center_error_m": {
+        "count": 376,
+        "max": 0.23338628888636986,
+        "p50": 0.14483335924736135,
+        "p95": 0.1875564335108008,
+        "rmse": 0.14892499001415346
+      },
+      "observation_error_m": {
+        "count": 399,
+        "max": 0.5471644031905811,
+        "p50": 0.1267866779904554,
+        "p95": 0.3103449915756846,
+        "rmse": 0.16590192367376577
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 399,
+        "max": 0.8580257001574787,
+        "p50": 0.06106289106727947,
+        "p95": 0.23330008354396026,
+        "rmse": 0.12003729796356942
+      },
+      "tracking_center_error_m": {
+        "count": 376,
+        "max": 0.23338628888636986,
+        "p50": 0.14483335924736135,
+        "p95": 0.1875564335108008,
+        "rmse": 0.14892499001415346
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 376,
+        "max": 1.4869427355639324,
+        "p50": 0.04582605363590542,
+        "p95": 0.1748001312006222,
+        "rmse": 0.1722467278300918
+      },
+      "tracking_relative_center_error": {
+        "count": 376,
+        "max": 0.0815598154811649,
+        "p50": 0.05061452285069813,
+        "p95": 0.06554703593290762,
+        "rmse": 0.052043594947438786
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 382,
+    "tracking": 168,
+    "fire_frames": 139,
+    "invalid_fire_frames": 0,
+    "model_frames": 376,
+    "window_errors": 0,
+    "shots": 70,
+    "hits": 330,
+    "target_hp": 98600,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 197,
+      "not_tracking": 203,
+      "alignment_or_facing": 3,
+      "insufficient_updates": 35,
+      "acquiring": 8,
+      "arrival_probability": 14,
+      "lost": 3
+    },
+    "passed": true,
+    "batch": "gate-color-20261030-010740",
+    "unique_damaging_shots": 70,
+    "processing_ms_median": 3.0199499999999997,
+    "processing_ms_p95": 8.5906,
+    "truth": {
+      "active_center_error_m": {
+        "count": 365,
+        "max": 0.1486025132086759,
+        "p50": 0.10744519271896641,
+        "p95": 0.12536293147120786,
+        "rmse": 0.10728754758934349
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 183,
+        "max": 0.616921825029378,
+        "p50": 0.03973540335348913,
+        "p95": 0.1809941196240359,
+        "rmse": 0.11454451166084577
+      },
+      "fire_center_error_m": {
+        "count": 139,
+        "max": 0.1345183873938563,
+        "p50": 0.10824729430508824,
+        "p95": 0.12524389984675227,
+        "rmse": 0.10695901885042039
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 139,
+        "max": 0.1063836304952553,
+        "p50": 0.08457289248382197,
+        "p95": 0.09806597171573643,
+        "rmse": 0.08268092929994175
+      },
+      "fire_omega_error_rad_s": {
+        "count": 139,
+        "max": 1.1209117066850165,
+        "p50": 0.051106666886485214,
+        "p95": 0.4503835390478609,
+        "rmse": 0.22702966154010001
+      },
+      "matched_model_plate_error_m": {
+        "count": 168,
+        "max": 0.1199896912690722,
+        "p50": 0.08619057864534949,
+        "p95": 0.10154120985131725,
+        "rmse": 0.0848599355948978
+      },
+      "near_tracking_center_error_m": {
+        "count": 168,
+        "max": 0.1486025132086759,
+        "p50": 0.11105638273097876,
+        "p95": 0.13018565425884632,
+        "rmse": 0.1099955911576915
+      },
+      "observation_error_m": {
+        "count": 183,
+        "max": 0.4462129001960166,
+        "p50": 0.09012555199930336,
+        "p95": 0.1200401421216801,
+        "rmse": 0.09980247794098746
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 183,
+        "max": 0.6174860094057635,
+        "p50": 0.040377499597267,
+        "p95": 0.1809941196240359,
+        "rmse": 0.11468874824666461
+      },
+      "tracking_center_error_m": {
+        "count": 168,
+        "max": 0.1486025132086759,
+        "p50": 0.11105638273097876,
+        "p95": 0.13018565425884632,
+        "rmse": 0.1099955911576915
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 168,
+        "max": 1.2136885018651569,
+        "p50": 0.0444219837420959,
+        "p95": 0.5283128177793812,
+        "rmse": 0.2560561692123446
+      },
+      "tracking_relative_center_error": {
+        "count": 168,
+        "max": 0.05193297238344285,
+        "p50": 0.038812582971584374,
+        "p95": 0.045500812885102354,
+        "rmse": 0.03844061987698334
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 460,
+    "tracking": 200,
+    "fire_frames": 15,
+    "invalid_fire_frames": 0,
+    "model_frames": 456,
+    "window_errors": 0,
+    "shots": 14,
+    "hits": 77,
+    "target_hp": 99840,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 244,
+      "alignment_or_facing": 386,
+      "insufficient_updates": 81,
+      "acquiring": 6,
+      "not_tracking": 250,
+      "arrival_probability": 427,
+      "lost": 4
+    },
+    "passed": true,
+    "batch": "gate-color-20261030-010740",
+    "unique_damaging_shots": 8,
+    "processing_ms_median": 3.0801,
+    "processing_ms_p95": 4.0186,
+    "truth": {
+      "active_center_error_m": {
+        "count": 404,
+        "max": 0.4919172686071058,
+        "p50": 0.28234820472917094,
+        "p95": 0.4685578451255023,
+        "rmse": 0.3225628030633275
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 359,
+        "max": 0.6126506619735166,
+        "p50": 0.144299497677852,
+        "p95": 0.3241947372521301,
+        "rmse": 0.18321038141875945
+      },
+      "far_tracking_center_error_m": {
+        "count": 200,
+        "max": 0.4919172686071058,
+        "p50": 0.2842009759117955,
+        "p95": 0.46548736162076226,
+        "rmse": 0.3203896352056996
+      },
+      "fire_center_error_m": {
+        "count": 15,
+        "max": 0.3118217506541055,
+        "p50": 0.23129100205531603,
+        "p95": 0.30245227059935487,
+        "rmse": 0.23646379729270126
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 15,
+        "max": 0.24019136824514778,
+        "p50": 0.19414806157707806,
+        "p95": 0.2302701588418663,
+        "rmse": 0.19348054663693742
+      },
+      "fire_omega_error_rad_s": {
+        "count": 15,
+        "max": 6.335129719111029,
+        "p50": 0.07437820576807042,
+        "p95": 6.272829602708856,
+        "rmse": 3.2106332911432998
+      },
+      "matched_model_plate_error_m": {
+        "count": 200,
+        "max": 0.24095891618853377,
+        "p50": 0.17341253041784394,
+        "p95": 0.22954203677529164,
+        "rmse": 0.17631655664591867
+      },
+      "observation_error_m": {
+        "count": 359,
+        "max": 1.3564279295628014,
+        "p50": 0.32757370247829903,
+        "p95": 0.7229098317243047,
+        "rmse": 0.42731404080699814
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 359,
+        "max": 1.0591234587193528,
+        "p50": 0.15377747829642563,
+        "p95": 0.440540393299234,
+        "rmse": 0.23057604897216297
+      },
+      "tracking_center_error_m": {
+        "count": 200,
+        "max": 0.4919172686071058,
+        "p50": 0.2842009759117955,
+        "p95": 0.46548736162076226,
+        "rmse": 0.3203896352056996
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 200,
+        "max": 6.716817456242049,
+        "p50": 0.050596947900710454,
+        "p95": 6.00975754647704,
+        "rmse": 1.6271431274418413
+      },
+      "tracking_relative_center_error": {
+        "count": 200,
+        "max": 0.10113052354491589,
+        "p50": 0.058429627471156285,
+        "p95": 0.09569896794993323,
+        "rmse": 0.06586939895317004
+      }
+    }
+  },
+  {
+    "case": "5_off",
+    "frames": 483,
+    "tracking": 314,
+    "fire_frames": 289,
+    "invalid_fire_frames": 0,
+    "model_frames": 476,
+    "window_errors": 0,
+    "shots": 81,
+    "hits": 452,
+    "target_hp": 99440,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "unmatched": 151,
+      "insufficient_updates": 32,
+      "acquiring": 9,
+      "not_tracking": 157,
+      "arrival_probability": 45,
+      "lost": 3
+    },
+    "passed": true,
+    "batch": "gate-color-20261030-010740",
+    "unique_damaging_shots": 28,
+    "processing_ms_median": 2.9436,
+    "processing_ms_p95": 9.0882,
+    "truth": {
+      "active_center_error_m": {
+        "count": 461,
+        "max": 0.23114128180161414,
+        "p50": 0.15775505101112525,
+        "p95": 0.20146699852411035,
+        "rmse": 0.1583409893351865
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 344,
+        "max": 0.6835251058425582,
+        "p50": 0.042968227737261167,
+        "p95": 0.25338621494757607,
+        "rmse": 0.12457976094645203
+      },
+      "far_tracking_center_error_m": {
+        "count": 314,
+        "max": 0.23114128180161414,
+        "p50": 0.15587011123003605,
+        "p95": 0.19804318823368022,
+        "rmse": 0.15685102026379583
+      },
+      "fire_center_error_m": {
+        "count": 289,
+        "max": 0.20206775614738257,
+        "p50": 0.15525481666877197,
+        "p95": 0.18751939159850917,
+        "rmse": 0.15393693597978425
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 289,
+        "max": 0.17299612659419672,
+        "p50": 0.12648482336890296,
+        "p95": 0.15964473317014935,
+        "rmse": 0.12691498234468282
+      },
+      "fire_omega_error_rad_s": {
+        "count": 289,
+        "max": 0.29331220594324536,
+        "p50": 0.023083472201341063,
+        "p95": 0.09361675398010218,
+        "rmse": 0.052633152096130426
+      },
+      "matched_model_plate_error_m": {
+        "count": 314,
+        "max": 0.20284812571750144,
+        "p50": 0.12814882968134697,
+        "p95": 0.16906670455510048,
+        "rmse": 0.12975110701760167
+      },
+      "observation_error_m": {
+        "count": 344,
+        "max": 0.6874910967995893,
+        "p50": 0.10430067931370163,
+        "p95": 0.2645600855286364,
+        "rmse": 0.17441501303958273
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 344,
+        "max": 0.6835251058425582,
+        "p50": 0.043227958405390954,
+        "p95": 0.2544870358419442,
+        "rmse": 0.12476495210150342
+      },
+      "tracking_center_error_m": {
+        "count": 314,
+        "max": 0.23114128180161414,
+        "p50": 0.15587011123003605,
+        "p95": 0.19804318823368022,
+        "rmse": 0.15685102026379583
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 314,
+        "max": 0.29331220594324536,
+        "p50": 0.022878366466275016,
+        "p95": 0.15481046665547576,
+        "rmse": 0.06225830942061874
+      },
+      "tracking_relative_center_error": {
+        "count": 314,
+        "max": 0.0475218869702118,
+        "p50": 0.032046443926097755,
+        "p95": 0.0407174668853739,
+        "rmse": 0.03224820265739392
+      }
+    }
+  },
+  {
+    "case": "3_constant",
+    "frames": 411,
+    "tracking": 364,
+    "fire_frames": 25,
+    "invalid_fire_frames": 0,
+    "model_frames": 411,
+    "window_errors": 0,
+    "shots": 21,
+    "hits": 97,
+    "target_hp": 99620,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "alignment_or_facing": 377,
+      "insufficient_updates": 14,
+      "unmatched": 44,
+      "not_tracking": 45,
+      "acquiring": 2,
+      "arrival_probability": 376
+    },
+    "passed": true,
+    "batch": "upright-edge-20261030-011915",
+    "unique_damaging_shots": 19,
+    "processing_ms_median": 3.2166,
+    "processing_ms_p95": 7.9073,
+    "truth": {
+      "active_center_error_m": {
+        "count": 408,
+        "max": 0.13376077549554408,
+        "p50": 0.05696199076301458,
+        "p95": 0.08295872002159604,
+        "rmse": 0.05853545795468666
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 383,
+        "max": 0.14844181966231762,
+        "p50": 0.026572463864027895,
+        "p95": 0.08973905653937164,
+        "rmse": 0.04423879402585851
+      },
+      "fire_center_error_m": {
+        "count": 25,
+        "max": 0.08953652445046476,
+        "p50": 0.052862941729946676,
+        "p95": 0.07118122678378662,
+        "rmse": 0.055495218476621096
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 27,
+        "max": 0.08824926478476905,
+        "p50": 0.04984088179271676,
+        "p95": 0.07080527981122436,
+        "rmse": 0.05277190285370476
+      },
+      "fire_omega_error_rad_s": {
+        "count": 25,
+        "max": 0.11266963461238877,
+        "p50": 0.029806978166121212,
+        "p95": 0.08299824438947745,
+        "rmse": 0.04796231097267132
+      },
+      "matched_model_plate_error_m": {
+        "count": 376,
+        "max": 0.1119987467692494,
+        "p50": 0.05375083908130659,
+        "p95": 0.08223992717437333,
+        "rmse": 0.05696604432690633
+      },
+      "near_tracking_center_error_m": {
+        "count": 364,
+        "max": 0.13376077549554408,
+        "p50": 0.05564521740386715,
+        "p95": 0.08375904091319963,
+        "rmse": 0.05821217355180362
+      },
+      "observation_error_m": {
+        "count": 383,
+        "max": 0.3935296328804175,
+        "p50": 0.06259088072049983,
+        "p95": 0.12905594774312457,
+        "rmse": 0.08121713622865324
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 383,
+        "max": 0.14844181966231762,
+        "p50": 0.02670182868824722,
+        "p95": 0.08973905653937164,
+        "rmse": 0.044443631170783336
+      },
+      "tracking_center_error_m": {
+        "count": 364,
+        "max": 0.13376077549554408,
+        "p50": 0.05564521740386715,
+        "p95": 0.08375904091319963,
+        "rmse": 0.05821217355180362
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 364,
+        "max": 1.7131350721603065,
+        "p50": 0.03680014282031152,
+        "p95": 0.1765729708291719,
+        "rmse": 0.185115260411846
+      },
+      "tracking_relative_center_error": {
+        "count": 364,
+        "max": 0.04674719535925726,
+        "p50": 0.01944538300757916,
+        "p95": 0.029268959438409237,
+        "rmse": 0.0203428199855169
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 411,
+    "tracking": 171,
+    "fire_frames": 142,
+    "invalid_fire_frames": 0,
+    "model_frames": 406,
+    "window_errors": 0,
+    "shots": 74,
+    "hits": 355,
+    "target_hp": 98520,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "alignment_or_facing": 3,
+      "insufficient_updates": 35,
+      "lost": 3,
+      "unmatched": 224,
+      "not_tracking": 230,
+      "acquiring": 7,
+      "arrival_probability": 13
+    },
+    "passed": true,
+    "batch": "upright-edge-20261030-011915",
+    "unique_damaging_shots": 74,
+    "processing_ms_median": 2.8721,
+    "processing_ms_p95": 8.4139,
+    "truth": {
+      "active_center_error_m": {
+        "count": 395,
+        "max": 0.16021882581840466,
+        "p50": 0.09602529264456323,
+        "p95": 0.12653575789013036,
+        "rmse": 0.10092695609842028
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 184,
+        "max": 0.5114345521834491,
+        "p50": 0.011740499022571349,
+        "p95": 0.047115553425440826,
+        "rmse": 0.062300859082339836
+      },
+      "fire_center_error_m": {
+        "count": 142,
+        "max": 0.15382529527346972,
+        "p50": 0.0960317895011889,
+        "p95": 0.12520772921015194,
+        "rmse": 0.10108636735226541
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 142,
+        "max": 0.12570273610520968,
+        "p50": 0.06743656983855621,
+        "p95": 0.09678971106085651,
+        "rmse": 0.07265408798726973
+      },
+      "fire_omega_error_rad_s": {
+        "count": 142,
+        "max": 0.23652967138997139,
+        "p50": 0.01242304089112205,
+        "p95": 0.0692355703450858,
+        "rmse": 0.03471387208833161
+      },
+      "matched_model_plate_error_m": {
+        "count": 171,
+        "max": 0.12570273610520968,
+        "p50": 0.06769816962379181,
+        "p95": 0.09587105320900816,
+        "rmse": 0.07270998737478422
+      },
+      "near_tracking_center_error_m": {
+        "count": 171,
+        "max": 0.15382529527346972,
+        "p50": 0.09614824806808075,
+        "p95": 0.12505803249158082,
+        "rmse": 0.10114761833721923
+      },
+      "observation_error_m": {
+        "count": 184,
+        "max": 0.23062503037275345,
+        "p50": 0.07306988192407977,
+        "p95": 0.10324615648246305,
+        "rmse": 0.07669824585961957
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 184,
+        "max": 0.5114345521834491,
+        "p50": 0.012470366563303914,
+        "p95": 0.04771047329480638,
+        "rmse": 0.06246993994943757
+      },
+      "tracking_center_error_m": {
+        "count": 171,
+        "max": 0.15382529527346972,
+        "p50": 0.09614824806808075,
+        "p95": 0.12505803249158082,
+        "rmse": 0.10114761833721923
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 171,
+        "max": 0.23652967138997139,
+        "p50": 0.01242304089112205,
+        "p95": 0.0765441469258748,
+        "rmse": 0.039226596059241184
+      },
+      "tracking_relative_center_error": {
+        "count": 171,
+        "max": 0.053758478364364634,
+        "p50": 0.03360289148019633,
+        "p95": 0.043705896672366226,
+        "rmse": 0.03534866634052024
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 507,
+    "tracking": 231,
+    "fire_frames": 21,
+    "invalid_fire_frames": 0,
+    "model_frames": 503,
+    "window_errors": 0,
+    "shots": 18,
+    "hits": 95,
+    "target_hp": 99820,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "alignment_or_facing": 432,
+      "insufficient_updates": 88,
+      "lost": 3,
+      "unmatched": 259,
+      "not_tracking": 267,
+      "acquiring": 6,
+      "arrival_probability": 472
+    },
+    "passed": true,
+    "batch": "upright-edge-20261030-011915",
+    "unique_damaging_shots": 9,
+    "processing_ms_median": 2.8592,
+    "processing_ms_p95": 3.7891,
+    "truth": {
+      "active_center_error_m": {
+        "count": 467,
+        "max": 0.37199926241993847,
+        "p50": 0.19403963170760175,
+        "p95": 0.26160797359672827,
+        "rmse": 0.1997445945029258
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 369,
+        "max": 0.5158523159880661,
+        "p50": 0.08764599650625593,
+        "p95": 0.3081465489149098,
+        "rmse": 0.14774781164839915
+      },
+      "far_tracking_center_error_m": {
+        "count": 231,
+        "max": 0.2956708912665822,
+        "p50": 0.19548538750061506,
+        "p95": 0.2539358504619272,
+        "rmse": 0.19822286356172203
+      },
+      "fire_center_error_m": {
+        "count": 21,
+        "max": 0.25584366061518304,
+        "p50": 0.19060347838415362,
+        "p95": 0.24322330052376637,
+        "rmse": 0.193464565108414
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 21,
+        "max": 0.21611027263508684,
+        "p50": 0.18015438316013352,
+        "p95": 0.21607106906057544,
+        "rmse": 0.17718278503021537
+      },
+      "fire_omega_error_rad_s": {
+        "count": 21,
+        "max": 0.159406217779968,
+        "p50": 0.02691762824754118,
+        "p95": 0.0709288281393814,
+        "rmse": 0.050395195617102845
+      },
+      "matched_model_plate_error_m": {
+        "count": 231,
+        "max": 0.2446764059588398,
+        "p50": 0.1718844713015962,
+        "p95": 0.2122700390314984,
+        "rmse": 0.17376747405518408
+      },
+      "observation_error_m": {
+        "count": 369,
+        "max": 1.104468281100753,
+        "p50": 0.18065519488770054,
+        "p95": 0.569617496866461,
+        "rmse": 0.2947187005750969
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 369,
+        "max": 0.5158523159880661,
+        "p50": 0.08810809874580716,
+        "p95": 0.3081465489149098,
+        "rmse": 0.14796468734777785
+      },
+      "tracking_center_error_m": {
+        "count": 231,
+        "max": 0.2956708912665822,
+        "p50": 0.19548538750061506,
+        "p95": 0.2539358504619272,
+        "rmse": 0.19822286356172203
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 231,
+        "max": 11.170614807578822,
+        "p50": 0.03553264935894074,
+        "p95": 0.4724745547293363,
+        "rmse": 1.1918414977641953
+      },
+      "tracking_relative_center_error": {
+        "count": 231,
+        "max": 0.060788315428503284,
+        "p50": 0.040191446404394544,
+        "p95": 0.05220680259927535,
+        "rmse": 0.04075383323102442
+      }
+    }
+  },
+  {
+    "case": "5_off",
+    "frames": 429,
+    "tracking": 275,
+    "fire_frames": 241,
+    "invalid_fire_frames": 0,
+    "model_frames": 418,
+    "window_errors": 0,
+    "shots": 79,
+    "hits": 441,
+    "target_hp": 99420,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "insufficient_updates": 41,
+      "lost": 4,
+      "not_tracking": 137,
+      "unmatched": 134,
+      "arrival_probability": 64,
+      "acquiring": 13
+    },
+    "passed": true,
+    "batch": "upright-edge-20261030-011915",
+    "unique_damaging_shots": 29,
+    "processing_ms_median": 3.0069,
+    "processing_ms_p95": 9.1264,
+    "truth": {
+      "active_center_error_m": {
+        "count": 403,
+        "max": 0.18785515097352182,
+        "p50": 0.11629988663298736,
+        "p95": 0.15032949280949848,
+        "rmse": 0.11974431806060608
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 292,
+        "max": 0.7526459052145721,
+        "p50": 0.0175629481724755,
+        "p95": 0.07172619230115651,
+        "rmse": 0.0778550962128921
+      },
+      "far_tracking_center_error_m": {
+        "count": 275,
+        "max": 0.18785515097352182,
+        "p50": 0.11844966107355952,
+        "p95": 0.15150408389850503,
+        "rmse": 0.12162469715511919
+      },
+      "fire_center_error_m": {
+        "count": 241,
+        "max": 0.15150408389850503,
+        "p50": 0.11520807202061843,
+        "p95": 0.14225022668344922,
+        "rmse": 0.11822789821368004
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 241,
+        "max": 0.12297139615330802,
+        "p50": 0.08660453814498982,
+        "p95": 0.11288226781822193,
+        "rmse": 0.08965125652949293
+      },
+      "fire_omega_error_rad_s": {
+        "count": 241,
+        "max": 0.30464223816621483,
+        "p50": 0.013604320967622048,
+        "p95": 0.08314133111451413,
+        "rmse": 0.044526949257028686
+      },
+      "matched_model_plate_error_m": {
+        "count": 275,
+        "max": 0.15873623793895753,
+        "p50": 0.08962880596116396,
+        "p95": 0.12286854151708378,
+        "rmse": 0.09315993166539668
+      },
+      "observation_error_m": {
+        "count": 292,
+        "max": 1.0019502163156697,
+        "p50": 0.08726059342331262,
+        "p95": 0.1587362379389593,
+        "rmse": 0.12585426874343653
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 292,
+        "max": 0.7526459052145721,
+        "p50": 0.017836797605034427,
+        "p95": 0.07204168233141428,
+        "rmse": 0.07796978986365798
+      },
+      "tracking_center_error_m": {
+        "count": 275,
+        "max": 0.18785515097352182,
+        "p50": 0.11844966107355952,
+        "p95": 0.15150408389850503,
+        "rmse": 0.12162469715511919
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 275,
+        "max": 0.30464223816621483,
+        "p50": 0.0146686810083102,
+        "p95": 0.11932844509005112,
+        "rmse": 0.056011160682272645
+      },
+      "tracking_relative_center_error": {
+        "count": 275,
+        "max": 0.03862193115482695,
+        "p50": 0.024353289330880917,
+        "p95": 0.031148715912950074,
+        "rmse": 0.025005898084075787
+      }
+    }
+  },
+  {
+    "case": "3_constant",
+    "frames": 471,
+    "tracking": 345,
+    "fire_frames": 68,
+    "invalid_fire_frames": 0,
+    "model_frames": 461,
+    "window_errors": 0,
+    "shots": 30,
+    "hits": 171,
+    "target_hp": 99800,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "flight_consistency": 1,
+      "acquiring": 12,
+      "lost": 10,
+      "arrival_probability": 369,
+      "not_tracking": 104,
+      "insufficient_updates": 83,
+      "alignment_or_facing": 355,
+      "unmatched": 87
+    },
+    "passed": true,
+    "batch": "final-motion-20261030-012408",
+    "unique_damaging_shots": 10,
+    "processing_ms_median": 3.7675,
+    "processing_ms_p95": 9.6539,
+    "truth": {
+      "active_center_error_m": {
+        "count": 432,
+        "max": 0.6966086630673272,
+        "p50": 0.07959081036719368,
+        "p95": 0.35947058420997774,
+        "rmse": 0.16372716034376936
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 449,
+        "max": 0.21399325580196416,
+        "p50": 0.04380099706165219,
+        "p95": 0.12716735333294205,
+        "rmse": 0.06603674305451342
+      },
+      "fire_center_error_m": {
+        "count": 68,
+        "max": 0.35947058420997774,
+        "p50": 0.05835868014862396,
+        "p95": 0.26262256804723383,
+        "rmse": 0.13643132688429316
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 70,
+        "max": 0.20051978293274034,
+        "p50": 0.06743786247685672,
+        "p95": 0.18931514576267996,
+        "rmse": 0.10064133118201843
+      },
+      "fire_omega_error_rad_s": {
+        "count": 68,
+        "max": 2.7921065561783425,
+        "p50": 0.3085204172795857,
+        "p95": 2.087428616760792,
+        "rmse": 0.9651822278827675
+      },
+      "matched_model_plate_error_m": {
+        "count": 353,
+        "max": 0.20051978293274034,
+        "p50": 0.0671181170375559,
+        "p95": 0.1667909191208296,
+        "rmse": 0.08843180904614628
+      },
+      "near_tracking_center_error_m": {
+        "count": 345,
+        "max": 0.35947058420997774,
+        "p50": 0.07169947035716871,
+        "p95": 0.22575386906198017,
+        "rmse": 0.10962647671567338
+      },
+      "observation_error_m": {
+        "count": 449,
+        "max": 0.32762765254442655,
+        "p50": 0.07637792686712196,
+        "p95": 0.17082093229169473,
+        "rmse": 0.0939719598450345
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 449,
+        "max": 0.21399325580196416,
+        "p50": 0.044493141482220055,
+        "p95": 0.12716735333294205,
+        "rmse": 0.06658671095007805
+      },
+      "tracking_center_error_m": {
+        "count": 345,
+        "max": 0.35947058420997774,
+        "p50": 0.07169947035716871,
+        "p95": 0.22575386906198017,
+        "rmse": 0.10962647671567338
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 345,
+        "max": 4.318441561170079,
+        "p50": 0.302130066432718,
+        "p95": 1.9340953820681088,
+        "rmse": 0.9052575822372155
+      },
+      "tracking_relative_center_error": {
+        "count": 345,
+        "max": 0.11848698470221648,
+        "p50": 0.024730747716462623,
+        "p95": 0.07307483326328934,
+        "rmse": 0.03636252325497574
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 345,
+    "tracking": 248,
+    "fire_frames": 70,
+    "invalid_fire_frames": 0,
+    "model_frames": 334,
+    "window_errors": 0,
+    "shots": 29,
+    "hits": 174,
+    "target_hp": 99940,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 13,
+      "lost": 11,
+      "arrival_probability": 230,
+      "not_tracking": 73,
+      "insufficient_updates": 91,
+      "alignment_or_facing": 221,
+      "unmatched": 60
+    },
+    "passed": true,
+    "batch": "final-motion-20261030-012408",
+    "unique_damaging_shots": 3,
+    "processing_ms_median": 4.472,
+    "processing_ms_p95": 11.8023,
+    "truth": {
+      "active_center_error_m": {
+        "count": 308,
+        "max": 0.9073168525406808,
+        "p50": 0.13711757181278125,
+        "p95": 0.6052451567889817,
+        "rmse": 0.2833252089091059
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 323,
+        "max": 0.3953933867468342,
+        "p50": 0.09516846286174685,
+        "p95": 0.28433284994030816,
+        "rmse": 0.14617706302798783
+      },
+      "fire_center_error_m": {
+        "count": 70,
+        "max": 0.53833310803833,
+        "p50": 0.2263873123097771,
+        "p95": 0.4619241188224657,
+        "rmse": 0.2743799182475459
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 70,
+        "max": 0.18569926195952274,
+        "p50": 0.11910249992540063,
+        "p95": 0.17217899174390858,
+        "rmse": 0.12408824687808999
+      },
+      "fire_omega_error_rad_s": {
+        "count": 70,
+        "max": 2.1960747839465644,
+        "p50": 1.168196283389745,
+        "p95": 1.9792412536676074,
+        "rmse": 1.2878833768051599
+      },
+      "matched_model_plate_error_m": {
+        "count": 248,
+        "max": 0.20917210403135703,
+        "p50": 0.08846544476744923,
+        "p95": 0.18238580824423095,
+        "rmse": 0.1059801563675078
+      },
+      "near_tracking_center_error_m": {
+        "count": 248,
+        "max": 0.53833310803833,
+        "p50": 0.12171941636456772,
+        "p95": 0.39295266530562467,
+        "rmse": 0.19868778885334484
+      },
+      "observation_error_m": {
+        "count": 323,
+        "max": 0.26993604033035273,
+        "p50": 0.08570608404426244,
+        "p95": 0.21726839102635873,
+        "rmse": 0.1200477621619774
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 323,
+        "max": 0.3953933867468342,
+        "p50": 0.16001399613916756,
+        "p95": 0.2953200718583855,
+        "rmse": 0.18089292915723648
+      },
+      "tracking_center_error_m": {
+        "count": 248,
+        "max": 0.53833310803833,
+        "p50": 0.12171941636456772,
+        "p95": 0.39295266530562467,
+        "rmse": 0.19868778885334484
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 248,
+        "max": 3.7006169645784466,
+        "p50": 0.571421909420351,
+        "p95": 2.2497163408807306,
+        "rmse": 1.1090017141082038
+      },
+      "tracking_relative_center_error": {
+        "count": 248,
+        "max": 0.17438835105835104,
+        "p50": 0.04172343230089822,
+        "p95": 0.12716256787344837,
+        "rmse": 0.06617463947921699
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 468,
+    "tracking": 99,
+    "fire_frames": 1,
+    "invalid_fire_frames": 0,
+    "model_frames": 443,
+    "window_errors": 0,
+    "shots": 1,
+    "hits": 7,
+    "target_hp": 100000,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "flight_consistency": 14,
+      "acquiring": 27,
+      "lost": 22,
+      "arrival_probability": 418,
+      "not_tracking": 320,
+      "insufficient_updates": 292,
+      "alignment_or_facing": 342,
+      "unmatched": 278
+    },
+    "passed": false,
+    "batch": "final-motion-20261030-012408",
+    "unique_damaging_shots": 0,
+    "processing_ms_median": 3.4603,
+    "processing_ms_p95": 4.4008,
+    "truth": {
+      "active_center_error_m": {
+        "count": 262,
+        "max": 0.7319139106168654,
+        "p50": 0.2439677694260472,
+        "p95": 0.542421952553846,
+        "rmse": 0.3214560437133756
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 354,
+        "max": 0.5636573031651175,
+        "p50": 0.10684386120671063,
+        "p95": 0.2833687159459912,
+        "rmse": 0.1505372716889854
+      },
+      "far_tracking_center_error_m": {
+        "count": 99,
+        "max": 0.5207855115057761,
+        "p50": 0.2111588304920753,
+        "p95": 0.45790569115739227,
+        "rmse": 0.2680691719562845
+      },
+      "fire_center_error_m": {
+        "count": 1,
+        "max": 0.17794070972447448,
+        "p50": 0.17794070972447448,
+        "p95": 0.17794070972447448,
+        "rmse": 0.17794070972447448
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 1,
+        "max": 0.22873548349190934,
+        "p50": 0.22873548349190934,
+        "p95": 0.22873548349190934,
+        "rmse": 0.22873548349190934
+      },
+      "fire_omega_error_rad_s": {
+        "count": 1,
+        "max": 0.8657867531512728,
+        "p50": 0.8657867531512728,
+        "p95": 0.8657867531512728,
+        "rmse": 0.8657867531512728
+      },
+      "matched_model_plate_error_m": {
+        "count": 99,
+        "max": 0.23520278597357003,
+        "p50": 0.16865875013897286,
+        "p95": 0.21905583113260682,
+        "rmse": 0.1585910972869266
+      },
+      "observation_error_m": {
+        "count": 354,
+        "max": 1.1425653873251251,
+        "p50": 0.19785176062522153,
+        "p95": 0.5319801347930491,
+        "rmse": 0.2884731031257051
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 354,
+        "max": 0.5636573031651175,
+        "p50": 0.10985267521346209,
+        "p95": 0.2890709746001159,
+        "rmse": 0.15276251089530343
+      },
+      "tracking_center_error_m": {
+        "count": 99,
+        "max": 0.5207855115057761,
+        "p50": 0.2111588304920753,
+        "p95": 0.45790569115739227,
+        "rmse": 0.2680691719562845
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 99,
+        "max": 10.487163090514427,
+        "p50": 0.7890866401397094,
+        "p95": 6.631725834503557,
+        "rmse": 2.717905136648354
+      },
+      "tracking_relative_center_error": {
+        "count": 99,
+        "max": 0.10704713810518897,
+        "p50": 0.042744160829722364,
+        "p95": 0.09268253156500533,
+        "rmse": 0.05427518766329796
+      }
+    }
+  },
+  {
+    "case": "3_constant",
+    "frames": 466,
+    "tracking": 437,
+    "fire_frames": 106,
+    "invalid_fire_frames": 0,
+    "model_frames": 466,
+    "window_errors": 0,
+    "shots": 49,
+    "hits": 293,
+    "target_hp": 99820,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "flight_consistency": 1,
+      "arrival_probability": 323,
+      "unmatched": 26,
+      "not_tracking": 27,
+      "alignment_or_facing": 348,
+      "insufficient_updates": 14
+    },
+    "passed": true,
+    "batch": "final-motion2-20261030-013028",
+    "unique_damaging_shots": 9,
+    "processing_ms_median": 3.7721999999999998,
+    "processing_ms_p95": 11.355,
+    "truth": {
+      "active_center_error_m": {
+        "count": 463,
+        "max": 0.2388402653614491,
+        "p50": 0.07137713162868008,
+        "p95": 0.19049214813231347,
+        "rmse": 0.10524068576798724
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 449,
+        "max": 0.2847703875619756,
+        "p50": 0.04411233825275396,
+        "p95": 0.12784309633488045,
+        "rmse": 0.06838434326900662
+      },
+      "fire_center_error_m": {
+        "count": 106,
+        "max": 0.2388402653614491,
+        "p50": 0.1329349969964467,
+        "p95": 0.201407293175004,
+        "rmse": 0.13877654354335367
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 108,
+        "max": 0.20506988631434436,
+        "p50": 0.1328899453421954,
+        "p95": 0.18633049746059557,
+        "rmse": 0.1315707527896959
+      },
+      "fire_omega_error_rad_s": {
+        "count": 106,
+        "max": 1.00734285819063,
+        "p50": 0.6034901938241859,
+        "p95": 0.928435075477033,
+        "rmse": 0.6301967174531496
+      },
+      "matched_model_plate_error_m": {
+        "count": 444,
+        "max": 0.20506988631434436,
+        "p50": 0.06152886659556671,
+        "p95": 0.17091842627655404,
+        "rmse": 0.09359879270016425
+      },
+      "near_tracking_center_error_m": {
+        "count": 437,
+        "max": 0.2388402653614491,
+        "p50": 0.07075436938678605,
+        "p95": 0.19054716265809735,
+        "rmse": 0.10412510249574809
+      },
+      "observation_error_m": {
+        "count": 449,
+        "max": 0.4905948060677471,
+        "p50": 0.07811072781464685,
+        "p95": 0.1606925458401792,
+        "rmse": 0.09526642963463741
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 449,
+        "max": 0.291968719797812,
+        "p50": 0.04693403754879766,
+        "p95": 0.1282518657599252,
+        "rmse": 0.06963781347944904
+      },
+      "tracking_center_error_m": {
+        "count": 437,
+        "max": 0.2388402653614491,
+        "p50": 0.07075436938678605,
+        "p95": 0.19054716265809735,
+        "rmse": 0.10412510249574809
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 437,
+        "max": 2.495018717218685,
+        "p50": 0.5690024653236865,
+        "p95": 0.9696797058622373,
+        "rmse": 0.635134078018447
+      },
+      "tracking_relative_center_error": {
+        "count": 437,
+        "max": 0.07829109510441346,
+        "p50": 0.024538774243362895,
+        "p95": 0.06336743909263963,
+        "rmse": 0.034757158189305054
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 441,
+    "tracking": 349,
+    "fire_frames": 106,
+    "invalid_fire_frames": 0,
+    "model_frames": 438,
+    "window_errors": 0,
+    "shots": 50,
+    "hits": 303,
+    "target_hp": 99780,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 5,
+      "arrival_probability": 232,
+      "unmatched": 80,
+      "not_tracking": 84,
+      "alignment_or_facing": 296,
+      "insufficient_updates": 35,
+      "lost": 3
+    },
+    "passed": true,
+    "batch": "final-motion2-20261030-013028",
+    "unique_damaging_shots": 11,
+    "processing_ms_median": 3.7192,
+    "processing_ms_p95": 11.1476,
+    "truth": {
+      "active_center_error_m": {
+        "count": 429,
+        "max": 0.5140958901487052,
+        "p50": 0.15232232068891904,
+        "p95": 0.40047236231035427,
+        "rmse": 0.21456451713946612
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 393,
+        "max": 0.4265600084024308,
+        "p50": 0.09319204491831212,
+        "p95": 0.2921638049090922,
+        "rmse": 0.15093101079516327
+      },
+      "fire_center_error_m": {
+        "count": 106,
+        "max": 0.4827719946069055,
+        "p50": 0.1972273567944575,
+        "p95": 0.39142959837000774,
+        "rmse": 0.2348778834500115
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 106,
+        "max": 0.1931682570700641,
+        "p50": 0.10131416320428185,
+        "p95": 0.17805067668553576,
+        "rmse": 0.1168531294488568
+      },
+      "fire_omega_error_rad_s": {
+        "count": 106,
+        "max": 1.4087118771225975,
+        "p50": 0.8904145583993321,
+        "p95": 1.3353972030394974,
+        "rmse": 0.9207488298069892
+      },
+      "matched_model_plate_error_m": {
+        "count": 349,
+        "max": 0.20274033363333083,
+        "p50": 0.09257340867310526,
+        "p95": 0.17805067668553576,
+        "rmse": 0.10678037143196067
+      },
+      "near_tracking_center_error_m": {
+        "count": 349,
+        "max": 0.5140958901487052,
+        "p50": 0.14889843059671418,
+        "p95": 0.40181666609280814,
+        "rmse": 0.21257087800265811
+      },
+      "observation_error_m": {
+        "count": 393,
+        "max": 0.2896401296163768,
+        "p50": 0.08045426824037373,
+        "p95": 0.22945122768104026,
+        "rmse": 0.12210305169862067
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 393,
+        "max": 0.4595422081496223,
+        "p50": 0.16373802417462135,
+        "p95": 0.2948218013010935,
+        "rmse": 0.1821286542013447
+      },
+      "tracking_center_error_m": {
+        "count": 349,
+        "max": 0.5140958901487052,
+        "p50": 0.14889843059671418,
+        "p95": 0.40181666609280814,
+        "rmse": 0.21257087800265811
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 349,
+        "max": 3.4510037291662186,
+        "p50": 0.8432044402356405,
+        "p95": 1.4794575563588643,
+        "rmse": 0.9781632855757433
+      },
+      "tracking_relative_center_error": {
+        "count": 349,
+        "max": 0.16936419273322476,
+        "p50": 0.05038976181340605,
+        "p95": 0.13196963707004264,
+        "rmse": 0.07097049426079985
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 507,
+    "tracking": 372,
+    "fire_frames": 59,
+    "invalid_fire_frames": 0,
+    "model_frames": 505,
+    "window_errors": 0,
+    "shots": 34,
+    "hits": 183,
+    "target_hp": 99960,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 4,
+      "flight_consistency": 2,
+      "arrival_probability": 398,
+      "unmatched": 126,
+      "not_tracking": 130,
+      "alignment_or_facing": 396,
+      "insufficient_updates": 27,
+      "lost": 1
+    },
+    "passed": true,
+    "batch": "final-motion2-20261030-013028",
+    "unique_damaging_shots": 2,
+    "processing_ms_median": 3.4776,
+    "processing_ms_p95": 9.7554,
+    "truth": {
+      "active_center_error_m": {
+        "count": 498,
+        "max": 0.5769498132278903,
+        "p50": 0.23457178349338983,
+        "p95": 0.39851869137852447,
+        "rmse": 0.25901227591604836
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 384,
+        "max": 0.4346450216190316,
+        "p50": 0.09734012295211958,
+        "p95": 0.31552305860020924,
+        "rmse": 0.15274131374327007
+      },
+      "far_tracking_center_error_m": {
+        "count": 372,
+        "max": 0.4313871984430575,
+        "p50": 0.23034713537767065,
+        "p95": 0.36884068229706646,
+        "rmse": 0.24701484234788462
+      },
+      "fire_center_error_m": {
+        "count": 59,
+        "max": 0.4313871984430575,
+        "p50": 0.298592864505912,
+        "p95": 0.3976226411437277,
+        "rmse": 0.2941861236622404
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 59,
+        "max": 0.22723883737584194,
+        "p50": 0.15545956145405615,
+        "p95": 0.22044377522964045,
+        "rmse": 0.15468141598467686
+      },
+      "fire_omega_error_rad_s": {
+        "count": 59,
+        "max": 1.4683749933166448,
+        "p50": 0.9450180869623042,
+        "p95": 1.330614337590161,
+        "rmse": 0.9306032215175505
+      },
+      "matched_model_plate_error_m": {
+        "count": 372,
+        "max": 0.2440243374093361,
+        "p50": 0.14441161994944535,
+        "p95": 0.2213206063929863,
+        "rmse": 0.15005837783641954
+      },
+      "observation_error_m": {
+        "count": 384,
+        "max": 1.0146020535011364,
+        "p50": 0.2000335131803256,
+        "p95": 0.561428848510222,
+        "rmse": 0.2970322606380449
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 384,
+        "max": 0.5171667887130187,
+        "p50": 0.09854859586116516,
+        "p95": 0.31552305860020924,
+        "rmse": 0.15527419289294708
+      },
+      "tracking_center_error_m": {
+        "count": 372,
+        "max": 0.4313871984430575,
+        "p50": 0.23034713537767065,
+        "p95": 0.36884068229706646,
+        "rmse": 0.24701484234788462
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 372,
+        "max": 5.944919811185113,
+        "p50": 0.8544132802904132,
+        "p95": 1.4242498153508532,
+        "rmse": 1.109867025483732
+      },
+      "tracking_relative_center_error": {
+        "count": 372,
+        "max": 0.08799824558991426,
+        "p50": 0.04694427801767958,
+        "p95": 0.07385629825369687,
+        "rmse": 0.04983641187170859
+      }
+    }
+  },
+  {
+    "case": "1.4_constant",
+    "frames": 367,
+    "tracking": 155,
+    "fire_frames": 11,
+    "invalid_fire_frames": 0,
+    "model_frames": 367,
+    "window_errors": 0,
+    "shots": 11,
+    "hits": 64,
+    "target_hp": 99820,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "arrival_probability": 279,
+      "unmatched": 209,
+      "not_tracking": 210,
+      "alignment_or_facing": 299,
+      "insufficient_updates": 19
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 9,
+    "processing_ms_median": 3.8156,
+    "processing_ms_p95": 5.2821,
+    "truth": {
+      "active_center_error_m": {
+        "count": 364,
+        "max": 0.13059952543162728,
+        "p50": 0.05148985709332824,
+        "p95": 0.088938136275281,
+        "rmse": 0.05720407211642557
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 354,
+        "max": 0.024028827412152176,
+        "p50": 0.005756359759707341,
+        "p95": 0.01753572242843826,
+        "rmse": 0.008517752867276778
+      },
+      "fire_center_error_m": {
+        "count": 11,
+        "max": 0.07402522125420466,
+        "p50": 0.04753636914661079,
+        "p95": 0.061154714639773275,
+        "rmse": 0.05008487194157868
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 11,
+        "max": 0.05651469234321502,
+        "p50": 0.030045578474559128,
+        "p95": 0.03942777381692078,
+        "rmse": 0.03193543558929583
+      },
+      "fire_omega_error_rad_s": {
+        "count": 11,
+        "max": 20.102034909602832,
+        "p50": 18.55821446221763,
+        "p95": 19.85968905344034,
+        "rmse": 18.261508288193685
+      },
+      "matched_model_plate_error_m": {
+        "count": 156,
+        "max": 0.10712769152230343,
+        "p50": 0.02893427153417815,
+        "p95": 0.04976755023712806,
+        "rmse": 0.03335861479749264
+      },
+      "near_tracking_center_error_m": {
+        "count": 155,
+        "max": 0.12702335751669855,
+        "p50": 0.04753636914661079,
+        "p95": 0.07685482744504431,
+        "rmse": 0.05082452521194626
+      },
+      "observation_error_m": {
+        "count": 354,
+        "max": 0.04020690181902448,
+        "p50": 0.02518444759249791,
+        "p95": 0.03550085214827223,
+        "rmse": 0.026123277033285316
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 354,
+        "max": 0.024028827412152176,
+        "p50": 0.005756359759707341,
+        "p95": 0.01753572242843826,
+        "rmse": 0.008517752867276778
+      },
+      "tracking_center_error_m": {
+        "count": 155,
+        "max": 0.12702335751669855,
+        "p50": 0.04753636914661079,
+        "p95": 0.07685482744504431,
+        "rmse": 0.05082452521194626
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 155,
+        "max": 20.44889461217975,
+        "p50": 17.76335816185393,
+        "p95": 19.92093900995303,
+        "rmse": 16.206289672443248
+      },
+      "tracking_relative_center_error": {
+        "count": 155,
+        "max": 0.1008883309349731,
+        "p50": 0.037800362461565776,
+        "p95": 0.0609475320263617,
+        "rmse": 0.04040605318617088
+      }
+    }
+  },
+  {
+    "case": "1.4_off",
+    "frames": 399,
+    "tracking": 195,
+    "fire_frames": 182,
+    "invalid_fire_frames": 0,
+    "model_frames": 399,
+    "window_errors": 0,
+    "shots": 67,
+    "hits": 392,
+    "target_hp": 98660,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "arrival_probability": 3,
+      "unmatched": 201,
+      "not_tracking": 202,
+      "alignment_or_facing": 3,
+      "insufficient_updates": 14
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 67,
+    "processing_ms_median": 3.878,
+    "processing_ms_p95": 12.0676,
+    "truth": {
+      "active_center_error_m": {
+        "count": 396,
+        "max": 0.06797281337405817,
+        "p50": 0.06326511159380081,
+        "p95": 0.06651508430147657,
+        "rmse": 0.06349678823802171
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 198,
+        "max": 0.015400080868019694,
+        "p50": 0.0025995231349156267,
+        "p95": 0.008503995089761185,
+        "rmse": 0.00423952752366013
+      },
+      "fire_center_error_m": {
+        "count": 182,
+        "max": 0.06651508430147657,
+        "p50": 0.06320237501362273,
+        "p95": 0.0656592369195657,
+        "rmse": 0.06338195255970948
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 182,
+        "max": 0.03831531350562108,
+        "p50": 0.035222468527903845,
+        "p95": 0.03761907635535552,
+        "rmse": 0.03538158132607856
+      },
+      "fire_omega_error_rad_s": {
+        "count": 182,
+        "max": 0.03093907371887148,
+        "p50": 0.006314756550459355,
+        "p95": 0.02204242998523763,
+        "rmse": 0.010687548466353594
+      },
+      "matched_model_plate_error_m": {
+        "count": 195,
+        "max": 0.04112618376718317,
+        "p50": 0.03518422479003419,
+        "p95": 0.037626875600165734,
+        "rmse": 0.03534632496020294
+      },
+      "near_tracking_center_error_m": {
+        "count": 195,
+        "max": 0.06651508430147657,
+        "p50": 0.06318260792874711,
+        "p95": 0.06568493828693597,
+        "rmse": 0.06334971977619193
+      },
+      "observation_error_m": {
+        "count": 198,
+        "max": 0.03865698641005695,
+        "p50": 0.03418996356420095,
+        "p95": 0.03822421260461211,
+        "rmse": 0.035378899207483806
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 198,
+        "max": 0.015400080868019694,
+        "p50": 0.004359042624718423,
+        "p95": 0.010959326493326982,
+        "rmse": 0.005704003826394017
+      },
+      "tracking_center_error_m": {
+        "count": 195,
+        "max": 0.06651508430147657,
+        "p50": 0.06318260792874711,
+        "p95": 0.06568493828693597,
+        "rmse": 0.06334971977619193
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 195,
+        "max": 0.03093907371887148,
+        "p50": 0.0062832899212671,
+        "p95": 0.02345175645086078,
+        "rmse": 0.01088690684882449
+      },
+      "tracking_relative_center_error": {
+        "count": 195,
+        "max": 0.052920478484283905,
+        "p50": 0.050270168023062375,
+        "p95": 0.052261397077151994,
+        "rmse": 0.050400152848537785
+      }
+    }
+  },
+  {
+    "case": "3_constant",
+    "frames": 527,
+    "tracking": 420,
+    "fire_frames": 56,
+    "invalid_fire_frames": 0,
+    "model_frames": 527,
+    "window_errors": 0,
+    "shots": 40,
+    "hits": 189,
+    "target_hp": 99340,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "arrival_probability": 310,
+      "unmatched": 104,
+      "not_tracking": 105,
+      "alignment_or_facing": 461,
+      "insufficient_updates": 13
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 33,
+    "processing_ms_median": 3.1295,
+    "processing_ms_p95": 9.1281,
+    "truth": {
+      "active_center_error_m": {
+        "count": 524,
+        "max": 0.11864809378196561,
+        "p50": 0.052771391593808066,
+        "p95": 0.08558364281746894,
+        "rmse": 0.056196607527122
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 433,
+        "max": 0.19490464318755896,
+        "p50": 0.0261141248945016,
+        "p95": 0.08079931341925661,
+        "rmse": 0.042035359774566884
+      },
+      "fire_center_error_m": {
+        "count": 56,
+        "max": 0.08776813971694634,
+        "p50": 0.046922989340228205,
+        "p95": 0.0749365309473122,
+        "rmse": 0.051974932814044854
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 57,
+        "max": 0.08547648336276663,
+        "p50": 0.04583224388619184,
+        "p95": 0.07198955762744365,
+        "rmse": 0.05001626634984446
+      },
+      "fire_omega_error_rad_s": {
+        "count": 56,
+        "max": 0.1768648895838476,
+        "p50": 0.02684773743370794,
+        "p95": 0.07611895256209689,
+        "rmse": 0.04490010535820316
+      },
+      "matched_model_plate_error_m": {
+        "count": 429,
+        "max": 0.09505401906180502,
+        "p50": 0.05025465311949161,
+        "p95": 0.08155565650029839,
+        "rmse": 0.05368461138277046
+      },
+      "near_tracking_center_error_m": {
+        "count": 420,
+        "max": 0.11864809378196561,
+        "p50": 0.05273448123991114,
+        "p95": 0.08419806513879792,
+        "rmse": 0.05600825865767559
+      },
+      "observation_error_m": {
+        "count": 433,
+        "max": 0.3237251760469532,
+        "p50": 0.06158993440869736,
+        "p95": 0.13098182473473136,
+        "rmse": 0.07423768022033025
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 433,
+        "max": 0.6407022769387631,
+        "p50": 0.02660691385360381,
+        "p95": 0.08079931341925661,
+        "rmse": 0.051391344255099905
+      },
+      "tracking_center_error_m": {
+        "count": 420,
+        "max": 0.11864809378196561,
+        "p50": 0.05273448123991114,
+        "p95": 0.08419806513879792,
+        "rmse": 0.05600825865767559
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 420,
+        "max": 1.6593456057168572,
+        "p50": 0.030080504524709006,
+        "p95": 0.12926118006301035,
+        "rmse": 0.14543068809429482
+      },
+      "tracking_relative_center_error": {
+        "count": 420,
+        "max": 0.04145910628565733,
+        "p50": 0.018426555473367183,
+        "p95": 0.0294245009798633,
+        "rmse": 0.01957248742781211
+      }
+    }
+  },
+  {
+    "case": "3_off",
+    "frames": 408,
+    "tracking": 166,
+    "fire_frames": 146,
+    "invalid_fire_frames": 0,
+    "model_frames": 407,
+    "window_errors": 0,
+    "shots": 75,
+    "hits": 353,
+    "target_hp": 98500,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 3,
+      "arrival_probability": 3,
+      "unmatched": 237,
+      "not_tracking": 238,
+      "alignment_or_facing": 3,
+      "insufficient_updates": 21,
+      "lost": 1
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 75,
+    "processing_ms_median": 3.4157,
+    "processing_ms_p95": 10.7029,
+    "truth": {
+      "active_center_error_m": {
+        "count": 403,
+        "max": 0.14013657144764735,
+        "p50": 0.09846659837712451,
+        "p95": 0.11457962140939741,
+        "rmse": 0.09869227229784644
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 170,
+        "max": 0.4090806269802181,
+        "p50": 0.014071490284611077,
+        "p95": 0.03742642265522145,
+        "rmse": 0.04902860608976071
+      },
+      "fire_center_error_m": {
+        "count": 146,
+        "max": 0.134198052628402,
+        "p50": 0.09844500669015405,
+        "p95": 0.11326119049601938,
+        "rmse": 0.09860272502118253
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 146,
+        "max": 0.10536379006553337,
+        "p50": 0.07077725569830452,
+        "p95": 0.08435558112802582,
+        "rmse": 0.06992474669008646
+      },
+      "fire_omega_error_rad_s": {
+        "count": 146,
+        "max": 0.681391583105754,
+        "p50": 0.021148224912835446,
+        "p95": 0.13663574073080226,
+        "rmse": 0.09658081719858608
+      },
+      "matched_model_plate_error_m": {
+        "count": 166,
+        "max": 0.10536379006553337,
+        "p50": 0.0709386169597635,
+        "p95": 0.08838239596856827,
+        "rmse": 0.07054825845241541
+      },
+      "near_tracking_center_error_m": {
+        "count": 166,
+        "max": 0.134198052628402,
+        "p50": 0.09870365174815995,
+        "p95": 0.11805032960978944,
+        "rmse": 0.09921830483244612
+      },
+      "observation_error_m": {
+        "count": 170,
+        "max": 0.16158495416065607,
+        "p50": 0.07321991755337677,
+        "p95": 0.0950912983464308,
+        "rmse": 0.07317015824264474
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 170,
+        "max": 0.4090806269802181,
+        "p50": 0.014753276670446791,
+        "p95": 0.03742642265522145,
+        "rmse": 0.049256159779756205
+      },
+      "tracking_center_error_m": {
+        "count": 166,
+        "max": 0.134198052628402,
+        "p50": 0.09870365174815995,
+        "p95": 0.11805032960978944,
+        "rmse": 0.09921830483244612
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 166,
+        "max": 0.681391583105754,
+        "p50": 0.022838632859164924,
+        "p95": 0.1652415154547094,
+        "rmse": 0.10016090395072764
+      },
+      "tracking_relative_center_error": {
+        "count": 166,
+        "max": 0.04689940879838127,
+        "p50": 0.034495756722495934,
+        "p95": 0.041256535169564165,
+        "rmse": 0.03467431725006136
+      }
+    }
+  },
+  {
+    "case": "5_constant",
+    "frames": 512,
+    "tracking": 339,
+    "fire_frames": 58,
+    "invalid_fire_frames": 0,
+    "model_frames": 512,
+    "window_errors": 0,
+    "shots": 39,
+    "hits": 226,
+    "target_hp": 99660,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "arrival_probability": 333,
+      "unmatched": 170,
+      "not_tracking": 171,
+      "alignment_or_facing": 426,
+      "insufficient_updates": 19
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 17,
+    "processing_ms_median": 2.9791499999999997,
+    "processing_ms_p95": 8.6305,
+    "truth": {
+      "active_center_error_m": {
+        "count": 509,
+        "max": 0.5282579472801667,
+        "p50": 0.20504918900306923,
+        "p95": 0.41571443020539295,
+        "rmse": 0.23553964687168047
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 345,
+        "max": 0.5783763924502345,
+        "p50": 0.0992456391589811,
+        "p95": 0.3034118618915227,
+        "rmse": 0.15322962014452932
+      },
+      "far_tracking_center_error_m": {
+        "count": 339,
+        "max": 0.5066587204252523,
+        "p50": 0.20353128076890756,
+        "p95": 0.35349716568772166,
+        "rmse": 0.22726268099835845
+      },
+      "fire_center_error_m": {
+        "count": 58,
+        "max": 0.4758550129570967,
+        "p50": 0.20642586743187716,
+        "p95": 0.3048990042095549,
+        "rmse": 0.23052881780996373
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 58,
+        "max": 0.23146975788385957,
+        "p50": 0.1651254897898073,
+        "p95": 0.21571647572587888,
+        "rmse": 0.1701138280921245
+      },
+      "fire_omega_error_rad_s": {
+        "count": 58,
+        "max": 0.20692185571746347,
+        "p50": 0.03592725586845624,
+        "p95": 0.1191937557457079,
+        "rmse": 0.06308903058239017
+      },
+      "matched_model_plate_error_m": {
+        "count": 339,
+        "max": 0.24466995739356975,
+        "p50": 0.1631424259738207,
+        "p95": 0.21349775862541528,
+        "rmse": 0.16317174884410143
+      },
+      "observation_error_m": {
+        "count": 345,
+        "max": 1.6230730637884705,
+        "p50": 0.1890416655510525,
+        "p95": 0.5804891855192668,
+        "rmse": 0.3117797829440101
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 345,
+        "max": 0.5783763924502345,
+        "p50": 0.0992456391589811,
+        "p95": 0.30394575107854904,
+        "rmse": 0.15535258397176377
+      },
+      "tracking_center_error_m": {
+        "count": 339,
+        "max": 0.5066587204252523,
+        "p50": 0.20353128076890756,
+        "p95": 0.35349716568772166,
+        "rmse": 0.22726268099835845
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 339,
+        "max": 2.0124484004615484,
+        "p50": 0.04032611625815541,
+        "p95": 0.20692185571746347,
+        "rmse": 0.1942523520259548
+      },
+      "tracking_relative_center_error": {
+        "count": 339,
+        "max": 0.10416103384585236,
+        "p50": 0.041844361158368655,
+        "p95": 0.07267784670449602,
+        "rmse": 0.046723788138285705
+      }
+    }
+  },
+  {
+    "case": "5_off",
+    "frames": 356,
+    "tracking": 230,
+    "fire_frames": 217,
+    "invalid_fire_frames": 0,
+    "model_frames": 356,
+    "window_errors": 0,
+    "shots": 83,
+    "hits": 468,
+    "target_hp": 99420,
+    "host_exit": 0,
+    "vision_exit": 0,
+    "blockers": {
+      "acquiring": 2,
+      "arrival_probability": 9,
+      "unmatched": 123,
+      "not_tracking": 124,
+      "insufficient_updates": 14
+    },
+    "passed": true,
+    "batch": "final-20261030-013123",
+    "unique_damaging_shots": 29,
+    "processing_ms_median": 3.68405,
+    "processing_ms_p95": 12.2232,
+    "truth": {
+      "active_center_error_m": {
+        "count": 353,
+        "max": 0.25605110012253907,
+        "p50": 0.11289574397382052,
+        "p95": 0.1747876331929412,
+        "rmse": 0.12127210776539361
+      },
+      "best_branch_observation_yaw_error_rad": {
+        "count": 235,
+        "max": 0.6474356981275884,
+        "p50": 0.02093763679037397,
+        "p95": 0.08418001800421715,
+        "rmse": 0.08909246913458566
+      },
+      "far_tracking_center_error_m": {
+        "count": 230,
+        "max": 0.25605110012253907,
+        "p50": 0.11579147845797406,
+        "p95": 0.18194929510552496,
+        "rmse": 0.12511904467445575
+      },
+      "fire_center_error_m": {
+        "count": 217,
+        "max": 0.18901313973422998,
+        "p50": 0.11390346849828276,
+        "p95": 0.16996326203573722,
+        "rmse": 0.11984710751230321
+      },
+      "fire_matched_model_plate_error_m": {
+        "count": 217,
+        "max": 0.1623727270927189,
+        "p50": 0.08702319342778175,
+        "p95": 0.1431728419721434,
+        "rmse": 0.09413815783773992
+      },
+      "fire_omega_error_rad_s": {
+        "count": 217,
+        "max": 0.2067902793306211,
+        "p50": 0.018450231955653047,
+        "p95": 0.09313529205731133,
+        "rmse": 0.047141222400202354
+      },
+      "matched_model_plate_error_m": {
+        "count": 230,
+        "max": 0.22721864740540168,
+        "p50": 0.0886203116784297,
+        "p95": 0.1552758544854662,
+        "rmse": 0.09946101963133788
+      },
+      "observation_error_m": {
+        "count": 235,
+        "max": 0.7174461852904244,
+        "p50": 0.08932690809557983,
+        "p95": 0.23641081050809828,
+        "rmse": 0.13797765616644495
+      },
+      "raw_observation_yaw_error_rad": {
+        "count": 235,
+        "max": 0.6474356981275884,
+        "p50": 0.02151138137064179,
+        "p95": 0.08418001800421715,
+        "rmse": 0.08926384543620056
+      },
+      "tracking_center_error_m": {
+        "count": 230,
+        "max": 0.25605110012253907,
+        "p50": 0.11579147845797406,
+        "p95": 0.18194929510552496,
+        "rmse": 0.12511904467445575
+      },
+      "tracking_omega_error_rad_s": {
+        "count": 230,
+        "max": 0.2194280372651937,
+        "p50": 0.01845950750900946,
+        "p95": 0.11000736911552518,
+        "rmse": 0.05132816203275901
+      },
+      "tracking_relative_center_error": {
+        "count": 230,
+        "max": 0.05264332453480801,
+        "p50": 0.023806675052872123,
+        "p95": 0.03740831575523199,
+        "rmse": 0.025724245121242946
+      }
+    }
+  }
+]

@@ -4,14 +4,15 @@ rm_detector:
     # 保留原有效灯条尺寸；CAD 尺寸对照未稳定改善。实车须按灯条中心距/有效长度标定。
     pnp_light_spacing_mm: 135.0
     pnp_light_height_mm: 58.0
+    pnp_armor_tilt_deg: 15.0 # 板外法线仰角；使用已有相机姿态约束直接位姿解算
 
     # ---- 灯条过滤参数 ----
     light_area_min: 5
     light_h_w_ratio: 2.0
     light_angle_min: -35
     light_angle_max: 35
-    light_red_ratio: 1.0
-    light_blue_ratio: 1.0
+    light_red_ratio: 1.3
+    light_blue_ratio: 1.3
 
     # ---- 装甲板匹配参数 ----
     height_rate_tol: 1.8

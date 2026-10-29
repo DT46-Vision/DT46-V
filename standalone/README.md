@@ -60,6 +60,8 @@ ctest --preset release
 
 依赖下载及校验值由 [bootstrap.cmake](../cmake/bootstrap.cmake) 维护；本工程另固定 nlohmann/json 和 GLFW。OpenCV 使用 CPU DNN，并启用图像和视频读写。Windows 运行前，将 OpenCV 安装目录下的 `x64/mingw/bin`（或相应编译器目录）加入当前进程 PATH；程序与依赖应使用兼容的编译器。FFmpeg 插件随 OpenCV 安装，录制时需要该插件。Linux 视频后端依赖本机 OpenCV/FFmpeg 构建配置。
 
+最新仿真视觉追踪与发弹验证见[优化记录](../outputs/vision_tracking_20261030/report.md)，当前算法语义由 [detector](../src/rm_detector/README.md#处理流程) 和 [tracker](../src/rm_tracker/README.md) 维护。
+
 默认构建提供 11 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖后为 10 项。`detector_pairing` 使用已入库的失败帧裁剪，覆盖数字轮廓遮挡配对、相邻板、交叉候选、ROI 坐标、颜色/几何/分类拒绝和旧缓存清理；结果见[检测器精简验证](../outputs/detector_simplify_20261030/report.md)。切板回归读取实际步兵 YAML，覆盖错误法线拒绝、漏检、重复观测、离群点及距离相关噪声；车体回归另验证正确原始法线能够纠正镜像先验。相关精度边界见[静止画面复核](../outputs/pnp_static_diagnosis_20261029/report.md)及[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。ROS 节点与实机串口未验证。
 
 ## 虚拟相机与独立调试
@@ -125,11 +127,11 @@ build/native/bin/dt46_vision.exe --save-debug
 
 输出包含装甲编号、分类分数、像素四角、相机系米制位置、追踪状态、预测状态、角度误差（度）及 `can_fire`。`position_camera_origin_world_axes_m` 以相机为原点，按世界轴表达；没有补偿自身底盘平移与光心移动，不能当作世界绝对位置。仿真反馈覆盖对应硬件输入，已给出的光学旋转不再叠加 IMU 安装修正。输入不含对手真值。
 
-非 `LOST` 帧的只读 `tracker_debug.ekf_state` 顺序为 `[xc,vx,yc,vy,za,vz,yaw,vyaw,r]`，位置单位米、速度米/秒、角度弧度、角速度弧度/秒。车心 XY 与装甲基准高度 za 均以采样时的相机光心为原点、按世界轴表达；转换世界位置只加 `input.optical_transform` 的平移，不能再次旋转。速度包含相机原点运动的影响。适配层同时导出原 `RenderSnapshot` 的 `ekf_second_radius_m`（另一对板半径）与 `ekf_alternate_height_m`（相邻板高度差 dz），不修改 tracker。四板模型为 `yaw_i=yaw-iπ/2`、`p_i=(xc-r_i cos(yaw_i), yc-r_i sin(yaw_i), z_i)`，偶数板取 r、za，奇数板取另一半径、za+dz。此状态重建与最终弹道目标不同；仿真同帧真值和评测流程见[自瞄验证场景](../../README.md#自瞄运动与预测验证场景)。
+非 `LOST` 帧的只读 `tracker_debug.ekf_state` 顺序为 `[xc,vx,yc,vy,za,vz,yaw,vyaw,r]`，位置单位米、速度米/秒、角度弧度、角速度弧度/秒。车心 XY 与装甲基准高度 za 均以采样时的相机光心为原点、按世界轴表达；转换世界位置只加 `input.optical_transform` 的平移，不能再次旋转。速度包含相机原点运动的影响。适配层同时导出原 `RenderSnapshot` 的 `ekf_second_radius_m`（另一对板半径）与 `ekf_alternate_height_m`（相邻板高度差 dz）。完整十一维共享状态、板序号与几何定义以 [tracker](../src/rm_tracker/README.md) 为准。`position_camera_origin_world_axes_m` / `velocity_world_axes_m_s` 来自该共享模型的当前观测板，含旋转切向速度。此状态重建与最终弹道目标不同；仿真同帧真值和评测流程见[自瞄验证场景](../../README.md#自瞄运动与预测验证场景)。
 
 `aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。适配层在调用 `track` 前清空仅供渲染的目标缓存；若本帧产生枪口目标，再调用原本无状态的 `solve_ballistic` 读取有效标记并检查有限角度。提前退出时不会导出旧帧有效性；额外调用只有原查表和三角运算，不修改核心状态。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
-图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，PnP 则把原始像素和 K/D 传给 `solvePnPGeneric`，在几何求解中补偿畸变。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
+图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，板位姿解算使用原始像素和 K/D，在 IPPE 或倾角约束直接解中补偿畸变；原生步兵当前使用后者，详见 detector 说明。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
 
 `debug_image()` 返回独立内存的 RGB 或灰度图；须启用显示参数，无当前图像时返回空。跟踪和弹道图由 [debug_images.cpp](../project/modules/vision/debug_images.cpp) 按原快照绘制，叠加文字使用抗锯齿、随字号加粗的笔画及黑色描边；开火许可为绿色，等待开火为黄色。红圈为含飞行时间/系统延迟的预测目标，绿十字为枪口相对目标，紫十字为原图像中心。绿十字不是弹道落点；HUD Pitch/Yaw 沿用原 tracker 指令，顶层结果角误差沿用 EMA 输出。投影使用完整 K/D。
 

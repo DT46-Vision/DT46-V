@@ -50,9 +50,18 @@ int main(int argc,char** argv){try{
     require(!valid,"outside LUT accepted geometric fallback");
     const auto stale=tracker.get_render_snapshot();require(stale.observed_plate<0&&stale.body_matched_mask==0,"invalid frame retained a measurement match");
     Tracker gate;gate.shootable_dist=10;
+    require(std::get<2>(gate.can_fire(Armor(8,3,0,0,.6),{0,0,true})),
+            "Visible oblique board was rejected despite aligned muzzle");
+    require(!std::get<2>(gate.can_fire(Armor(8,3,0,0,M_PI),{0,0,true})),
+            "Back-facing board allowed fire");
     require(!std::get<2>(gate.can_fire(Armor(8,8,0,0,0),{0,.5,true})),"far pitch gate exceeds physical board height");
     gate.yaw_tolerance_deg=.01;
     require(!std::get<2>(gate.can_fire(Armor(8,2,0,0,0),{.1,0,true})),"configured yaw limit ignored");
     require(gate.yaw_tolerance_deg==.01,"fire HUD mutated configured tolerance");
+    Tracker red,blue;
+    red.track(tf,{Armor(8,3,0,0,.2)},Eigen::Vector3d::Zero(),.01);
+    blue.track(tf,{Armor(2,3,0,0,.2)},Eigen::Vector3d::Zero(),.01);
+    require((red.get_render_snapshot().body_state-blue.get_render_snapshot().body_state).norm()==0,
+            "Vehicle ID changes geometry prior");
     std::cout<<"actual tracker center RMSE "<<rmse<<", max "<<maxerr<<", fire frames "<<shots<<'\n';return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}

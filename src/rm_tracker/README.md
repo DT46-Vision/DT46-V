@@ -4,7 +4,7 @@
 
 相机系 → 世界系坐标变换 → 目标选择/装甲板跳变处理 → 11 维共享车心 EKF 状态估计 → 反小陀螺判定 → 空气阻力弹道解算 → 输出云台 `yaw/pitch` 与 `can_fire`。
 
-代码分为两层：`tracker_core`（`tracker.cpp` / `body_ekf.cpp` / `rm_tf_tools.cpp`，纯算法；`ekf.cpp` 保留作旧算法辅助）与 `rm_tracker_node`（`node.cpp`，ROS 通信、线程、渲染）。
+代码分为两层：`tracker_core`（`tracker.cpp` / `body_ekf.cpp` / `rm_tf_tools.cpp`，纯算法；`ekf.cpp` 仅留作历史回归，当前 Tracker 不使用旧九维滤波器）与 `rm_tracker_node`（`node.cpp`，ROS 通信、线程、渲染）。
 
 无 ROS 接入见 [standalone](../../standalone/README.md)。`RmTF` 可接收直接光学旋转，并通过 `set_camera_info(..., false)` 保留标定主点；原 ROS 调用保持原默认行为。
 
@@ -43,13 +43,16 @@
 
 1. **输入与坐标**：颜色过滤和相机坐标变换沿用现有链路。只用独立视觉 IMU，不补 MCU 姿态；变换后的坐标仍是以移动相机为原点的相对目标位置，不能将速度当成敌方绝对速度。ROS 消息已有相机系板法线 `nx/ny/nz`；ROS 和原生入口现在都先旋转完整法线，再由水平投影取得板→心朝向，避免仅相减 yaw 丢失相机俯仰关系。法线无效时回退旧 yaw。本轮未新增消息或硬件能力。
 2. **时间**：ROS 和原生入口共用 `FrameClock`。首帧建轨不预测；重复、倒序、非有限戳拒绝且不移动时间基准；所有正间隔原样使用，包括 0.5 ms 和 200 ms。超过 0.5 s 断流失效、重建轨，不把长间隔截成短间隔。这个阈值是当前恢复策略，不是已测延迟。主机戳的采样误差依然存在，配置补偿语义见[独立传感器实验](../../outputs/relative_aim_restart_20261029/report.md#延迟配置与计算语义)。
-3. **共享车体**：`BodyEkf` 状态为 `[cx,vx,cy,vy,zA,vz,theta,omega,rA,rB,hB]`。四板角度为 `theta+i*pi/2`，位置为 `(cx-r*cos(angle),cy-r*sin(angle),zA+group*hB)`，组别取 `i%2`。同组相差 180°且保留同组高度；两个半径和高度差独立估计。zA 是 A 组板平面，不是已测底盘高度。90°是名义拓扑，车型表半径仅作先验。初始化由 `center=board+radius*normal` 的雅可比传播观测与几何先验，保留车心、半径、相位的交叉协方差；单块静止板不能唯一确定真实车心。
-4. **关联与融合**：匿名观测相对于同一预测状态枚举四板，使用 PnP 已选定并经完整坐标变换的原始 yaw，仅将角差绕回 `[-pi,pi]`。不再按预测方向人为反射或 pi 翻转观测，也不再维护由这种改写支撑的初始镜像车体；否则正确 PnP 能被改成错误测量，并以接近零的创新锁住错误朝向。NIS 上限 18.47，候选分差须大于 1；重复分配只更新一次，同帧最多处理 16 个候选、更新四板。没有半径交换、换板冷却或冻结车心。连续白噪声 Q 使用真实 dt，LDLT 检查正定性，Joseph 更新并对称化 P。位置 R 支持沿视线增加随距离平方增长的深度方差；关闭该项时恢复各向同性 R。修复前后同日志对照及仍存在的原始 PnP 偏差见[静止画面复核](../../outputs/pnp_static_diagnosis_20261029/report.md)。
+3. **共享车体**：`BodyEkf` 状态为 `[cx,vx,cy,vy,zA,vz,theta,omega,rA,rB,hB]`。四板角度为 `theta+i*pi/2`，位置为 `(cx-r*cos(angle),cy-r*sin(angle),zA+group*hB)`，组别取 `i%2`。同组相差 180°且保留同组高度；两个半径和高度差独立估计。zA 是 A 组板平面，不是已测底盘高度。90°是名义拓扑；两组半径均以配置上下限的中点初始化，高差初值为 0，不按车辆编号填半径。半径受配置上下限保护，高差绝对值上限为 0.3 m；这些是模型适用范围，不是测得几何。初始化由 `center=board+radius*normal` 的雅可比传播观测与几何先验，保留车心、半径、相位的交叉协方差；单块静止板不能唯一确定真实车心。
+4. **关联与融合**：匿名观测相对于同一预测状态枚举四板，使用 PnP 已选定并经完整坐标变换的原始 yaw，仅将角差绕回 `[-pi,pi]`。不再按预测方向人为反射或 pi 翻转观测，也不再维护由这种改写支撑的初始镜像车体；否则正确 PnP 能被改成错误测量，并以接近零的创新锁住错误朝向。NIS 上限 18.47，候选分差须大于 1；重复分配只更新一次，同帧最多处理 16 个候选、更新四板。没有半径交换、换板冷却或冻结车心。连续白噪声 Q 使用真实 dt，LDLT 检查正定性，Joseph 更新并对称化 P。位置 R 支持沿视线增加随距离平方增长的深度方差；启用时硬关联分别检查横向 `max_match_distance` 和深度 `max(max_match_distance,3*depth_sigma)`，之后仍须通过 NIS；关闭该项时保持原三维距离门槛及各向同性 R。修复前后同日志对照及仍存在的原始 PnP 偏差见[静止画面复核](../../outputs/pnp_static_diagnosis_20261029/report.md)。
 5. **状态机**：建轨/失锁按真实累计时间；`tracking_thres`/`lost_thres` 按名义 10 ms 换算持续时间。建轨中一次漏配会清零连续确认时间；只有车体关联成功才算有效跟踪。无效时间清除本帧瞄准与匹配标记，超过断流阈值重建。SPIN 进入/退出使用共享车体角速度及配置的持续时间，不再由旧单板跳变决定发射窗口。
 6. **选板与预测**：共享车心按相对速度、相位按角速度传播，枚举到达时刻真实四板；选板有 0.08 rad 切换惩罚，不交换 EKF 的半径或高度组。选板和瞄准共用 `飞行时间+system_delay+controller_delay`，两个补偿项均以秒配置、不考虑则写 0，当前配置不是实测延迟。飞行时间以车体近表面距离作一次初估，弹道解算后重检到达位置，偏差超过 25 mm 拒绝，没有迭代求解器。
-7. **弹道与许可**：沿用平方阻力 LUT 和固定重力 9.81；0.2 m 起查表，表外拒绝。必须处于 TRACKING、本帧车体匹配、至少接受 8 次更新、弹道有效且预测一致。将包含未来 Q 的 P 投影到选中板切向和竖直方向，两倍标准差分别不得超过半板宽的 85% 和半板高的 80%；不再强制未观测的另一组半径收敛。`body_ready` 仍表示完整几何协方差条件，仅作诊断。角度许可同时受板面投影、配置上限及 SPIN 正对弧长约束；没有远距离 1° 下限，也不再让 HUD 覆盖配置。输出不再门控后平滑。这些是高斯模型下的工程门限，不能保证所有模型偏差下的命中。
+7. **弹道与许可**：沿用平方阻力 LUT 和固定重力 9.81；0.2 m 起查表，表外拒绝。必须处于 TRACKING、本帧车体匹配、至少接受 8 次更新、弹道有效且预测一致。将包含未来 Q 的 P 投影到视线横向和竖直方向，用当前枪口误差作为均值，计算落入投影板面宽 85%、高 80% 区域的两个一维高斯概率之积；须达到 `min_hit_probability`。步兵当前取 0.25，其余配置为 0.5。还须满足实际板面角窗、配置误差上限、正面可见和射程要求。删除独立 SPIN 正对弧长限制及“两倍 sigma 必须塞进半板”的重复门槛。该概率忽略相关项、模型偏差和弹丸散布，不是实测命中率。`body_ready` 仅作完整几何收敛诊断，未观测的另一组半径不阻止已观测板发射。
 
-旧单板估计与九维 EKF、圆拟合/冻结车心、半径交换辅助函数保留供兼容调试和对照，已退出车体更新、预测与 SPIN 发射判定。原生 GUI 的 `tracking_state_img` 显示估计车心、四块名义竖直模型板、匹配/选中标记；`ballistic_img` 显示 HOLD 原因和到达标准差，默认四视图包括这两路。板框按车型表名义宽高绘制，不是完整倾斜 CAD 投影。原生适配器仍有光学/枪口真值输入；ROS 及实车尚未验证，不能将原生闭环称为实车输入公平的证据。
+当前运行路径只有共享车体模型；旧单板滤波、圆拟合、冻结车心、换板周期及半径交换辅助代码已移除。适配器报告的板位置/速度也从同一车体的当前观测板求出，包含切向速度。原生 GUI 的 `tracking_state_img` 显示估计车心、四块名义竖直模型板、匹配/选中标记；`ballistic_img` 显示 HOLD 原因和到达标准差。JSON 另含 `aim_hit_probability`。板框使用名义 135×125 mm，不是完整倾斜 CAD 投影。算法处理同一目标的多块板；当前仍只锁定一个 `tracked_id`，没有多车独立轨迹池，同编号车辆的身份分离尚未实现。
+
+仿真闭环、固定日志回放、半径/正负高差回归和当前边界见[视觉追踪优化记录](../../outputs/vision_tracking_20261030/report.md)。原生适配器继续使用已有光学/枪口姿态输入；新算法未增加目标真值输入。ROS 与实车属于后续阶段。
+
 ## 参数
 
 参数文件：`config/tracker_params.yaml`（通用）、`tracker_params_hero.yaml`、`tracker_params_infantry.yaml`、`tracker_params_sentry.yaml`。
@@ -65,7 +68,7 @@
 | `rotation_rpy_r/p/y` | double | `0 / 0 / −180` | IMU → 相机的轴固定旋转修正（度） |
 | `cam_to_gun_pos_x/y/z` | double | `0 / 0.125 / 0` | 相机 → 枪口平移外参（m） |
 | `cam_to_gun_rpy_r/p/y` | double | `0 / 0 / 0` | 相机 → 枪口旋转外参（度） |
-| `max_match_distance` | double | `0.2` | 观测关联的最大位置偏差（m） |
+| `max_match_distance` | double | `0.2` | 观测关联位置门槛（m）；额外深度噪声启用时按上面的横向/深度规则处理 |
 | `max_match_yaw_diff` | double | `57.0` | 车体观测关联的 yaw 偏差上限（度） |
 | `jump_cooldown_max` | int | `20` | 保留兼容参数；当前车体关联不使用跳变冷却 |
 | `tracking_thres` | int | `5` | 有效关联持续时间 / 10 ms |
@@ -85,6 +88,7 @@
 | `shootable_dist` | double | `3.0` | 允许开火的最大距离（m） |
 | `yaw_tolerance_deg` | double | `5.0` | 允许开火的 yaw 误差（度） |
 | `pitch_tolerance_deg` | double | `2.0` | 允许开火的 pitch 误差（度） |
+| `min_hit_probability` | double | `0.5` | 到达板面的高斯近似概率下限，范围 (0,1]；步兵配置 0.25 |
 | `min_spinning_vel` | double | `5.0` | 进入小陀螺判定的角速度门限（rad/s） |
 | `spin_enter_time` | double | `0.3` | 持续多久判定为小陀螺（s） |
 | `spin_exit_time` | double | `0.15` | 低于门限多久退出小陀螺（s） |
@@ -150,7 +154,7 @@ ros2 param set /rm_tracker display true       # 打开调试图
 
 ## 注意事项 / 已知问题
 
-1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期帧计数版小陀螺），配置里留着会让人误以为可以调。当前进入 SPIN 依赖连续同向换板，退出结合时间门限；不能把 `min_spinning_vel` / `spin_enter_time` 理解为唯一进入条件。
+1. **YAML 里有一批"写了但不生效"的参数**：`log_throttle_ms`（代码里硬编码 1000 ms）、`show_rpy`、`debug`、`max_spinning_frame`、`spinning_frame_lost`、`distance_decress_ratio` 在 `node.cpp` 里没有 `declare_parameter`，属于历史遗留（早期帧计数版小陀螺），配置里留着会让人误以为可以调。当前 SPIN 按共享车体角速度和持续时间判定，见上面的状态机说明。
 2. **不声明就改不动**：ROS 2 对未声明的参数只会当作 override 忽略，不会有任何报错或告警，排查参数问题时建议先 `ros2 param list /rm_tracker` 核对。
 3. **颜色过滤在核心外做**：`Tracker::target_color` 成员在 `tracker.cpp` 里没有被使用；ROS 在 `node.cpp` 的 `armors_cb` 过滤，原生接入在适配层执行相同过滤。
 4. **渲染依赖 `/camera_info`**：`res_img_cb` 在 `tf_.has_camera_info()` 为 false 时直接返回，表现为"开了 display 也没有图像"。

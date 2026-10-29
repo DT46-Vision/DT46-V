@@ -19,6 +19,7 @@ int main(int argc,char** argv){try{
         params["ekf_QR_q_xyz"]>>tracker.ekf_QR_params.q_xyz;params["ekf_QR_q_yaw"]>>tracker.ekf_QR_params.q_yaw;params["ekf_QR_q_r"]>>tracker.ekf_QR_params.q_r;
         params["ekf_QR_r_xyz_factor"]>>tracker.ekf_QR_params.r_xyz_factor;params["ekf_QR_r_yaw"]>>tracker.ekf_QR_params.r_yaw;params["system_delay"]>>tracker.system_delay;
         if(!params["controller_delay"].empty())params["controller_delay"]>>tracker.controller_delay_;
+        if(!params["min_hit_probability"].empty())params["min_hit_probability"]>>tracker.min_hit_probability;
         if(!params["ekf_QR_r_depth_factor"].empty())params["ekf_QR_r_depth_factor"]>>tracker.ekf_QR_params.r_depth_factor;
         params["ekf_QR_stable_dist"]>>tracker.ekf_QR_params.stable_dist;params["shootable_dist"]>>tracker.shootable_dist;
         params["max_match_distance"]>>tracker.max_match_distance;double yaw_limit=57;params["max_match_yaw_diff"]>>yaw_limit;tracker.max_match_yaw_diff=yaw_limit*DEG2RAD;

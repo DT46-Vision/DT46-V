@@ -1,0 +1,3 @@
+saved_frame lights=4 armors=1
+detect_ms median=0.6585 p95=0.8301
+unobstructed_pair_ms median=0.3767 p95=0.5232

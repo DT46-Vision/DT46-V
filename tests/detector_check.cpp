@@ -24,6 +24,17 @@ int main(int argc, char** argv) {
         require(argc >= 3, "Expected saved frame and classifier model");
         const auto input = cv::imread(argv[1]);
         require(!input.empty(), "Missing detector regression frame");
+        cv::Mat fractional(160,80,CV_8UC3,cv::Scalar(10,10,10));
+        for(int y=0;y<fractional.rows;++y){
+            const double coverage=std::max(0.,std::min(y+.5,120.7)-std::max(y-.5,80.2));
+            for(int x=35;x<=41;++x)fractional.at<cv::Vec3b>(y,x)=cv::Vec3b(
+                uchar(10+245*coverage),uchar(10+210*coverage),10);
+        }
+        DT46_VISION::ArmorDetector edge_detector(1,false,120,parameters());
+        const auto edge_lights=edge_detector.find_lights(edge_detector.process(fractional));
+        require(edge_lights.size()==1 && std::abs(edge_lights[0].up.y-120.7)<.35 &&
+                std::abs(edge_lights[0].down.y-80.2)<.35,
+                "Light endpoints retained pixel-center shortening on fractional edges");
         DT46_VISION::ArmorDetector detector(1, false, 120, parameters());
         detector.set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(argv[2]));
         auto lights = detector.find_lights(detector.process(input));
@@ -68,6 +79,18 @@ int main(int argc, char** argv) {
         cv::Mat two_plates;
         cv::hconcat(input, input, two_plates);
         require(detector.detect_armors(two_plates).size() == 2, "Adjacent plates were merged or lost");
+        cv::vconcat(input, input, two_plates);
+        require(detector.detect_armors(two_plates).size() == 2,
+                "Disjoint plates with overlapping x intervals were lost");
+        detector.params.light_red_ratio = detector.params.light_blue_ratio = 1.3;
+        require(detector.detect_armors(input).size() == 1 && detector.lights.size() == 3,
+                "Color contrast did not remove the white digit while preserving real lights");
+        cv::Mat white;
+        cv::cvtColor(input, white, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(white, white, cv::COLOR_GRAY2BGR);
+        require(detector.detect_armors(white).empty() && detector.lights.empty(),
+                "Achromatic white contours passed the color gate");
+        detector.params = parameters();
         cv::Mat padded(input.rows * 2, input.cols * 2, CV_8UC3, cv::Scalar());
         input.copyTo(padded(cv::Rect(input.cols / 2, input.rows / 2, input.cols, input.rows)));
         detector.params.roi_crop = true;

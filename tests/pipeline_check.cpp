@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
         pipeline.configure({{"detector",{{"detect_color",2}}}});
         if(pipeline.process(red,0,k,{},cv::Matx33d::eye(),{},1).at("light_count")!=1)throw std::runtime_error("Both-color detection ignored");
         const auto* configured=pipeline.context();const auto configured_revision=pipeline.revision();
-        for(const auto& invalid:std::vector<dt46::Json>{{{"model","missing-rqt-test.onnx"}},{{"detector",{{"detect_color",3}}}},{{"detector",{{"pnp_light_spacing_mm",0}}}},{{"tracker",{{"text_size",0}}}},{{"tracker",{{"display",0.5}}}},{{"tracker",{{"ekf_QR_q_xyz",-1}}}},{{"tracker",{{"ekf_QR_r_depth_factor",-1}}}},{{"tracker",{{"ekf_QR_r_yaw",0}}}}}){
+        for(const auto& invalid:std::vector<dt46::Json>{{{"model","missing-rqt-test.onnx"}},{{"detector",{{"detect_color",3}}}},{{"detector",{{"pnp_light_spacing_mm",0}}}},{{"detector",{{"pnp_armor_tilt_deg",90}}}},{{"tracker",{{"min_hit_probability",0}}}},{{"tracker",{{"min_hit_probability",1.01}}}},{{"tracker",{{"text_size",0}}}},{{"tracker",{{"display",0.5}}}},{{"tracker",{{"ekf_QR_q_xyz",-1}}}},{{"tracker",{{"ekf_QR_r_depth_factor",-1}}}},{{"tracker",{{"ekf_QR_r_yaw",0}}}}}){
             rejected=false;try{pipeline.configure(invalid);}catch(const std::exception&){rejected=true;}
             if(!rejected||pipeline.context()!=configured||pipeline.revision()!=configured_revision)throw std::runtime_error("Invalid model/display/color replaced context");
         }

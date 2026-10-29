@@ -1,0 +1,188 @@
+Start testing: Oct 30 01:30 中国标准时间
+----------------------------------------------------------
+1/11 Testing: shared_body_ekf
+1/11 Test: shared_body_ekf
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_body_ekf_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/body_ekf_results"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"shared_body_ekf" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+geometry truth 0.17 0.37 0.14 estimated 0.170453 0.370428 0.139511
+geometry truth  0.37  0.17 -0.14 estimated  0.370257  0.169254 -0.139836
+geometry truth 0.25 0.25    0 estimated     0.250255     0.250163 -0.000730164
+shared body, geometry, Jacobians, Joseph PSD, real dt checks passed; center RMSE 0.00144882 m, max 0.00545773 m
+<end of output>
+Test time =   5.11 sec
+----------------------------------------------------------
+Test Passed.
+"shared_body_ekf" end time: Oct 30 01:30 中国标准时间
+"shared_body_ekf" time elapsed: 00:00:05
+----------------------------------------------------------
+
+2/11 Testing: relative_aim
+2/11 Test: relative_aim
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_relative_aim_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/relative_aim_results" "D:/project/RobotMaster/sim_vision/DT46_V/tests/data/relative_aim_delays.cfg"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"relative_aim" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+relative aim checks passed; artifacts: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/relative_aim_results
+<end of output>
+Test time =   0.18 sec
+----------------------------------------------------------
+Test Passed.
+"relative_aim" end time: Oct 30 01:30 中国标准时间
+"relative_aim" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/11 Testing: native_media
+3/11 Test: native_media
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_media_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/test-output/media"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"native_media" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+calibration RMS=2.09406e-05 pixels
+MP4 round trip: 20 frames
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"native_media" end time: Oct 30 01:30 中国标准时间
+"native_media" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/11 Testing: archived_tracker_baseline
+4/11 Test: archived_tracker_baseline
+Command: "D:/msys2/ucrt64/bin/cmake.exe" "-DDT46_ROOT=D:/project/RobotMaster/sim_vision/DT46_V" "-P" "D:/project/RobotMaster/sim_vision/DT46_V/tests/original_tracker_check.cmake"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"archived_tracker_baseline" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+-- Archived integration baseline intact; current tracker is intentionally rewritten
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"archived_tracker_baseline" end time: Oct 30 01:30 中国标准时间
+"archived_tracker_baseline" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/11 Testing: detector_pairing
+5/11 Test: detector_pairing
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_detector_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/tests/data/detector_digit_obstruction.png" "D:/project/RobotMaster/sim_vision/DT46_V/src/rm_detector/model/RM_Armor_CNN_sim.onnx"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"detector_pairing" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+saved_frame lights=4 armors=1
+PASS: digit obstruction, pair ownership, order, geometry, colors and stale state
+<end of output>
+Test time =   1.22 sec
+----------------------------------------------------------
+Test Passed.
+"detector_pairing" end time: Oct 30 01:30 中国标准时间
+"detector_pairing" time elapsed: 00:00:01
+----------------------------------------------------------
+
+6/11 Testing: tracker_body_integration
+6/11 Test: tracker_body_integration
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_tracker_model_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/tracker_model_results"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"tracker_body_integration" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+actual tracker center RMSE 0.000231272, max 0.000779573, fire frames 876
+<end of output>
+Test time =   0.48 sec
+----------------------------------------------------------
+Test Passed.
+"tracker_body_integration" end time: Oct 30 01:30 中国标准时间
+"tracker_body_integration" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/11 Testing: noisy_switching_actual_yaml
+7/11 Test: noisy_switching_actual_yaml
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_tracker_switch_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/src/rm_tracker/config/tracker_params_infantry.yaml" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/switch_results"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"noisy_switching_actual_yaml" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+actual YAML, single plate, rejected invalid normals, noisy switching, duplicates and missing-frame gates passed
+<end of output>
+Test time =   0.62 sec
+----------------------------------------------------------
+Test Passed.
+"noisy_switching_actual_yaml" end time: Oct 30 01:30 中国标准时间
+"noisy_switching_actual_yaml" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/11 Testing: hardware_protocol
+8/11 Test: hardware_protocol
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_hardware_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/tests/data/protocol_reference.json"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"hardware_protocol" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+CRC fixtures, byte layouts, all frame splits, corruption recovery and quaternion checks passed
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"hardware_protocol" end time: Oct 30 01:30 中国标准时间
+"hardware_protocol" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/11 Testing: native_pipeline
+9/11 Test: native_pipeline
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_pipeline_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"native_pipeline" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+Native configuration, colors, raw camera geometry, retired flip rejection, monotonic timestamps and reset passed
+<end of output>
+Test time =   0.58 sec
+----------------------------------------------------------
+Test Passed.
+"native_pipeline" end time: Oct 30 01:30 中国标准时间
+"native_pipeline" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/11 Testing: native_transport
+10/11 Test: native_transport
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_transport_check.exe"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"native_transport" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+Full-resolution RGB, metadata, authentication and size limits passed
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"native_transport" end time: Oct 30 01:30 中国标准时间
+"native_transport" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/11 Testing: calibrated_pnp_and_optical_rotation
+11/11 Test: calibrated_pnp_and_optical_rotation
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/standalone/dt46_core_check.exe"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/standalone
+"calibrated_pnp_and_optical_rotation" start time: Oct 30 01:30 中国标准时间
+Output:
+----------------------------------------------------------
+distortion_check target_mm=[0, 0, 2300] compensated_mm=0.00091353 ignored_mm=1.05692
+distortion_check target_mm=[800, 300, 2300] compensated_mm=0.00340274 ignored_mm=147.806
+distortion_check target_mm=[-800, -300, 2300] compensated_mm=0.00422531 ignored_mm=144.414
+distortion_check target_mm=[1100, -550, 2300] compensated_mm=0.204153 ignored_mm=307.794
+PASS: calibrated PnP error 0.00018723 mm; optical rotation round trips
+<end of output>
+Test time =   0.42 sec
+----------------------------------------------------------
+Test Passed.
+"calibrated_pnp_and_optical_rotation" end time: Oct 30 01:30 中国标准时间
+"calibrated_pnp_and_optical_rotation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 30 01:30 中国标准时间

@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include "rm_detector/detector.hpp"
 #include <array>
+#include <optional>
 #include <cmath>
 #include <vector>
 #include <limits>
@@ -36,6 +37,10 @@ namespace DT46_VISION {
         // Clear the previous diagnostic pose at frame boundaries.
         void beginFrame();
         void setArmorGeometry(double light_spacing_mm,double light_height_mm);
+        // Uses only camera attitude and configured board mounting tilt, never target geometry.
+        void setUprightConstraint(const cv::Matx33d& camera_to_world,double tilt_deg) {
+            camera_to_world_=camera_to_world;armor_tilt_rad_=tilt_deg*CV_PI/180.;
+        }
         struct Pose {
             std::vector<cv::Point3d> corners_camera_mm;
             double reprojection_error_px = 0;
@@ -49,6 +54,8 @@ namespace DT46_VISION {
         bool has_cached_caminfo_ = false;
         double light_spacing_mm_=135.0,light_height_mm_=58.0;
         Pose pose_;
+        std::optional<cv::Matx33d> camera_to_world_;
+        double armor_tilt_rad_=0;
 
         void parseCameraInfo(const CameraCalibration* msg);
         std::vector<cv::Point3f> getObjectPoints(int object_size);

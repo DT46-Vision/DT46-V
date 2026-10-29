@@ -18,6 +18,7 @@ int main(int argc,char** argv){try{
     if(!p["ekf_QR_r_depth_factor"].empty())p["ekf_QR_r_depth_factor"]>>tracker.ekf_QR_params.r_depth_factor;
     p["system_delay"]>>tracker.system_delay;p["shootable_dist"]>>tracker.shootable_dist;p["max_match_distance"]>>tracker.max_match_distance;
     if(!p["controller_delay"].empty())p["controller_delay"]>>tracker.controller_delay_;
+    if(!p["min_hit_probability"].empty())p["min_hit_probability"]>>tracker.min_hit_probability;
     double yaw_limit=57;p["max_match_yaw_diff"]>>yaw_limit;tracker.max_match_yaw_diff=yaw_limit*DEG2RAD;
     p["radius_r_min"]>>tracker.radius_params.r_min;p["radius_r_max"]>>tracker.radius_params.r_max;p["tracking_thres"]>>tracker.tracking_thres;p["lost_thres"]>>tracker.lost_thres;
     p["yaw_tolerance_deg"]>>tracker.yaw_tolerance_deg;p["pitch_tolerance_deg"]>>tracker.pitch_tolerance_deg;
