@@ -1,0 +1,25 @@
+Test project D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+      Start  1: shared_body_ekf
+ 1/10 Test  #1: shared_body_ekf .......................   Passed    0.03 sec
+      Start  2: relative_aim
+ 2/10 Test  #2: relative_aim ..........................   Passed    0.14 sec
+      Start  3: native_media
+ 3/10 Test  #3: native_media ..........................   Passed    0.16 sec
+      Start  4: archived_tracker_baseline
+ 4/10 Test  #4: archived_tracker_baseline .............   Passed    0.17 sec
+      Start  5: tracker_body_integration
+ 5/10 Test  #5: tracker_body_integration ..............   Passed    0.04 sec
+      Start  6: noisy_switching_actual_yaml
+ 6/10 Test  #6: noisy_switching_actual_yaml ...........   Passed    0.13 sec
+      Start  7: hardware_protocol
+ 7/10 Test  #7: hardware_protocol .....................   Passed    0.02 sec
+      Start  8: native_pipeline
+ 8/10 Test  #8: native_pipeline .......................   Passed    0.10 sec
+      Start  9: native_transport
+ 9/10 Test  #9: native_transport ......................   Passed    0.03 sec
+      Start 10: calibrated_pnp_and_optical_rotation
+10/10 Test #10: calibrated_pnp_and_optical_rotation ...   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   0.85 sec

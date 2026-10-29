@@ -24,6 +24,21 @@ int main() {
     const double error = cv::norm(cv::Vec3d(x,y,z)-position);
     if (!std::isfinite(error) || error > 2.0)
         throw std::runtime_error("PnP failed with source K/D and an off-centre principal point");
+    for(double pitch:{-.6,.26,.6})for(double heading:{-.7,-.1,.1,.7}){
+        const cv::Vec3d rvec(pitch,heading,0);
+        cv::Mat rotation;cv::Rodrigues(rvec,rotation);
+        const cv::Vec3d expected(rotation.at<double>(0,2),rotation.at<double>(1,2),rotation.at<double>(2,2));
+        cv::projectPoints(object,rvec,position,k,d,image);
+        armor.light1_up=image[0];armor.light1_down=image[1];armor.light2_up=image[2];armor.light2_down=image[3];
+        pnp.beginFrame();const auto pose=pnp.processArmorCorners(&calibration,false,cv::Mat(),armor,5);
+        const cv::Vec3d actual(std::get<4>(pose),std::get<5>(pose),std::get<6>(pose));
+        if(cv::norm(actual-expected)>.001||pnp.pose().reprojection_error_px>.001||pnp.pose().corners_camera_mm.size()!=4)
+            throw std::runtime_error("PnP selected a mirrored normal despite exact image evidence");
+    }
+    pnp.processArmorCorners(&calibration,true,cv::Mat::zeros(1024,1280,CV_8UC3),armor,5);
+    const auto restored=pnp.processArmorCorners(&calibration,false,cv::Mat(),armor,5);
+    if(cv::norm(cv::Vec3d(std::get<0>(restored),std::get<1>(restored),std::get<2>(restored))-position)>2)
+        throw std::runtime_error("Geometric centre permanently changed the cached calibration");
     const std::vector<cv::Point3f> measured_geometry{{-62.9f,-29.735f,0},{-62.9f,29.735f,0},{62.9f,-29.735f,0},{62.9f,29.735f,0}};
     cv::projectPoints(measured_geometry,cv::Vec3d(.15,-.4,.02),position,k,d,image);
     armor.light1_up=image[0];armor.light1_down=image[1];armor.light2_up=image[2];armor.light2_down=image[3];

@@ -33,28 +33,22 @@ namespace DT46_VISION {
         int class_id
         );
 
-        // 每帧开始时调用：上一帧的板才参与消歧，同一帧的另一块板不能互相污染
+        // Clear the previous diagnostic pose at frame boundaries.
         void beginFrame();
         void setArmorGeometry(double light_spacing_mm,double light_height_mm);
-        void resetCameraInfo() { has_cached_caminfo_=false; prev_plates_.clear(); curr_plates_.clear(); }
+        struct Pose {
+            std::vector<cv::Point3d> corners_camera_mm;
+            double reprojection_error_px = 0;
+        };
+        const Pose& pose() const { return pose_; }
+        void resetCameraInfo() { has_cached_caminfo_=false; pose_={}; }
 
     private:
-        struct PlatePrior {
-            double depth;
-            double nx;
-            double ny;
-            double nz;
-            float cx;
-            float cy;
-        };
-
         cv::Mat cached_K_;
         cv::Mat cached_D_;
         bool has_cached_caminfo_ = false;
         double light_spacing_mm_=135.0,light_height_mm_=58.0;
-        // 按图像位置区分同一数字的多块板，只和上一帧、同一块板做时序消歧
-        std::vector<PlatePrior> prev_plates_;
-        std::vector<PlatePrior> curr_plates_;
+        Pose pose_;
 
         void parseCameraInfo(const CameraCalibration* msg);
         std::vector<cv::Point3f> getObjectPoints(int object_size);

@@ -42,7 +42,9 @@
 3. `is_armor()`：按中心 x 排序，选择右侧首个同色且灯条夹角、中心连线角通过限制的候选，再检查高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内。灯条夹角按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒；每条灯条只用一次。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。
 5. `Armor::get_id()`：颜色 + `class_id` 映射成 `armor_id`（见下表）；`is_armor()` 只接受 `class_id ∈ {0,1,2}`。
-6. `PNP::processArmorCorners()`：`cv::solvePnPGeneric(..., cv::SOLVEPNP_IPPE)`，按尺寸深度线索及上一帧法线/深度选择解，输出 `dx/dy/dz`（mm）、`yaw`（deg）和相机系单位法线 `nx/ny/nz`。当前尺寸与 id 无关，由 `pnp_light_spacing_mm` / `pnp_light_height_mm` 配置；灯条矩形中线端点保留浮点精度，颜色采样才转整数。
+6. `PNP::processArmorCorners()`：`cv::solvePnPGeneric(..., cv::SOLVEPNP_IPPE)`，剔除角点不在相机前方或误差非有限的解，再按当前四角重投影均方误差选择解；上一帧法线不再压过当前图像证据，输出 `dx/dy/dz`（mm）、`yaw`（deg）和相机系单位法线 `nx/ny/nz`。当前尺寸与 id 无关，由 `pnp_light_spacing_mm` / `pnp_light_height_mm` 配置；灯条矩形中线端点保留浮点精度，颜色采样才转整数。
+
+原生跟踪图把检测端点（黄色）、原始 PnP 重投影与 120 mm 法线箭头（品红）和 EKF 模型（青/绿/橙）分开显示；PnP 行显示深度和像素 RMS。重投影贴合只说明位姿解释了输入角点，不能证明尺寸、角点与真实物体一致。完整平面法线在近正视或小像素目标上仍可能不可靠，本次静止及旋转的离线检查见[底层 PnP 复核](../../outputs/pnp_scene_cleanup_20261029/report.md)。
 
 ## 参数
 

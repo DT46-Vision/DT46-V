@@ -1,0 +1,86 @@
+{
+  "stationary_off": {
+    "before": {
+      "normal_error_rad": {
+        "p50": 0.19823012996832598,
+        "p95": 0.25532764342212555,
+        "rmse": 0.2019180765507165
+      },
+      "observations": 73,
+      "position_error_m": {
+        "p50": 0.014334066577410017,
+        "p95": 0.02294090741106389,
+        "rmse": 0.018258673747876736
+      },
+      "reprojection_px": {
+        "p50": 0.34211023135447205,
+        "p95": 0.5605694321004818,
+        "rmse": 0.35157506316453074
+      },
+      "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+      "selected_higher_reprojection": 15
+    },
+    "after": {
+      "normal_error_rad": {
+        "p50": 0.19823012996832598,
+        "p95": 0.25532764342212555,
+        "rmse": 0.2012592944409566
+      },
+      "observations": 73,
+      "position_error_m": {
+        "p50": 0.014334066577410017,
+        "p95": 0.02294090741106389,
+        "rmse": 0.018288639960013536
+      },
+      "reprojection_px": {
+        "p50": 0.23277708366650807,
+        "p95": 0.4229385306364946,
+        "rmse": 0.2720565462232371
+      },
+      "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+      "selected_higher_reprojection": 0
+    }
+  },
+  "stationary_constant": {
+    "before": {
+      "normal_error_rad": {
+        "p50": 0.05400953569484335,
+        "p95": 1.2314017676295628,
+        "rmse": 0.4903721389038292
+      },
+      "observations": 430,
+      "position_error_m": {
+        "p50": 0.02117054722399076,
+        "p95": 0.060529930166427395,
+        "rmse": 0.03090805076033064
+      },
+      "reprojection_px": {
+        "p50": 1.062146810511641,
+        "p95": 3.2801147340494445,
+        "rmse": 1.6044152444354027
+      },
+      "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+      "selected_higher_reprojection": 134
+    },
+    "after": {
+      "normal_error_rad": {
+        "p50": 0.034414333850132366,
+        "p95": 0.19811844428645015,
+        "rmse": 0.08285943842384481
+      },
+      "observations": 430,
+      "position_error_m": {
+        "p50": 0.022347098007145533,
+        "p95": 0.06082048239804749,
+        "rmse": 0.03189022587203871
+      },
+      "reprojection_px": {
+        "p50": 0.8094828880413322,
+        "p95": 1.8918388882150112,
+        "rmse": 1.0581273922175272
+      },
+      "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+      "selected_higher_reprojection": 0
+    }
+  }
+}

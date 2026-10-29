@@ -67,6 +67,7 @@ struct Pipeline {
     cv::Mat bgr;
     std::string snapshot = "{}";
     std::vector<Eigen::Vector3d> observed_normals_camera;
+    std::vector<DT46_VISION::PNP::Pose> observed_poses;
 
     Pipeline(const char* model, const char* parameters) {
         cv::setNumThreads(1);
@@ -96,6 +97,7 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
              const Eigen::Matrix3d& rotation, std::vector<dt46_vision::Armor>& armors) {
     pipeline.pnp.beginFrame();
     pipeline.observed_normals_camera.clear();
+    pipeline.observed_poses.clear();
     pipeline.detector->img_drawn.release();
     pipeline.detector->img_armor.release();
     pipeline.detector->img_armor_processed.release();
@@ -107,6 +109,7 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
             &pipeline.calibration, false, frame, armor, armor.armor_id);
         if (!(z > 0.0) || !std::isfinite(x+y+z+yaw)) continue;
         auto& output = result.observations[result.count++];
+        pipeline.observed_poses.push_back(pipeline.pnp.pose());
         output.id = armor.armor_id;
         output.confidence = armor.res.confidence;
         output.position_camera_mm[0] = x;
@@ -141,6 +144,13 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
     json << "observation_normals_camera" << "[";
     for(const auto& n:pipeline.observed_normals_camera)json<<"["<<n.x()<<n.y()<<n.z()<<"]";
     json << "]";
+    json << "pnp_armors" << "[";
+    for(const auto& pose:pipeline.observed_poses){
+        json<<"{"<<"reprojection_error_px"<<pose.reprojection_error_px<<"corners_camera_m"<<"[";
+        for(const auto& p:pose.corners_camera_mm)json<<"["<<p.x*.001<<p.y*.001<<p.z*.001<<"]";
+        json<<"]"<<"}";
+    }
+    json<<"]";
     json << "frame_interval_s" << pipeline.frame_interval_s << "frame_reinitialized" << int(pipeline.frame_reinitialized);
     json << "body_ready" << int(s.body_ready) << "body_ekf_state" << "[";
     for(int i=0;i<11;++i)json<<s.body_state[i];json<<"]"<<"body_covariance_diagonal"<<"[";

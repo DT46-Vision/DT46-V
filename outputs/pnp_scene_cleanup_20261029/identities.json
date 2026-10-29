@@ -1,0 +1,42 @@
+[
+  {
+    "path": "CMakeLists.txt",
+    "sha256": "09E25E7D03C39CED9FEFC01ECACECDDD1C985A9FA1DE60829F861FE882E724B7"
+  },
+  {
+    "path": "src/rm_detector/src/pnp.cpp",
+    "sha256": "04208DBC9061F7C0F3A766EF7CF4A544C1EE33D0ECF8B9C6C5D4A8E9D2A2D466"
+  },
+  {
+    "path": "src/rm_detector/include/rm_detector/pnp.hpp",
+    "sha256": "D8A9785C5D1CAED066AF22667B71E47E024F845CDD70559EDD9CC9061C453E85"
+  },
+  {
+    "path": "standalone/aim.cpp",
+    "sha256": "05F3C4E41DA04B605E7514B1B5120A6EFFD6780FB46AC236137081F85C02F38E"
+  },
+  {
+    "path": "standalone/core_check.cpp",
+    "sha256": "43A2AFA88C120E90FCD3F7F53B9BED70E8CC6D718E5A2D8460FDA2996E923A0A"
+  },
+  {
+    "path": "project/modules/vision/pipeline.cpp",
+    "sha256": "5B131A9EF66F1D4C498DBB8C882388F85451FE3C45FC84D8E579AB98F613D9B9"
+  },
+  {
+    "path": "project/modules/vision/debug_images.cpp",
+    "sha256": "32BA9C094D22CA084B3896E02722CFB00344ECCBA053F7F38E013473DE60D434"
+  },
+  {
+    "path": "tools/check_pnp.cpp",
+    "sha256": "39DB954A8F894E9D958EF2EAFC968DFF62E7E9B48F4D7507D0280FA64B8FD7BC"
+  },
+  {
+    "path": "build/native/bin/dt46_vision.exe",
+    "sha256": "4AB8A86F9197D4B06C0E6DDFEF207530AABF8BF4180463DF71532D0891299A64"
+  },
+  {
+    "path": "build/native/bin/dt46_aim.dll",
+    "sha256": "ABF426A70ED9CBC4E50502ABE295E4ED098FC89303E7CA5DF5A16D7B43EE3F1B"
+  }
+]

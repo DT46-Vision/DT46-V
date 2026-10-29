@@ -1,0 +1,12 @@
+{
+  "cases": 9,
+  "passed": 9,
+  "frames": 11416.0,
+  "actual_shots": 164.0,
+  "all_hosts_exited_normally": true,
+  "batches": [
+    "live-20261029-184345",
+    "live-20261029-184623"
+  ],
+  "scope": "20 s per case; actual RGB, ONNX detector, PnP, EKF, ballistics, HP damage; functional checks only."
+}

@@ -29,23 +29,34 @@ void outlined_text(cv::Mat& image,const std::string& text,cv::Point origin,doubl
 }
 cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
     cv::Mat output=rgb.clone();
+    text_size=std::min(text_size,1.2);
+    outlined_text(output,"yellow: detected   magenta: raw PnP   cyan/green/orange: EKF",{12,24},.42*text_size,{255,255,255});
+    int row=0;
     for(const auto& armor:result.at("observations")) {
         std::vector<cv::Point> corners;for(int i:{0,1,3,2})corners.emplace_back(int(std::nearbyint(armor.at("corners_px").at(i).at(0).get<double>())),int(std::nearbyint(armor.at("corners_px").at(i).at(1).get<double>())));
         cv::polylines(output,corners,true,cv::Scalar(255,220,0),2);
+        if(armor.contains("pnp")){
+            const auto& pose=armor.at("pnp");std::vector<cv::Point> pixels;
+            for(int i:{0,1,3,2})if(auto p=project(pose.at("corners_camera_m").at(i),result))pixels.push_back(*p);
+            if(pixels.size()==4){cv::polylines(output,pixels,true,cv::Scalar(255,0,255),1);for(const auto& p:pixels)cv::circle(output,p,3,{255,0,255},1);}
+            const auto& p=armor.at("position_camera_m");const auto& n=armor.at("normal_camera");
+            Json tip=Json::array();for(int i=0;i<3;++i)tip.push_back(p.at(i).get<double>()+.12*n.at(i).get<double>());
+            const auto start=project(p,result),end=project(tip,result);if(start&&end)cv::arrowedLine(output,*start,*end,{255,0,255},2,cv::LINE_AA,0,.2);
+            outlined_text(output,"PnP "+std::to_string(row)+": z="+number(p.at(2))+" m, reproj="+number(pose.at("reprojection_error_px"))+" px",{12,48+24*row},.45*text_size,{255,0,255});
+            ++row;
+        }
     }
-    for(const auto& armor:result.at("tracker_debug").at("yaw_armors"))if(auto point=project(armor.at("position_camera_m"),result))
-        outlined_text(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,.55*text_size,cv::Scalar(255,0,255));
     const auto& debug=result.at("tracker_debug");
     if(debug.contains("body_center_camera_m"))if(auto center=project(debug.at("body_center_camera_m"),result)){
         cv::drawMarker(output,*center,{0,255,255},cv::MARKER_CROSS,24,2);
-        outlined_text(output,"estimated center",*center+cv::Point(12,-12),.5*text_size,{0,255,255});
+        outlined_text(output,"EKF center",*center+cv::Point(12,-12),.4*text_size,{0,255,255});
         for(const auto& plate:debug.at("body_plates")){
             std::vector<cv::Point> corners;
             for(const auto& vertex:plate.at("corners_camera_m")){auto pixel=project(vertex,result);if(pixel)corners.push_back(*pixel);}
             if(corners.size()!=4)continue;
             const cv::Scalar color=plate.at("selected").get<int>()?cv::Scalar(255,160,0):plate.at("matched").get<int>()?cv::Scalar(0,255,80):cv::Scalar(0,180,220);
             cv::polylines(output,corners,true,color,2);cv::line(output,*center,(corners[0]+corners[2])/2,color,1);
-            outlined_text(output,"model "+std::to_string(plate.at("index").get<int>()),corners[0],.45*text_size,color);
+            outlined_text(output,"E"+std::to_string(plate.at("index").get<int>()),corners[0],.35*text_size,color);
         }
     }
     return output;

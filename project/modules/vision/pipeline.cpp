@@ -183,7 +183,8 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
         for (int j = 0; j < 4; ++j) corners.push_back({a.corners[2*j], a.corners[2*j+1]});
         observations.push_back({{"armor_id", a.id}, {"classifier_score", a.confidence},
             {"position_camera_m", {a.position_camera_mm[0]/1000, a.position_camera_mm[1]/1000, a.position_camera_mm[2]/1000}},
-            {"yaw_deg", a.yaw_deg}, {"normal_camera",debug.at("observation_normals_camera").at(i)}, {"corners_px", corners}});
+            {"yaw_deg", a.yaw_deg}, {"normal_camera",debug.at("observation_normals_camera").at(i)}, {"corners_px", corners},
+            {"pnp",debug.at("pnp_armors").at(i)}});
     }
     return {{"simulation_time_s", timestamp}, {"state", states[result.state]}, {"tracked_id", result.tracked_id},
         {"can_fire", bool(result.can_fire)}, {"yaw_error_deg", result.yaw_error_deg}, {"pitch_error_deg", result.pitch_error_deg},
