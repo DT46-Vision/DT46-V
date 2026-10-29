@@ -1,0 +1,11 @@
+lights=4 armors=0
+light 0 center=626,704 height=83.4257 color=1 endpoints=[616.799, 744.72],[635.756, 663.476]
+light 1 center=998,729 height=86.3653 color=1 endpoints=[1001.66, 772.865],[994.685, 686.782]
+light 2 center=1062,712 height=147.395 color=1 endpoints=[1065.9, 786.192],[1059.6, 638.931]
+light 3 center=1110,691 height=67.1176 color=1 endpoints=[1112.83, 725.011],[1108.37, 658.042]
+pair 0,1 tilt=17.7694 line=3.84474 height_ratio=1.03524 spacing_height=4.39174 class=-1 score=0
+pair 0,2 tilt=15.581 line=1.05118 height_ratio=1.76679 spacing_height=3.77845 class=-1 score=0
+pair 0,3 tilt=16.9481 line=1.53857 height_ratio=1.24298 spacing_height=6.43236 class=-1 score=0
+pair 1,2 tilt=2.18838 line=14.8757 height_ratio=1.70665 spacing_height=0.566557 class=-1 score=0
+pair 1,3 tilt=0.821362 line=18.7413 height_ratio=1.28677 spacing_height=1.54116 class=1 score=5.92243
+pair 2,3 tilt=1.36702 line=23.6294 height_ratio=2.19608 spacing_height=0.488481 class=-1 score=0
