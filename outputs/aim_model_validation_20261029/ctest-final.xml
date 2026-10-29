@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Win32-ninja"
+	tests="10"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="DESKTOP-V74PU4D"
+	time="10"
+	timestamp="2026-10-29T18:08:56"
+	>
+	<testcase name="shared_body_ekf" classname="shared_body_ekf" time="0.0348635" status="run">
+		<properties/>
+		<system-out>shared body, geometry, Jacobians, Joseph PSD, real dt checks passed; center RMSE 0.00144929 m, max 0.00545773 m
+</system-out>
+	</testcase>
+	<testcase name="relative_aim" classname="relative_aim" time="0.144116" status="run">
+		<properties/>
+		<system-out>relative aim checks passed; artifacts: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/relative_aim_results
+</system-out>
+	</testcase>
+	<testcase name="native_media" classname="native_media" time="0.18026" status="run">
+		<properties/>
+		<system-out>calibration RMS=2.09406e-05 pixels
+MP4 round trip: 20 frames
+</system-out>
+	</testcase>
+	<testcase name="archived_tracker_baseline" classname="archived_tracker_baseline" time="0.234165" status="run">
+		<properties/>
+		<system-out>-- Archived integration baseline intact; current tracker is intentionally rewritten
+</system-out>
+	</testcase>
+	<testcase name="tracker_body_integration" classname="tracker_body_integration" time="0.0398963" status="run">
+		<properties/>
+		<system-out>actual tracker center RMSE 0.000226054, max 0.000775208, fire frames 40
+</system-out>
+	</testcase>
+	<testcase name="noisy_switching_actual_yaml" classname="noisy_switching_actual_yaml" time="5.20995" status="run">
+		<properties/>
+		<system-out>actual YAML, single plate, mirrored yaw, noisy switching, duplicates and missing-frame gates passed
+</system-out>
+	</testcase>
+	<testcase name="hardware_protocol" classname="hardware_protocol" time="0.0167018" status="run">
+		<properties/>
+		<system-out>CRC fixtures, byte layouts, all frame splits, corruption recovery and quaternion checks passed
+</system-out>
+	</testcase>
+	<testcase name="native_pipeline" classname="native_pipeline" time="2.40825" status="run">
+		<properties/>
+		<system-out>Native configuration, colors, raw camera geometry, retired flip rejection, monotonic timestamps and reset passed
+</system-out>
+	</testcase>
+	<testcase name="native_transport" classname="native_transport" time="0.0403357" status="run">
+		<properties/>
+		<system-out>Full-resolution RGB, metadata, authentication and size limits passed
+</system-out>
+	</testcase>
+	<testcase name="calibrated_pnp_and_optical_rotation" classname="calibrated_pnp_and_optical_rotation" time="2.03116" status="run">
+		<properties/>
+		<system-out>distortion_check target_mm=[0, 0, 2300] compensated_mm=0.478868 ignored_mm=1.09611
+distortion_check target_mm=[800, 300, 2300] compensated_mm=1.64862 ignored_mm=147.806
+distortion_check target_mm=[-800, -300, 2300] compensated_mm=0.789782 ignored_mm=144.01
+distortion_check target_mm=[1100, -550, 2300] compensated_mm=1.81439 ignored_mm=307.794
+PASS: calibrated PnP error 0.563164 mm; optical rotation round trips
+</system-out>
+	</testcase>
+</testsuite>

@@ -1,0 +1,14 @@
+{
+  "count": 19,
+  "height_mm": {
+    "median": 57.12880541870696,
+    "p05": 56.79842726697414,
+    "p95": 57.87956115048517
+  },
+  "scope": "Offline rendered stationary fixture, first 0.6 s with observations; known plane inclination 15 degrees. Not a hardware calibration.",
+  "width_mm": {
+    "median": 130.28204172659346,
+    "p05": 129.7153555640291,
+    "p95": 130.42963356382234
+  }
+}

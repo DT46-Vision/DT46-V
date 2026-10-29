@@ -10,10 +10,10 @@ namespace {
 const std::set<std::string> detector_parameters = {
     "light_area_min", "light_h_w_ratio", "light_angle_min", "light_angle_max", "light_red_ratio", "light_blue_ratio",
     "height_rate_tol", "height_multiplier_min", "height_multiplier_max", "row_stretch", "col_stretch", "roi_crop",
-    "roi_scale", "binary_val", "display_mode", "detect_color", "print_period_ms"};
+    "roi_scale", "binary_val", "display_mode", "detect_color", "print_period_ms", "pnp_light_spacing_mm", "pnp_light_height_mm"};
 const std::set<std::string> tracker_parameters = {
     "max_match_distance", "max_match_yaw_diff", "jump_cooldown_max", "tracking_thres", "lost_thres", "dist_tol",
-    "ekf_QR_q_xyz", "ekf_QR_q_yaw", "ekf_QR_q_r", "ekf_QR_r_xyz_factor", "ekf_QR_r_yaw", "ekf_QR_stable_dist",
+    "ekf_QR_q_xyz", "ekf_QR_q_yaw", "ekf_QR_q_r", "ekf_QR_r_xyz_factor", "ekf_QR_r_depth_factor", "ekf_QR_r_yaw", "ekf_QR_stable_dist",
     "radius_r_min", "radius_r_max", "system_delay", "controller_delay", "bullet_speed", "k_v2", "gravity", "shootable_dist",
     "yaw_tolerance_deg", "pitch_tolerance_deg", "min_spinning_vel", "spin_enter_time", "spin_exit_time",
     "cam_to_gun_rpy_r", "cam_to_gun_rpy_p", "cam_to_gun_rpy_y", "target_color", "follow_decision",
@@ -50,6 +50,8 @@ void validate_settings(const Json& settings) {
         number(d.at("binary_val")) < 0 || number(d.at("binary_val")) > 255) throw std::invalid_argument("Invalid ROI scale/threshold");
     for (const char* key : {"row_stretch", "col_stretch", "light_h_w_ratio", "height_rate_tol"})
         if (!(number(d.at(key)) > 0)) throw std::invalid_argument(std::string(key)+" must be positive");
+    for(const char* key:{"pnp_light_spacing_mm","pnp_light_height_mm"})
+        if(d.contains(key)&&number(d.at(key))<=0)throw std::invalid_argument(std::string(key)+" must be positive");
     if (number(d.at("light_area_min")) < 0 || number(d.at("light_angle_min")) > number(d.at("light_angle_max")) ||
         number(d.at("height_multiplier_min")) < 0 || number(d.at("height_multiplier_min")) > number(d.at("height_multiplier_max")))
         throw std::invalid_argument("Invalid light/armor bounds");
@@ -62,6 +64,10 @@ void validate_settings(const Json& settings) {
     }
     for (const char* key : {"system_delay", "controller_delay", "spin_enter_time", "spin_exit_time"})
         if (number(t.at(key)) < 0) throw std::invalid_argument(std::string(key)+" must be nonnegative");
+    for (const char* key : {"ekf_QR_q_xyz", "ekf_QR_q_yaw", "ekf_QR_q_r", "ekf_QR_r_xyz_factor", "ekf_QR_r_depth_factor"})
+        if(t.contains(key)&&number(t.at(key))<0)throw std::invalid_argument(std::string(key)+" must be nonnegative");
+    for (const char* key : {"ekf_QR_r_yaw", "ekf_QR_stable_dist", "max_match_distance", "max_match_yaw_diff"})
+        if(number(t.at(key))<=0)throw std::invalid_argument(std::string(key)+" must be positive");
     for (const auto* group : {&d, &t}) for (const char* key : {"roi_crop", "display_mode", "follow_decision", "display", "display_fps_limit"})
         if (group->contains(key) && number(group->at(key)) != 0 && number(group->at(key)) != 1)
             throw std::invalid_argument(std::string(key)+" must be boolean");
@@ -169,6 +175,7 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
     if (dt46_process(context_, contiguous.data, rgb.cols, rgb.rows, timestamp, k.val, distortion.val,
                      optical_rotation.val, muzzle_offset.val, target_color, measured_speed, &result)) throw native_error();
     const char* states[] = {"LOST", "DETECTING", "TRACKING", "TEMP_LOST"};
+    const Json debug=Json::parse(dt46_snapshot(context_));
     Json observations = Json::array();
     for (int i = 0; i < result.count; ++i) {
         const auto& a = result.observations[i];
@@ -176,14 +183,14 @@ Json AimPipeline::process(const cv::Mat& rgb, double timestamp, const cv::Matx33
         for (int j = 0; j < 4; ++j) corners.push_back({a.corners[2*j], a.corners[2*j+1]});
         observations.push_back({{"armor_id", a.id}, {"classifier_score", a.confidence},
             {"position_camera_m", {a.position_camera_mm[0]/1000, a.position_camera_mm[1]/1000, a.position_camera_mm[2]/1000}},
-            {"yaw_deg", a.yaw_deg}, {"corners_px", corners}});
+            {"yaw_deg", a.yaw_deg}, {"normal_camera",debug.at("observation_normals_camera").at(i)}, {"corners_px", corners}});
     }
     return {{"simulation_time_s", timestamp}, {"state", states[result.state]}, {"tracked_id", result.tracked_id},
         {"can_fire", bool(result.can_fire)}, {"yaw_error_deg", result.yaw_error_deg}, {"pitch_error_deg", result.pitch_error_deg},
         {"aim", {{"valid", bool(result.aim_valid)}, {"yaw_error_deg", result.yaw_command_deg},
                  {"pitch_error_deg", result.pitch_command_deg}, {"can_fire", bool(result.can_fire)}}},
         {"position_camera_origin_world_axes_m", result.position}, {"velocity_world_axes_m_s", result.velocity},
-        {"light_count", result.light_count}, {"observations", observations}, {"tracker_debug", Json::parse(dt46_snapshot(context_))},
+        {"light_count", result.light_count}, {"observations", observations}, {"tracker_debug", debug},
         {"input", {{"K", matrix_json(k)}, {"D", distortion.val}, {"optical_rotation", matrix_json(optical_rotation)},
                     {"muzzle_offset_camera_m", muzzle_offset.val}, {"target_color",target_color},
                     {"detect_color",configured_color < 0 ? target_color : configured_color}}}};

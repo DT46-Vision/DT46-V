@@ -35,6 +35,8 @@ namespace DT46_VISION {
 
         // 每帧开始时调用：上一帧的板才参与消歧，同一帧的另一块板不能互相污染
         void beginFrame();
+        void setArmorGeometry(double light_spacing_mm,double light_height_mm);
+        void resetCameraInfo() { has_cached_caminfo_=false; prev_plates_.clear(); curr_plates_.clear(); }
 
     private:
         struct PlatePrior {
@@ -49,6 +51,7 @@ namespace DT46_VISION {
         cv::Mat cached_K_;
         cv::Mat cached_D_;
         bool has_cached_caminfo_ = false;
+        double light_spacing_mm_=135.0,light_height_mm_=58.0;
         // 按图像位置区分同一数字的多块板，只和上一帧、同一块板做时序消歧
         std::vector<PlatePrior> prev_plates_;
         std::vector<PlatePrior> curr_plates_;

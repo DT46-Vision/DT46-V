@@ -50,6 +50,8 @@ public:
 
     // 新增函数的声明
     Eigen::Vector3d cam_to_world(const Eigen::Vector3d& raw_xyz, const Eigen::Vector3d& imu_rpy);
+    double armor_yaw_from_normal(const Eigen::Vector3d& outward_camera_normal,
+                                const Eigen::Vector3d& imu_rpy, double fallback_yaw);
     Eigen::Vector3d world_to_cam(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy);
 
     std::tuple<cv::Point2i, bool> project_point(const Eigen::Vector3d& xyz_cam) const;

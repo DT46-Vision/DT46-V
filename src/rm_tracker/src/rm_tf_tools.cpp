@@ -101,6 +101,14 @@ Eigen::Vector3d RmTF::cam_to_world(const Eigen::Vector3d& raw_xyz, const Eigen::
     return rotate_pos_axis(normal_axis_xyz, imu_rpy, "xyz");
 }
 
+double RmTF::armor_yaw_from_normal(const Eigen::Vector3d& normal,
+                                  const Eigen::Vector3d& imu_rpy, double fallback_yaw) {
+    if (!normal.allFinite() || normal.norm() < .5) return fallback_yaw;
+    const Eigen::Vector3d world = cam_to_world(normal, imu_rpy);
+    if (world.head<2>().norm() < 1e-6) return fallback_yaw;
+    return std::atan2(-world.y(), -world.x());
+}
+
 Eigen::Vector3d RmTF::world_to_cam(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy) {
     if (optical_rotation_) return optical_rotation_->transpose() * world_xyz;
     Eigen::Vector3d inv_imu_rpy(-imu_rpy(2), -imu_rpy(1), -imu_rpy(0));

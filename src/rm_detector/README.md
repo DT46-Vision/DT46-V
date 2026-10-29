@@ -42,16 +42,18 @@
 3. `is_armor()`：按中心 x 排序，选择右侧首个同色且灯条夹角、中心连线角通过限制的候选，再检查高度比 < `height_rate_tol`、中心距/平均高严格位于 `(height_multiplier_min, height_multiplier_max)` 内。灯条夹角按最小角差计算，避免近竖直灯条跨越 ±180° 时被误拒；每条灯条只用一次。
 4. `get_armor_result()`：透视变换到 89×125 → Otsu 二值化 → `NumberClassifier` 推理 → `class_id`。
 5. `Armor::get_id()`：颜色 + `class_id` 映射成 `armor_id`（见下表）；`is_armor()` 只接受 `class_id ∈ {0,1,2}`。
-6. `PNP::processArmorCorners()`：`cv::solvePnP(..., cv::SOLVEPNP_IPPE)`，用 `armor_id` 选择装甲板物理尺寸，输出 `dx/dy/dz`（mm）和 `yaw`（deg）。
+6. `PNP::processArmorCorners()`：`cv::solvePnPGeneric(..., cv::SOLVEPNP_IPPE)`，按尺寸深度线索及上一帧法线/深度选择解，输出 `dx/dy/dz`（mm）、`yaw`（deg）和相机系单位法线 `nx/ny/nz`。当前尺寸与 id 无关，由 `pnp_light_spacing_mm` / `pnp_light_height_mm` 配置；灯条矩形中线端点保留浮点精度，颜色采样才转整数。
 
 ## 参数
 
-`config/` 下有 4 份参数文件，内容仅在 `col_stretch` 上有差别：
+`config/` 下有 4 份参数文件；步兵文件另显式列出 PnP 灯条尺寸，未填写时使用代码默认值：
 `detector_params.yaml`（通用，0.6）、`detector_params_sentry.yaml`（0.7）、`detector_params_hero.yaml`（0.7）、`detector_params_infantry.yaml`（0.7）。
 
 | 参数 | 类型 | 代码 declare 默认值 | config 中的值 | 含义 |
 | --- | --- | --- | --- | --- |
 | `cls_model_file` | string | `mlp.onnx` | `RM_Armor_CNN_sim.onnx` | ONNX 文件名（相对 `share/rm_detector/model/`）；置空字符串可禁用分类器 |
+| `pnp_light_spacing_mm` | double | `135.0` | 步兵 `135.0`，其余使用默认 | 两灯条中心距，必须为正有限数；不是装甲板整体宽度 |
+| `pnp_light_height_mm` | double | `58.0` | 步兵 `58.0`，其余使用默认 | 与检测端点对应的有效灯条长度，必须为正有限数；实际硬件须标定 |
 | `roi_crop` | bool | `false` | `false` | 是否只处理图像中心 ROI |
 | `roi_scale` | double | `0.5` | `0.4` | ROI 占整图的比例 |
 | `light_area_min` | int | `5` | `5` | 灯条轮廓最小面积（像素） |
@@ -157,10 +159,10 @@ ros2 topic echo /detector/armors_info
 ## 注意事项 / 已知问题
 
 1. **分类器不可用 = 检测不到任何装甲板**：`cls_model_file` 为空或模型加载失败时 `classifier_` 为 `nullptr`，`get_armor_result()` 不会填 `class_id`（默认 -1），`is_armor()` 的 `class_id ∈ {0,1,2}` 判断会丢弃全部候选，终端只会周期性打印 `No armors detected`。
-2. **必须有 `/camera_info`**：内参只在收到第一帧时解析并缓存。若没有内参，`cameraMatrix` 为空（`use_geometric_center: true` 时是除了 cx/cy 全 0 的矩阵，即 fx=fy=0），`solvePnP` 会抛异常，被 node 捕获后打印 `Detection error: ...`。
+2. **必须有 `/camera_info`**：内参首次解析后缓存；尚无内参时 PnP 返回无效深度，不输出有效位姿。
 3. **`use_geometric_center: true` 会覆盖标定主点**：所有 yaml 当前都是 true，等于放弃标定得到的 `cx/cy`，只用图像几何中心。若要做高精度测距/换分辨率，注意这一点。
 4. **调试图像很吃带宽**：`display_mode: true` 时 6 路图像都用 SensorDataQoS 发布，只是看调试图时记得关掉。
 5. **丢帧策略**：`image_callback` 覆盖式保存最新帧、`processing_loop` 取走即置空，所以处理慢时直接丢帧而不是排队，不会"重复识别同一帧"。
 6. **参数默认值与 YAML 不一致**（见参数表）：`ros2 run` 不带参数文件时行为和跑 launch 完全不同，排查问题时先确认参数从哪来。
-7. `PnP` 的 `class_id` 用 `armor_id` 判断大小装甲板：`armor_id ∈ {0, 6}` 按 225mm×58mm 解算，其余按 135mm×58mm。与上面"只输出 6 个 ID"配合，即 R1/B1 走大装甲板尺寸。
-8. `solvePnP` 失败或候选点为 0 时返回 `(0, 0, -1, 0)`，下游拿到 `dz = -1` 应当视为无效。
+7. 当前 PnP 对所有 id 使用同一套可配置灯条尺寸，不按编号推定大小板。ROS 的两个尺寸是启动参数，运行时修改会明确拒绝，需修改 YAML 后重启；原生 Apply 重建上下文后生效。
+8. PnP 无可用解或缺少内参时返回 `(0, 0, -1, 0, 0, 0, 0)`，下游必须将 `dz = -1` 视为无效。

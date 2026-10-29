@@ -1,0 +1,27 @@
+{
+  "association": {
+    "innovation": 9,
+    "matched": 318,
+    "no_candidate": 1,
+    "no_observations": 93
+  },
+  "blockers": {
+    "acquiring": 702,
+    "alignment_or_facing": 394,
+    "arrival_uncertainty": 7,
+    "insufficient_updates": 15,
+    "lost": 1,
+    "not_tracking": 103,
+    "unmatched": 102,
+    "yaw_hypothesis": 15
+  },
+  "body_ready": 1104,
+  "fire": 20,
+  "frames": 1123,
+  "matched": 318,
+  "q_r": 1e-06,
+  "q_xyz": 0.02,
+  "q_yaw": 0.5,
+  "r_yaw": 0.02,
+  "tracking": 317
+}

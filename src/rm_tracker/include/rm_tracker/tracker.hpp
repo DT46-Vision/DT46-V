@@ -50,10 +50,11 @@ struct Armor {
 
 // 3. EKF 参数结构体
 struct EKF_QR_Params {
-    double q_xyz = 2.5;
+    double q_xyz = 0.2;
     double q_yaw = 15.0;
-    double q_r = 0.05;
+    double q_r = 0.000001;
     double r_xyz_factor = 0.05;
+    double r_depth_factor = 0.0; // Extra depth sigma = 5 mm + factor * .01 * range^2; 0 disables.
     double r_yaw = 0.02;
     double stable_dist = 1.5;
 };
@@ -72,6 +73,10 @@ struct RenderSnapshot {
     BodyEkf::State body_state = BodyEkf::State::Zero();
     BodyEkf::Covariance body_covariance = BodyEkf::Covariance::Identity();
     bool body_ready = false;
+    unsigned body_matched_mask = 0;
+    int observed_plate = -1;
+    double aim_lateral_sigma = 0, aim_vertical_sigma = 0;
+    std::vector<std::string> fire_blockers;
     TrackerState tracker_state;
     Eigen::Matrix<double, 9, 1> target_state;
     double another_r;
@@ -174,10 +179,17 @@ public:
 
 private:
     BodyEkf body_ekf_;
+    std::optional<BodyEkf> body_mirror_;
+    double body_hypothesis_age_=0,body_hypothesis_log_odds_=0;
+    bool body_spin_mode_=false;
+    double body_spin_enter_s_=0,body_spin_exit_s_=0;
+    double fire_yaw_tolerance_deg_=0,fire_pitch_tolerance_deg_=0;
     int body_plate_index_ = 0;
     bool body_matched_ = false;
     int selected_body_plate_ = -1;
     double detect_elapsed_s_ = 0, lost_elapsed_s_ = 0;
+    double aim_lateral_sigma_ = 0, aim_vertical_sigma_ = 0;
+    std::vector<std::string> fire_blockers_;
     ExtendedKalmanFilter ekf_;
     std::vector<RobotAppearance> robot_list_;
 

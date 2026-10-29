@@ -36,12 +36,13 @@ rm_tracker:
     lost_thres: 20 # 连续丢失帧数 (进入 LOST) - int
 
     # [EKF Q/R 参数] — 连续白噪声离散化 (Q_pos = q*dt³/3, Q_vel = q*dt, Q_r = q*dt)
-    ekf_QR_q_xyz: 5.0 # 加速度谱密度 (m²/s³) — 越大越信任观测
-    ekf_QR_q_yaw: 1.0 # 角加速度谱密度 (rad²/s³)
-    ekf_QR_q_r: 0.015 # 半径游走谱密度 (m²/s)
+    ekf_QR_q_xyz: 0.02 # 相对平移加速度谱密度 (m²/s³)，验证记录见 tracker README
+    ekf_QR_q_yaw: 0.5 # 角加速度谱密度 (rad²/s³)
+    ekf_QR_q_r: 0.000001 # 刚性车体几何的缓慢游走 (m²/s)
 
     ekf_QR_r_xyz_factor: 0.5 # PnP位置噪声：距离百分比(0.2=>0.2%)，R=(factor*dist+5mm)^2
-    ekf_QR_r_yaw: 0.002 # Measurement Noise R: 角度方差
+    ekf_QR_r_depth_factor: 1.0 # 测深sigma=max(位置sigma, 0.005+factor*0.01*dist²)，0关闭
+    ekf_QR_r_yaw: 0.02 # 角度方差；平面分支消歧后仍有像素/倾斜误差
 
     ekf_QR_stable_dist: 1.4
 
@@ -49,7 +50,8 @@ rm_tracker:
     radius_r_max: 0.4 # 车辆最大半径 (m)
     radius_r_min: 0.15 # 车辆最小半径 (m)
 
-    system_delay: 0.01
+    system_delay: 0.01 # 图像/估计补偿秒数；不是实测延迟，不考虑则写0
+    controller_delay: 0.02 # 执行补偿秒数；不是实测延迟，不考虑则写0
 
     # 反小陀螺
     max_spinning_frame: 10

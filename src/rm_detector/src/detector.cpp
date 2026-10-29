@@ -211,15 +211,15 @@ namespace DT46_VISION{
 
             int up_x = static_cast<int>(std::abs(box[0].x - box[3].x) / 2 + std::min(box[0].x, box[3].x));
             int up_y = static_cast<int>(std::abs(box[0].y - box[3].y) / 2 + std::min(box[0].y, box[3].y));
-            cv::Point2f up(up_x, up_y);
+            cv::Point2f up = (box[0]+box[3])*.5f;
 
             int down_x = static_cast<int>(std::abs(box[1].x - box[2].x) / 2 + std::min(box[1].x, box[2].x));
             int down_y = static_cast<int>(std::abs(box[1].y - box[2].y) / 2 + std::min(box[1].y, box[2].y));
-            cv::Point2f down(down_x, down_y);
+            cv::Point2f down = (box[1]+box[2])*.5f;
 
             int length = static_cast<int>(calculate_distance(up, down));
 
-            if (length <= 0) continue;
+            if (length < 2) continue;
 
             cv::Mat raw = img;
             if (params.roi_crop){

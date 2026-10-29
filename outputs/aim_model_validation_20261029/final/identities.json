@@ -1,0 +1,22 @@
+[
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\build\\validation\\runtime-path-check\\rm_sim.exe",
+    "Hash": "B30F091C99B178849A74296485898DA14110D0E42D2C75208F76EC29C9047385"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\dt46_vision.exe",
+    "Hash": "5C0B9D7454B46ADD7D1B73EE26E0B21C5BA5A9314F41F065F60A891B76C1C5A8"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\standalone\\dt46_aim.dll",
+    "Hash": "B7C62754DD476F7EC769DC504D73BB0AD79C3D612040B71B9DD020D449D10D95"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\src\\rm_tracker\\config\\tracker_params_infantry.yaml",
+    "Hash": "538ED81F9392764CECCFA2D422740C97DAC93E40020C385B73B3DA603A2E07E8"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\src\\rm_detector\\config\\detector_params_infantry.yaml",
+    "Hash": "0DABF324723F15BF05C3BF68A061A5AABD0F96E05BDEF60BB87BDA2A351D6581"
+  }
+]

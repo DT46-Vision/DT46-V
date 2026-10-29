@@ -58,7 +58,7 @@ struct VisionDebug::Impl {
     std::array<nk_font*,6> fonts{};std::array<float,6> font_sizes{};int font_choice=2;
     Json theme_config;int theme_choice=1;
     VirtualFrame last_frame;Json last_result=nullptr,last_parameters;std::array<cv::Mat,10> images;std::array<GLuint,4> textures{};
-    std::array<int,4> choices{3,1,7,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
+    std::array<int,4> choices{3,1,2,5};std::array<int,4> texture_views{-1,-1,-1,-1};bool dirty=true;
     struct ViewOptions {int smooth=0,zoom=0,grid=0,rotation=0;};std::array<ViewOptions,4> view_options;
     std::map<std::string,std::map<std::string,std::array<char,256>>> fields;Json field_types;
     std::string status="Starting",message;std::deque<std::string> logs;int tab=0;std::filesystem::path pending_screenshot;

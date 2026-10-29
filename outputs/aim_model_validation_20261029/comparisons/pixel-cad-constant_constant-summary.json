@@ -1,0 +1,29 @@
+{
+  "association": {
+    "innovation": 6,
+    "matched": 113,
+    "no_candidate": 108,
+    "no_observations": 47
+  },
+  "blockers": {
+    "acquiring": 786,
+    "alignment_or_facing": 236,
+    "arrival_uncertainty": 246,
+    "ballistic_domain": 1,
+    "flight_consistency": 26,
+    "insufficient_updates": 110,
+    "lost": 9,
+    "not_tracking": 176,
+    "unmatched": 152,
+    "yaw_hypothesis": 103
+  },
+  "body_ready": 76,
+  "fire": 1,
+  "frames": 1060,
+  "matched": 113,
+  "q_r": 1e-06,
+  "q_xyz": 0.02,
+  "q_yaw": 0.5,
+  "r_yaw": 0.02,
+  "tracking": 89
+}

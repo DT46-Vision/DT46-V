@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Win32-ninja"
+	tests="4"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname="DESKTOP-V74PU4D"
+	time="26"
+	timestamp="2026-10-29T17:53:44"
+	>
+	<testcase name="auto_aim_control" classname="auto_aim_control" time="0.138669" status="run">
+		<properties/>
+		<system-out>Optical aim direction, fire gates, stale/reset/focus rejection and camera return transport passed
+</system-out>
+	</testcase>
+	<testcase name="native_camera" classname="native_camera" time="2.16244" status="run">
+		<properties/>
+		<system-out>robots.json on NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2, persistent=1
+onboard: max image error 1, bounded readback and timestamps passed
+operator: max image error 1, bounded readback and timestamps passed
+robots_dt46.json on NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2, persistent=1
+onboard: max image error 1, bounded readback and timestamps passed
+operator: max image error 1, bounded readback and timestamps passed
+robots_old_infantry.json on NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2, persistent=1
+onboard: max image error 1, bounded readback and timestamps passed
+operator: max image error 1, bounded readback and timestamps passed
+</system-out>
+	</testcase>
+	<testcase name="aim_tracking_scenario" classname="aim_tracking_scenario" time="23.87" status="run">
+		<properties/>
+		<system-out>{
+  "combinations": [
+    {
+      "peak_speed_m_s": 0.0,
+      "peak_spin_rad_s": 0.0,
+      "rotation": "off",
+      "translation": "stationary",
+      "y_range_m": [
+        -2.0,
+        -2.0
+      ]
+    },
+    {
+      "peak_speed_m_s": 0.0,
+      "peak_spin_rad_s": 6.283185307179586,
+      "rotation": "constant",
+      "translation": "stationary",
+      "y_range_m": [
+        -2.0,
+        -2.0
+      ]
+    },
+    {
+      "peak_speed_m_s": 0.0,
+      "peak_spin_rad_s": 9.42477796076938,
+      "rotation": "sine",
+      "translation": "stationary",
+      "y_range_m": [
+        -2.0,
+        -2.0
+      ]
+    },
+    {
+      "peak_speed_m_s": 1.5,
+      "peak_spin_rad_s": 0.0,
+      "rotation": "off",
+      "translation": "constant",
+      "y_range_m": [
+        -2.0,
+        1.9996442222222481
+      ]
+    },
+    {
+      "peak_speed_m_s": 1.5,
+      "peak_spin_rad_s": 6.283185307179586,
+      "rotation": "constant",
+      "translation": "constant",
+      "y_range_m": [
+        -2.0,
+        1.9996442222222481
+ ...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="camera_sampling" classname="camera_sampling" time="0.033649" status="run">
+		<properties/>
+		<system-out>Absolute camera schedule, exposure/state limits, overload and parameter changes passed
+</system-out>
+	</testcase>
+</testsuite>

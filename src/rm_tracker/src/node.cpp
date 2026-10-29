@@ -46,10 +46,11 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.dist_tol = this->declare_parameter("dist_tol", 0.15);
 
     // 2.7 加载 EKF Q/R 噪声参数
-    tracker_.ekf_QR_params.q_xyz = this->declare_parameter("ekf_QR_q_xyz", 2.5);
-    tracker_.ekf_QR_params.q_yaw = this->declare_parameter("ekf_QR_q_yaw", 15.0);
-    tracker_.ekf_QR_params.q_r = this->declare_parameter("ekf_QR_q_r", 0.05);
+    tracker_.ekf_QR_params.q_xyz = this->declare_parameter("ekf_QR_q_xyz", tracker_.ekf_QR_params.q_xyz);
+    tracker_.ekf_QR_params.q_yaw = this->declare_parameter("ekf_QR_q_yaw", tracker_.ekf_QR_params.q_yaw);
+    tracker_.ekf_QR_params.q_r = this->declare_parameter("ekf_QR_q_r", tracker_.ekf_QR_params.q_r);
     tracker_.ekf_QR_params.r_xyz_factor = this->declare_parameter("ekf_QR_r_xyz_factor", 0.05);
+    tracker_.ekf_QR_params.r_depth_factor = this->declare_parameter("ekf_QR_r_depth_factor", 0.0);
     tracker_.ekf_QR_params.r_yaw = this->declare_parameter("ekf_QR_r_yaw", 0.02);
     tracker_.ekf_QR_params.stable_dist = this->declare_parameter("ekf_QR_stable_dist", 1.5);
 
@@ -210,8 +211,9 @@ void RmTrackerNode::processing_worker() {
         raw_armors.reserve(data.msg->armors.size());
 
         for (const auto& a : data.msg->armors) {
+            if (!(a.dz>0) || !std::isfinite(double(a.dx)+a.dy+a.dz+a.yaw)) continue;
             // 1. 颜色过滤：只保留目标敌人颜色的装甲板
-            // target_color_ == 0 表示要打红色 (id 1~5), target_color_ == 1 表示要打蓝色 (id 6+)
+            // target_color_ == 0 表示红色 (id 6+)，target_color_ == 1 表示蓝色 (id < 6)。
             if (target_color_ == 0 && a.armor_id < 6) continue;
             if (target_color_ == 1 && a.armor_id >= 6) continue;
 
@@ -219,7 +221,7 @@ void RmTrackerNode::processing_worker() {
             Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);
             Eigen::Vector3d world_pos = tf_.cam_to_world(raw_pos, data.imu_rpy);
 
-            // 角度对齐与转换 (Degree -> Radian)。PnP yaw 取反后再加云台 yaw。
+            // 完整法线无效时，兼容旧 yaw 消息的回退角度 (Degree -> Radian)。
             double gimbal_yaw_deg = data.imu_rpy(2);
             double pnp_yaw_deg = -a.yaw;
             double world_yaw_deg = gimbal_yaw_deg + pnp_yaw_deg;
@@ -228,6 +230,7 @@ void RmTrackerNode::processing_worker() {
             if (norm_yaw < 0) norm_yaw += 2.0 * M_PI;
             norm_yaw -= M_PI;
 
+            norm_yaw = tf_.armor_yaw_from_normal(Eigen::Vector3d(a.nx,a.ny,a.nz), data.imu_rpy, norm_yaw);
             Armor armor(a.armor_id, world_pos(0), world_pos(1), world_pos(2), norm_yaw);
             raw_armors.push_back(armor);
         }

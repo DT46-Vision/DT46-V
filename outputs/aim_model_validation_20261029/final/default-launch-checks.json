@@ -1,0 +1,29 @@
+{
+  "provenance": {
+    "executable": "D:\\project\\RobotMaster\\sim_vision\\DT46_V/build/native/bin\\dt46_vision.exe",
+    "executable_sha256": "5c0b9d7454b46add7d1b73ee26e0b21c5ba5a9314f41f065f60a891b76c1c5a8",
+    "files": [
+      {
+        "path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\src/rm_detector/config\\detector_params_infantry.yaml",
+        "sha256": "0dabf324723f15bf05c3bf68a061a5aabd0f96e05bdef60bb87bda2a351d6581"
+      },
+      {
+        "path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\src/rm_tracker/config\\tracker_params_infantry.yaml",
+        "sha256": "538ed81f9392764ceccfa2d422740c97dac93e40020c385b73b3da603a2e07e8"
+      },
+      {
+        "path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V/build/native/bin\\dt46_aim.dll",
+        "sha256": "b7c62754dd476f7ec769dc504d73bb0ad79c3d612040b71b9dd020d449d10d95"
+      }
+    ],
+    "parameter_overrides": {},
+    "profile": "infantry"
+  },
+  "target_hp": 0,
+  "model_frames": 408,
+  "exit": 0,
+  "frames": 842,
+  "passed": true,
+  "invalid_fire_frames": 0,
+  "shots": 18
+}

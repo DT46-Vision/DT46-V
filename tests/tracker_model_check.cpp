@@ -48,5 +48,11 @@ int main(int argc,char** argv){try{
     auto gap=tracker.track(tf,{},Eigen::Vector3d::Zero(),.8);require(std::get<0>(gap)[2]==0&&tracker.tracker_state==TrackerState::LOST,"gap did not invalidate tracking");
     const auto [yaw,pitch,valid]=tracker.solve_ballistic(tf,Armor(8,20,0,0,0),Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero());
     require(!valid,"outside LUT accepted geometric fallback");
+    const auto stale=tracker.get_render_snapshot();require(stale.observed_plate<0&&stale.body_matched_mask==0,"invalid frame retained a measurement match");
+    Tracker gate;gate.shootable_dist=10;
+    require(!std::get<2>(gate.can_fire(Armor(8,8,0,0,0),{0,.5,true})),"far pitch gate exceeds physical board height");
+    gate.yaw_tolerance_deg=.01;
+    require(!std::get<2>(gate.can_fire(Armor(8,2,0,0,0),{.1,0,true})),"configured yaw limit ignored");
+    require(gate.yaw_tolerance_deg==.01,"fire HUD mutated configured tolerance");
     std::cout<<"actual tracker center RMSE "<<rmse<<", max "<<maxerr<<", fire frames "<<shots<<'\n';return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}

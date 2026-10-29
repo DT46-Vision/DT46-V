@@ -95,24 +95,12 @@ void Tracker::resolve_center_from_armor(double xa, double ya, double r, double& 
 void Tracker::try_init_tracker(std::vector<Armor>& armors) {
     if (armors.empty()) return;
 
-    // 按 Z 轴深度升序排列 (从小到大，选最近的)
+    // Inputs are already in stabilized axes; Z is height, not camera depth.
     std::sort(armors.begin(), armors.end(), [](const Armor& a, const Armor& b) {
-        return a.pos(2) < b.pos(2);
+        return a.dist < b.dist;
     });
 
     Armor chosen_armor = armors[0];
-
-    // 如果存在第二个目标，且两者深度差在 dist_tol 范围内，则优选 X 轴靠近中心的
-    if (armors.size() >= 2) {
-        Armor first = armors[0];
-        Armor second = armors[1];
-
-        if (std::abs(first.pos(2) - second.pos(2)) <= dist_tol) {
-            if (std::abs(first.pos(0)) > std::abs(second.pos(0))) {
-                chosen_armor = second;
-            }
-        }
-    }
 
     lock_target(chosen_armor);
 }
@@ -148,10 +136,31 @@ void Tracker::init_ekf(const Armor& armor) {
     dz_ = 0.0;
     BodyEkf::State body=BodyEkf::State::Zero();body.head<8>()=init_x.head<8>();
     body[8]=r_init;body[9]=another_r_;
-    BodyEkf::Covariance covariance=BodyEkf::Covariance::Identity();
-    covariance(8,8)=covariance(9,9)=.01;covariance(10,10)=.01;
+    // The first board is measured; its inferred center and radius are correlated.
+    // Propagate independent (board xyz, yaw, rA, rB, hB, velocities) priors through
+    // c = board + rA * normal. Independent center/radius priors invent board error.
+    const double sigma=.005+ekf_QR_params.r_xyz_factor*.01*armor.dist;
+    const double yaw_scale=std::max(1.0,armor.dist/std::max(.1,ekf_QR_params.stable_dist));
+    BodyEkf::Covariance prior=BodyEkf::Covariance::Zero();
+    const double depth_sigma=ekf_QR_params.r_depth_factor>0?.005+ekf_QR_params.r_depth_factor*.01*armor.dist*armor.dist:0;
+    const Eigen::Matrix3d position_covariance=BodyEkf::measurement_covariance(armor.pos,sigma,1,depth_sigma).topLeftCorner<3,3>();
+    for(int i=0;i<3;++i)for(int j=0;j<3;++j)prior(2*i,2*j)=position_covariance(i,j);
+    prior(6,6)=std::clamp(ekf_QR_params.r_yaw*yaw_scale*yaw_scale,1e-6,10.0);
+    prior(1,1)=prior(3,3)=prior(5,5)=1.;prior(7,7)=50.;
+    prior(8,8)=prior(9,9)=prior(10,10)=.01;
+    BodyEkf::Covariance transform=BodyEkf::Covariance::Identity();
+    transform(0,6)=-r_init*std::sin(last_yaw_);transform(2,6)=r_init*std::cos(last_yaw_);
+    transform(0,8)=std::cos(last_yaw_);transform(2,8)=std::sin(last_yaw_);
+    const BodyEkf::Covariance covariance=transform*prior*transform.transpose();
     body_ekf_.init(body,covariance);body_plate_index_=0;selected_body_plate_=-1;body_matched_=false;detect_elapsed_s_=lost_elapsed_s_=0;
     body_ekf_.set_limits(radius_params.r_min,radius_params.r_max,max_match_distance,max_match_yaw_diff);
+    const double reflected=normalize_angle(2*std::atan2(ya,xa)-last_yaw_);
+    body[6]=reflected;body[0]=xa+r_init*std::cos(reflected);body[2]=ya+r_init*std::sin(reflected);
+    transform(0,6)=-r_init*std::sin(reflected);transform(2,6)=r_init*std::cos(reflected);
+    transform(0,8)=std::cos(reflected);transform(2,8)=std::sin(reflected);
+    body_mirror_=body_ekf_;body_mirror_->init(body,transform*prior*transform.transpose());
+    body_hypothesis_age_=body_hypothesis_log_odds_=0;
+    body_spin_mode_=false;body_spin_enter_s_=body_spin_exit_s_=0;
 }
 void Tracker::reset_plate(const Armor& armor) {
     plate_.setZero();
@@ -746,10 +755,30 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     const double distance=std::hypot(target_state_(0),target_state_(2));
     const double sigma=.005+ekf_QR_params.r_xyz_factor*.01*distance;
     const double yaw_scale=std::max(1.0,distance/std::max(.1,ekf_QR_params.stable_dist));
-    const int matched=body_ekf_.update(observations,sigma,std::clamp(ekf_QR_params.r_yaw*yaw_scale*yaw_scale,1e-6,10.0));
+    const double depth_sigma=ekf_QR_params.r_depth_factor>0?.005+ekf_QR_params.r_depth_factor*.01*distance*distance:0;
+    const double yaw_variance=std::clamp(ekf_QR_params.r_yaw*yaw_scale*yaw_scale,1e-6,10.0);
+    int matched=body_ekf_.update(observations,sigma,yaw_variance,depth_sigma);
+    if(body_mirror_){
+        body_mirror_->predict(dt,ekf_QR_params.q_xyz,ekf_QR_params.q_yaw,ekf_QR_params.q_r);
+        const int alternative=body_mirror_->update(observations,sigma,yaw_variance,depth_sigma);
+        body_hypothesis_age_+=dt;
+        if(!observations.empty())body_hypothesis_log_odds_=.99*body_hypothesis_log_odds_+
+            std::clamp(body_ekf_.association_cost()-body_mirror_->association_cost(),-20.0,20.0);
+        if(body_hypothesis_age_>=.25&&std::abs(body_hypothesis_log_odds_)>12){
+            if(body_hypothesis_log_odds_>0){body_ekf_=*body_mirror_;matched=alternative;selected_body_plate_=-1;}
+            body_mirror_.reset();
+        }
+    }
     body_matched_=matched>=0;
     if(body_matched_)body_plate_index_=matched;
     const auto& state=body_ekf_.state();
+    if(body_matched_){
+        if(std::abs(state[7])>=min_spinning_vel_){body_spin_enter_s_+=dt;body_spin_exit_s_=0;}
+        else {body_spin_exit_s_+=dt;body_spin_enter_s_=0;}
+        if(body_spin_enter_s_>=spin_enter_time_)body_spin_mode_=true;
+        if(body_spin_exit_s_>=spin_exit_time_)body_spin_mode_=false;
+    }
+    spin_=body_spin_mode_;
     const int group=body_plate_index_%2;
     target_state_.head<8>()=state.head<8>();
     target_state_(4)=state[4]+group*state[10];
@@ -760,12 +789,15 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     spin_center_valid_=spin_center_converged_=body_ekf_.ready();
     const bool plate_ok=body_matched_;
     logs.emplace_back("body_nis",std::to_string(body_ekf_.last_nis()));
+    logs.emplace_back("body_association",body_ekf_.rejection_reason());
+    logs.emplace_back("body_yaw_hypothesis",body_mirror_?"ambiguous":"resolved");
     // Keep existing frame-count configuration as nominal 10 ms durations, independent of delivery rate.
     if(plate_ok){
         lost_elapsed_s_=0;detect_elapsed_s_+=dt;
         if(tracker_state==TrackerState::TEMP_LOST || detect_elapsed_s_>=tracking_thres*.01)
             tracker_state=TrackerState::TRACKING;
     }else{
+        if(tracker_state==TrackerState::DETECTING)detect_elapsed_s_=0;
         lost_elapsed_s_+=dt;
         if(lost_elapsed_s_>lost_thres*.01)tracker_state=TrackerState::LOST;
         else if(tracker_state==TrackerState::TRACKING)tracker_state=TrackerState::TEMP_LOST;
@@ -834,22 +866,21 @@ std::tuple<double, double, bool> Tracker::can_fire(const Armor& target, std::tup
     // HUD：用真实角窗半宽，比 atan(w/2/dist) 更贴斜对时的投影。
     const double half_span_deg = 0.5 * (std::abs(allow_min) + std::abs(allow_max)) * RAD2DEG;
     double dynamic_pitch_tol = std::atan((armor_h / 2.0) / std::max(target.dist, 0.1)) * RAD2DEG * 0.8;
-    double yaw_tol_mix = std::clamp(half_span_deg, 1.0, 8.0);
-    double pitch_tol_mix = std::clamp(dynamic_pitch_tol, 1.0, 5.0);
-    this->yaw_tolerance_deg = yaw_tol_mix;
-    this->pitch_tolerance_deg = pitch_tol_mix;
+    const double yaw_tol_mix=std::min(half_span_deg,yaw_tolerance_deg);
+    const double pitch_tol_mix=std::min(dynamic_pitch_tol,pitch_tolerance_deg);
+    fire_yaw_tolerance_deg_=yaw_tol_mix;fire_pitch_tolerance_deg_=pitch_tol_mix;
 
     bool fire_flag = false;
     if (spin_) {
         // 板还在正对窗口（弧长）且枪口误差落在装甲左右边缘角内。
         const double half_w = armor_w * 0.5 - 0.0085;
-        fire_flag = (in_edge &&
-                     std::abs(pitch) < pitch_tol_mix * 0.8 &&
+        fire_flag = (in_edge && std::abs(yaw)<yaw_tolerance_deg &&
+                     std::abs(pitch) < pitch_tol_mix &&
                      target.dist <= shootable_dist &&
                      target.target_to_armor_dist < half_w);
     } else {
-        fire_flag = (in_edge &&
-                     std::abs(pitch) < pitch_tol_mix * 0.8 &&
+        fire_flag = (in_edge && std::abs(yaw)<yaw_tolerance_deg &&
+                     std::abs(pitch) < pitch_tol_mix &&
                      target.dist <= shootable_dist);
     }
 
@@ -980,11 +1011,15 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     std::vector<std::pair<std::string, std::string>> logs;
     std::vector<double> gimbal_control = {0.0, 0.0, 0.0}; // 映射：[yaw_deg, pitch_deg, can_fire_flag]
     target_cam_cache_.reset();target_muzzle_cache_.reset();gimbal_control_cache_={0,0,false};
-    if(!std::isfinite(dt)||dt<0||(dt==0&&tracker_state!=TrackerState::LOST))return {gimbal_control,logs};
+    fire_blockers_.clear();aim_lateral_sigma_=aim_vertical_sigma_=0;
+    body_matched_=false;
+    fire_yaw_tolerance_deg_=fire_pitch_tolerance_deg_=0;
+    if(!std::isfinite(dt)||dt<0||(dt==0&&tracker_state!=TrackerState::LOST)){fire_blockers_.push_back("invalid_time");return {gimbal_control,logs};}
     if(dt>.5){tracker_state=TrackerState::LOST;body_matched_=false;}
 
     // 1. 判断并调度基础状态机
     if (tracker_state == TrackerState::LOST) {
+        fire_blockers_.push_back("acquiring");
         if (!raw_armors.empty()) {
             // 拷贝一份用于排序，避免破坏传入的 const raw_armors
             std::vector<Armor> temp_armors = raw_armors;
@@ -999,6 +1034,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
 
     // 兜底机制：若更新判定目标大范围离群导致状态机瞬间跌落，紧急刹车退出
     if (tracker_state == TrackerState::LOST) {
+        fire_blockers_.push_back("lost");
         tracked_id = -1;
         logs.emplace_back("state", "TRACKING/TEMP_LOST -> LOST (target lost)");
         return {gimbal_control, logs};
@@ -1013,7 +1049,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     }
     const auto& body=body_ekf_.state();
     const double center_range=std::hypot(body[0],body[2]);
-    const double flight=lut_lookup_tof(center_range,body[4]);
+    // The selected board is on the near half of the body. A near-surface seed
+    // avoids adding an entire chassis radius to the initial flight distance.
+    const double flight=lut_lookup_tof(std::max(.2,center_range-std::min(body[8],body[9])),body[4]);
     const double ahead=flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_);
     int chosen=body_plate_index_;double best_score=std::numeric_limits<double>::infinity();
     for(int i=0;i<4;++i){
@@ -1042,8 +1080,27 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     const double actual_flight=lut_lookup_tof(std::hypot(target_muzzle->pos[0],target_muzzle->pos[1]),target_muzzle->pos[2]);
     const auto arrival=body_ekf_.plate(chosen,actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_));
     const bool prediction_consistent=(arrival.head<3>()-target_cam.pos).norm()<.025;
-    if(!body_matched_||!body_ekf_.ready()||tracker_state!=TrackerState::TRACKING||!prediction_consistent)
-        std::get<2>(final_gimbal)=false;
+    const auto forecast=body_ekf_.forecast(actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_));
+    const Eigen::Matrix3d covariance=forecast.plate_covariance(chosen);
+    const Eigen::Vector3d tangent(-std::sin(arrival[3]),std::cos(arrival[3]),0);
+    aim_lateral_sigma_=std::sqrt(std::max(0.0,tangent.dot(covariance*tangent)));
+    aim_vertical_sigma_=std::sqrt(std::max(0.0,covariance(2,2)));
+    double width=.135,height=.125;
+    for(const auto& robot:robot_list_)if(robot.id==tracked_id){width=robot.armor_width*.001;height=robot.armor_height*.001;break;}
+    if(!isValid)fire_blockers_.push_back("ballistic_domain");
+    if(!std::get<2>(final_gimbal))fire_blockers_.push_back("alignment_or_facing");
+    if(!body_matched_)fire_blockers_.push_back("unmatched");
+    if(!body_ekf_.established())fire_blockers_.push_back("insufficient_updates");
+    if(tracker_state!=TrackerState::TRACKING)fire_blockers_.push_back("not_tracking");
+    if(!prediction_consistent)fire_blockers_.push_back("flight_consistency");
+    if(body_mirror_){
+        double disagreement=std::numeric_limits<double>::infinity();
+        for(int i=0;i<4;++i)disagreement=std::min(disagreement,(body_mirror_->plate(i,actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_)).head<3>()-arrival.head<3>()).norm());
+        if(disagreement>.025)fire_blockers_.push_back("yaw_hypothesis");
+    }
+    if(2*aim_lateral_sigma_>width*.5*.85||2*aim_vertical_sigma_>height*.5*.8)
+        fire_blockers_.push_back("arrival_uncertainty");
+    std::get<2>(final_gimbal)=fire_blockers_.empty();
     // 【新增】：将刚刚算出的局部变量，固化存入类成员缓存中，给快照提供数据！
     target_cam_cache_ = target_cam;
     target_muzzle_cache_ = target_muzzle;
@@ -1063,6 +1120,8 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
 RenderSnapshot Tracker::get_render_snapshot() const {
     RenderSnapshot s;
     s.body_state=body_ekf_.state();s.body_covariance=body_ekf_.covariance();s.body_ready=body_ekf_.ready();
+    s.body_matched_mask=body_matched_?body_ekf_.matched_mask():0;s.observed_plate=body_matched_?body_plate_index_:-1;
+    s.aim_lateral_sigma=aim_lateral_sigma_;s.aim_vertical_sigma=aim_vertical_sigma_;s.fire_blockers=fire_blockers_;
     s.tracker_state = tracker_state;
     s.target_state = target_state_;
     s.another_r = another_r_;
@@ -1071,8 +1130,8 @@ RenderSnapshot Tracker::get_render_snapshot() const {
     s.target = target_cam_cache_;
     s.muzzle_target = target_muzzle_cache_;
     s.spin = spin_;
-    s.yaw_tolerance_deg = yaw_tolerance_deg;
-    s.pitch_tolerance_deg = pitch_tolerance_deg;
+    s.yaw_tolerance_deg = fire_yaw_tolerance_deg_;
+    s.pitch_tolerance_deg = fire_pitch_tolerance_deg_;
     s.gimbal_control = gimbal_control_cache_;
     s.ekf_yaw_vel = target_state_(7);
     s.bullet_speed = bullet_speed;

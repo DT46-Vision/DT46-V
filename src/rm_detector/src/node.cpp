@@ -67,6 +67,8 @@ namespace DT46_VISION {
             // 其他参数
             this->declare_parameter<bool>("use_geometric_center", true);
             this->declare_parameter<int>("print_period_ms", 1000); // ms
+            this->declare_parameter<double>("pnp_light_spacing_mm",135.0);
+            this->declare_parameter<double>("pnp_light_height_mm",58.0);
 
             // ---------------- 参数读取 ----------------
             std::string cls_model_file   = get_required_param<std::string>("cls_model_file");
@@ -103,6 +105,7 @@ namespace DT46_VISION {
             // ---------------- Detector 初始化 ----------------
             detector_ = std::make_shared<ArmorDetector>(detect_color_, display_mode_, binary_val_, params);
             pnp_      = std::make_shared<PNP>();
+            pnp_->setArmorGeometry(get_required_param<double>("pnp_light_spacing_mm"),get_required_param<double>("pnp_light_height_mm"));
 
             reload_classifier_impl_(cls_model_path_);
 
@@ -393,6 +396,14 @@ namespace DT46_VISION {
         parameters_callback(const std::vector<rclcpp::Parameter>& parameters) {
             rcl_interfaces::msg::SetParametersResult result;
             result.successful = true; result.reason = "success";
+
+            for (const auto& param : parameters) {
+                if (param.get_name()=="pnp_light_spacing_mm" || param.get_name()=="pnp_light_height_mm") {
+                    result.successful=false;
+                    result.reason="PnP light geometry is a startup parameter; restart the detector";
+                    return result;
+                }
+            }
 
             std::optional<std::string> new_model_file;
 

@@ -35,6 +35,19 @@ cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
     }
     for(const auto& armor:result.at("tracker_debug").at("yaw_armors"))if(auto point=project(armor.at("position_camera_m"),result))
         outlined_text(output,"yaw "+number(armor.at("yaw_rad"),1)+" rad",*point,.55*text_size,cv::Scalar(255,0,255));
+    const auto& debug=result.at("tracker_debug");
+    if(debug.contains("body_center_camera_m"))if(auto center=project(debug.at("body_center_camera_m"),result)){
+        cv::drawMarker(output,*center,{0,255,255},cv::MARKER_CROSS,24,2);
+        outlined_text(output,"estimated center",*center+cv::Point(12,-12),.5*text_size,{0,255,255});
+        for(const auto& plate:debug.at("body_plates")){
+            std::vector<cv::Point> corners;
+            for(const auto& vertex:plate.at("corners_camera_m")){auto pixel=project(vertex,result);if(pixel)corners.push_back(*pixel);}
+            if(corners.size()!=4)continue;
+            const cv::Scalar color=plate.at("selected").get<int>()?cv::Scalar(255,160,0):plate.at("matched").get<int>()?cv::Scalar(0,255,80):cv::Scalar(0,180,220);
+            cv::polylines(output,corners,true,color,2);cv::line(output,*center,(corners[0]+corners[2])/2,color,1);
+            outlined_text(output,"model "+std::to_string(plate.at("index").get<int>()),corners[0],.45*text_size,color);
+        }
+    }
     return output;
 }
 cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result,double text_size) {
@@ -50,6 +63,11 @@ cv::Mat ballistic_image(const cv::Mat& rgb,const Json& result,double text_size) 
         "Bullet Speed: "+number(debug.at("bullet_speed_m_s"))+" m/s",fire?"FIRE ENABLE":"HOLD FIRE"};
     for(std::size_t row=0;row<lines.size();++row){const cv::Point point(18,int((28+26*int(row))*text_size));const auto color=row==lines.size()-1?(fire?cv::Scalar(80,255,120):cv::Scalar(255,210,90)):cv::Scalar(255,255,255);
         outlined_text(output,lines[row],point,.6*text_size,color);}
+    if(debug.contains("fire_blockers")){
+        int row=int(lines.size());
+        for(const auto& reason:debug.at("fire_blockers"))outlined_text(output,reason.get<std::string>(),{18,int((28+26*row++)*text_size)},.5*text_size,{255,210,90});
+        outlined_text(output,"arrival sigma [m]: "+number(debug.value("aim_lateral_sigma_m",0.),3)+" / "+number(debug.value("aim_vertical_sigma_m",0.),3),{18,int((28+26*row)*text_size)},.5*text_size,{255,255,255});
+    }
     return output;
 }
 cv::Mat observer_image(const cv::Mat& rgb,const Json& result,const cv::Matx44d& optical,const cv::Matx33d& k,const cv::Vec<double,5>& d) {

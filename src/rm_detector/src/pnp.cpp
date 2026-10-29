@@ -1,6 +1,11 @@
 #include "rm_detector/pnp.hpp"
+#include <stdexcept>
 
 namespace DT46_VISION {
+    void PNP::setArmorGeometry(double spacing,double height) {
+        if(!std::isfinite(spacing+height)||spacing<=0||height<=0)throw std::invalid_argument("Armor light geometry must be positive finite millimeters");
+        light_spacing_mm_=spacing;light_height_mm_=height;prev_plates_.clear();curr_plates_.clear();
+    }
 
     void PNP::beginFrame() {
         prev_plates_ = std::move(curr_plates_);
@@ -26,12 +31,12 @@ namespace DT46_VISION {
         // 坐标系定义: X右, Y下, Z前 (物体平面)
         // 确保这里的顺序与 imagePoints (左上, 左下, 右上, 右下) 一一对应
         (void)object_size;
-        // 小装甲板 (135mm x 58mm)。编号 0/6 以前是大装甲，比赛已统一成小装甲。
+        const float half_width=float(light_spacing_mm_*.5),half_height=float(light_height_mm_*.5);
         return {
-            {-67.5f, -29.0f, 0.0f},  // 0: 左上
-            {-67.5f,  29.0f, 0.0f},  // 1: 左下
-            { 67.5f, -29.0f, 0.0f},  // 2: 右上
-            { 67.5f,  29.0f, 0.0f}   // 3: 右下
+            {-half_width, -half_height, 0.0f},  // 0: 左上
+            {-half_width,  half_height, 0.0f},  // 1: 左下
+            { half_width, -half_height, 0.0f},  // 2: 右上
+            { half_width,  half_height, 0.0f}   // 3: 右下
         };
     }
 
@@ -101,8 +106,8 @@ namespace DT46_VISION {
         };
         const double fx = cameraMatrix.at<double>(0, 0);
         const double fy = cameraMatrix.at<double>(1, 1);
-        const double armor_width_mm  = 135.0;
-        const double armor_height_mm = 58.0;
+        const double armor_width_mm  = light_spacing_mm_;
+        const double armor_height_mm = light_height_mm_;
         const double w_px = 0.5 * (px_dist(imagePoints[2], imagePoints[0]) +
                                    px_dist(imagePoints[3], imagePoints[1]));
         const double h_px = 0.5 * (px_dist(imagePoints[0], imagePoints[1]) +

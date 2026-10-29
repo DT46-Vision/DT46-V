@@ -1,6 +1,9 @@
 rm_detector:
   ros__parameters:
     cls_model_file: 'RM_Armor_CNN_sim.onnx'   # 文件名
+    # 保留原有效灯条尺寸；CAD 尺寸对照未稳定改善。实车须按灯条中心距/有效长度标定。
+    pnp_light_spacing_mm: 135.0
+    pnp_light_height_mm: 58.0
 
     # ---- 灯条过滤参数 ----
     light_area_min: 5

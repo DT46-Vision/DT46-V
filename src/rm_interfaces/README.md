@@ -25,6 +25,7 @@
 | `dy` | float32 | mm | 相机系 Y（下为正） |
 | `dz` | float32 | mm | 相机系 Z（前为正，即距离）；PnP 失败时为 **-1** |
 | `yaw` | float32 | 度 | 装甲板法向相对相机的偏航角（正对约 0） |
+| `nx/ny/nz` | float32 | 无量纲 | 已有相机系单位板法线；tracker 旋转完整向量后取水平朝向，零向量回退 yaw |
 
 ### ArmorsMsg.msg
 

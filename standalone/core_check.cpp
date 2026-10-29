@@ -24,6 +24,15 @@ int main() {
     const double error = cv::norm(cv::Vec3d(x,y,z)-position);
     if (!std::isfinite(error) || error > 2.0)
         throw std::runtime_error("PnP failed with source K/D and an off-centre principal point");
+    const std::vector<cv::Point3f> measured_geometry{{-62.9f,-29.735f,0},{-62.9f,29.735f,0},{62.9f,-29.735f,0},{62.9f,29.735f,0}};
+    cv::projectPoints(measured_geometry,cv::Vec3d(.15,-.4,.02),position,k,d,image);
+    armor.light1_up=image[0];armor.light1_down=image[1];armor.light2_up=image[2];armor.light2_down=image[3];
+    pnp.setArmorGeometry(125.8,59.47);pnp.resetCameraInfo();pnp.beginFrame();
+    const auto measured=pnp.processArmorCorners(&calibration,false,cv::Mat::zeros(1,1,CV_8UC3),armor,5);
+    if(cv::norm(cv::Vec3d(std::get<0>(measured),std::get<1>(measured),std::get<2>(measured))-position)>2)
+        throw std::runtime_error("Configured light geometry did not reach actual PnP");
+    bool invalid_geometry=false;try{pnp.setArmorGeometry(0,58);}catch(const std::invalid_argument&){invalid_geometry=true;}
+    if(!invalid_geometry)throw std::runtime_error("Invalid armor geometry accepted");
     DT46_VISION::CameraCalibration source{{1075.77876,0,649.75819,0,1075.95573,525.30871,0,0,1},
                                          {-0.454786,0.179046,-0.001430,-0.000463,0}};
     cv::Mat source_k(3,3,CV_64F,source.k.data());
@@ -55,6 +64,10 @@ int main() {
             Eigen::AngleAxisd(0.2, Eigen::Vector3d::UnitY()) *
             Eigen::AngleAxisd(-0.3, Eigen::Vector3d::UnitX())).toRotationMatrix();
         tf.set_optical_rotation(rotation);
+        const Eigen::Vector3d outward(-std::cos(.7)*std::cos(.26),-std::sin(.7)*std::cos(.26),std::sin(.26));
+        if(std::abs(tf.armor_yaw_from_normal(rotation.transpose()*outward,Eigen::Vector3d::Zero(),0)-.7)>1e-12 ||
+           tf.armor_yaw_from_normal(Eigen::Vector3d::Zero(),Eigen::Vector3d::Zero(),.12)!=.12)
+            throw std::runtime_error("Inclined armor normal lost during optical conversion");
         const auto world = tf.cam_to_world(point, Eigen::Vector3d::Zero());
         if ((world-rotation*point).norm() > 1e-12 ||
             (tf.world_to_cam(world, Eigen::Vector3d::Zero())-point).norm() > 1e-12)

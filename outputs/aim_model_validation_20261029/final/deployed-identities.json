@@ -1,0 +1,18 @@
+[
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\dt46_vision.exe",
+    "Hash": "5C0B9D7454B46ADD7D1B73EE26E0B21C5BA5A9314F41F065F60A891B76C1C5A8"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_vision.exe",
+    "Hash": "5C0B9D7454B46ADD7D1B73EE26E0B21C5BA5A9314F41F065F60A891B76C1C5A8"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\aim-validation-full\\standalone\\dt46_aim.dll",
+    "Hash": "B7C62754DD476F7EC769DC504D73BB0AD79C3D612040B71B9DD020D449D10D95"
+  },
+  {
+    "Path": "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\build\\native\\bin\\dt46_aim.dll",
+    "Hash": "B7C62754DD476F7EC769DC504D73BB0AD79C3D612040B71B9DD020D449D10D95"
+  }
+]

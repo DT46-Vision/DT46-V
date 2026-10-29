@@ -26,6 +26,7 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
     PARAM(ekf_QR_params.q_yaw, "ekf_QR_q_yaw");
     PARAM(ekf_QR_params.q_r, "ekf_QR_q_r");
     PARAM(ekf_QR_params.r_xyz_factor, "ekf_QR_r_xyz_factor");
+    PARAM(ekf_QR_params.r_depth_factor, "ekf_QR_r_depth_factor");
     PARAM(ekf_QR_params.r_yaw, "ekf_QR_r_yaw");
     PARAM(ekf_QR_params.stable_dist, "ekf_QR_stable_dist");
     PARAM(radius_params.r_min, "radius_r_min");
@@ -65,6 +66,7 @@ struct Pipeline {
     bool smooth_ready = false;
     cv::Mat bgr;
     std::string snapshot = "{}";
+    std::vector<Eigen::Vector3d> observed_normals_camera;
 
     Pipeline(const char* model, const char* parameters) {
         cv::setNumThreads(1);
@@ -86,12 +88,14 @@ struct Pipeline {
         detector->set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(model));
         detect_color = int(parameter(source,"detect_color",-1));
         configure_tracker(tracker, config["tracker"]);
+        pnp.setArmorGeometry(parameter(source,"pnp_light_spacing_mm",135.),parameter(source,"pnp_light_height_mm",58.));
     }
 };
 
 void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
              const Eigen::Matrix3d& rotation, std::vector<dt46_vision::Armor>& armors) {
     pipeline.pnp.beginFrame();
+    pipeline.observed_normals_camera.clear();
     pipeline.detector->img_drawn.release();
     pipeline.detector->img_armor.release();
     pipeline.detector->img_armor_processed.release();
@@ -109,6 +113,8 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
         output.position_camera_mm[1] = y;
         output.position_camera_mm[2] = z;
         output.yaw_deg = yaw;
+        const Eigen::Vector3d normal(nx,ny,nz);
+        pipeline.observed_normals_camera.push_back(normal.allFinite() ? normal : Eigen::Vector3d(0,0,0));
         const cv::Point2f corners[] = {armor.light1_up, armor.light1_down,
                                       armor.light2_up, armor.light2_down};
         for (int i=0; i<4; ++i) {
@@ -117,7 +123,8 @@ void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
         }
         const Eigen::Vector3d world = rotation * Eigen::Vector3d(x, y, z) / 1000.0;
         const double heading = std::atan2(rotation(1, 2), rotation(0, 2));
-        const double world_yaw = dt46_vision::normalize_angle(heading - yaw*dt46_vision::DEG2RAD);
+        const double world_yaw = pipeline.transform.armor_yaw_from_normal(normal,Eigen::Vector3d::Zero(),
+            dt46_vision::normalize_angle(heading - yaw*dt46_vision::DEG2RAD));
         // Match the ROS node's color gate even when the detector displays both colors.
         if ((pipeline.tracker.target_color == 0 && armor.armor_id < 6) ||
             (pipeline.tracker.target_color == 1 && armor.armor_id >= 6)) continue;
@@ -131,10 +138,35 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
     cv::FileStorage json(".json", cv::FileStorage::WRITE | cv::FileStorage::MEMORY |
                                   cv::FileStorage::FORMAT_JSON);
     json << "spin" << int(s.spin) << "bullet_speed_m_s" << s.bullet_speed;
+    json << "observation_normals_camera" << "[";
+    for(const auto& n:pipeline.observed_normals_camera)json<<"["<<n.x()<<n.y()<<n.z()<<"]";
+    json << "]";
     json << "frame_interval_s" << pipeline.frame_interval_s << "frame_reinitialized" << int(pipeline.frame_reinitialized);
     json << "body_ready" << int(s.body_ready) << "body_ekf_state" << "[";
     for(int i=0;i<11;++i)json<<s.body_state[i];json<<"]"<<"body_covariance_diagonal"<<"[";
     for(int i=0;i<11;++i)json<<s.body_covariance(i,i);json<<"]";
+    json<<"observed_plate"<<s.observed_plate<<"matched_plate_mask"<<int(s.body_matched_mask);
+    json<<"aim_lateral_sigma_m"<<s.aim_lateral_sigma<<"aim_vertical_sigma_m"<<s.aim_vertical_sigma;
+    json<<"fire_blockers"<<"[";for(const auto& reason:s.fire_blockers)json<<reason;json<<"]";
+    if(s.tracker_state!=dt46_vision::TrackerState::LOST){
+        const auto& body=s.body_state;
+        const Eigen::Vector3d center(body[0],body[2],body[4]+body[10]*.5);
+        const auto center_camera=(rotation.transpose()*center).eval();
+        json<<"body_center_camera_m"<<"["<<center_camera[0]<<center_camera[1]<<center_camera[2]<<"]";
+        json<<"body_plates"<<"[";
+        for(int i=0;i<4;++i){
+            const double angle=body[6]+i*dt46_vision::DEG2RAD*90,radius=body[8+i%2];
+            const Eigen::Vector3d position(body[0]-radius*std::cos(angle),body[2]-radius*std::sin(angle),body[4]+(i%2)*body[10]);
+            const Eigen::Vector3d tangent(-std::sin(angle),std::cos(angle),0);
+            json<<"{"<<"index"<<i<<"matched"<<int((s.body_matched_mask>>i)&1)<<"selected"<<int(s.target&&s.target->index==i)<<"corners_camera_m"<<"[";
+            for(const auto& signs:std::vector<Eigen::Vector2d>{{-1,-1},{1,-1},{1,1},{-1,1}}){
+                const auto corner=(rotation.transpose()*(position+signs[0]*.0675*tangent+signs[1]*.0625*Eigen::Vector3d::UnitZ())).eval();
+                json<<"["<<corner[0]<<corner[1]<<corner[2]<<"]";
+            }
+            json<<"]"<<"}";
+        }
+        json<<"]";
+    }
     json << "yaw_tolerance_deg" << s.yaw_tolerance_deg << "pitch_tolerance_deg" << s.pitch_tolerance_deg;
     json << "gravity_m_s2" << 9.81 << "quadratic_drag_per_m" << pipeline.tracker.k_v2;
     json << "gimbal_control" << "[" << std::get<0>(s.gimbal_control)
@@ -240,7 +272,7 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         std::copy(k, k+9, calibration.k.begin());
         calibration.d.assign(d, d+5);
         if (calibration.k != pipeline.calibration.k || calibration.d != pipeline.calibration.d) {
-            pipeline.pnp = DT46_VISION::PNP{};
+            pipeline.pnp.resetCameraInfo();
             pipeline.calibration = calibration;
             pipeline.transform.set_camera_info(cv::Mat(3, 3, CV_64F, const_cast<double*>(k)),
                 cv::Mat(1, 5, CV_64F, const_cast<double*>(d)), width, height, false);

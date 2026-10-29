@@ -7,13 +7,13 @@
 
 ## 原始 tracker 基线
 
-本节以下是个人集成基线 `6c3e6f8` 的历史来源；本实验分支现已替换实际 tracker 的车体更新、时间与预测路径，不再声称当前源码与 Glenn 一致。当前算法以 [rm_tracker 数据流与算法](../src/rm_tracker/README.md#数据流与算法)为唯一说明，测量结果见[底层修复报告](../outputs/body_model_repair_20261029/report.md)。
+本节以下是个人集成基线 `6c3e6f8` 的历史来源；本实验分支现已替换实际 tracker 的车体更新、时间与预测路径，不再声称当前源码与 Glenn 一致。当前算法以 [rm_tracker 数据流与算法](../src/rm_tracker/README.md#数据流与算法)为唯一说明，最新 HOLD、GUI 与 HP 闭环验证见[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。
 
-本次重新开展的实车输入边界实验位于独立分支 `codex/relative-aim-restart`，从个人集成基线 `6c3e6f8` 出发；尚未接入原生或 ROS 在线控制。共享车心、独立视觉 IMU、时间补偿配置、理想云台实验及失败条件见[实验报告](../outputs/relative_aim_restart_20261029/report.md)。仅构建隔离实验可设置 `-DDT46_RELATIVE_AIM_ONLY=ON`，依赖 Eigen，不依赖 OpenCV。此报告不能替代下面的原 tracker 历史验证。
+独立分支 `codex/relative-aim-restart` 从个人集成基线 `6c3e6f8` 出发；实际原生与 ROS tracker 已改用共享车体核心，原生在线链路已验证，ROS 适配层尚未在本机编译运行。早先独立视觉 IMU、细分延迟和理想云台隔离实验仍由[历史实验报告](../outputs/relative_aim_restart_20261029/report.md)维护，其 `relative_aim` 没有替代当前适配器的传感器输入。仅构建隔离实验可设置 `-DDT46_RELATIVE_AIM_ONLY=ON`，依赖 Eigen，不依赖 OpenCV。
 
 2026-10-28 按用户要求，从仿真 main 固定基线逐项比较 Glenn 视觉。本次个人分支 `codex/glenn-stepwise` 先仅合入 Glenn `58235b9` 的 `tracker.cpp` / `tracker.hpp`；归一化行尾后的文件与该提交完全一致。配套源码摘要采用 Glenn `dee69bc` 的两项值，`ekf.cpp` / `ekf.hpp` 和 ROS `node.cpp` 继续锁定 `3c41f0b`。`original_tracker_baseline` 仅校验源码身份，不代表跟踪问题已修复。算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护，真实逐项验证见[本轮报告](../../outputs/glenn_integration_20261028/report.md)。
 
-Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走原默认路径。原 tracker 重力固定为 9.81 m/s²；配置其他重力时明确拒绝，不能声称已跟随仿真重力。弹速、阻力和枪口偏移继续读取相应反馈。每帧有效性由适配层读取原始弹道求解器的结果，不在 tracker 中新增状态或改变选板、EKF、弹道和发弹判据。
+Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走 IMU 安装变换。重力固定为 9.81 m/s²；配置其他重力时明确拒绝。弹速、阻力和枪口偏移继续读取相应反馈。当前选板、EKF 与发弹行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护；适配层另从弹道求解器读取每帧有效性。
 
 Git 历史改动、恢复范围、剩余检测器差异、功能审查及本次验证见 [2026-10-23 审查快照](../docs/reviews/native-parity-20261023/README.md)。旧 [aim_test 审查](../docs/reviews/aim-test-3c41f0b/README.md)记录的是另一条修复历史，不能作为当前 tracker 已采用这些修复的依据。
 
@@ -60,7 +60,7 @@ ctest --preset release
 
 依赖下载及校验值由 [bootstrap.cmake](../cmake/bootstrap.cmake) 维护；本工程另固定 nlohmann/json 和 GLFW。OpenCV 使用 CPU DNN，并启用图像和视频读写。Windows 运行前，将 OpenCV 安装目录下的 `x64/mingw/bin`（或相应编译器目录）加入当前进程 PATH；程序与依赖应使用兼容的编译器。FFmpeg 插件随 OpenCV 安装，录制时需要该插件。Linux 视频后端依赖本机 OpenCV/FFmpeg 构建配置。
 
-默认构建提供 9 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖，运行本轮实际验证的 8 项：共享车体 EKF、旧隔离实验、归档基线身份、实际 tracker 集成、硬件字节协议、原生管线、通信及标定 PnP/光学旋转。执行证据与复现命令见[底层修复报告](../outputs/body_model_repair_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。此前迁移数值不是本轮结果；ROS 节点与实机串口未验证。
+默认构建提供 10 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖后为 9 项。新增切板回归读取实际步兵 YAML，覆盖镜像/π 翻转、漏检、重复观测、离群点及距离相关噪声。最新执行证据、闭环与精度边界见[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。ROS 节点与实机串口未验证。
 
 ## 虚拟相机与独立调试
 
@@ -68,7 +68,7 @@ Windows 仿真接口保留两条个人开发分支：本 C++ 应用为 `codex/si
 
 主题只改变窗口控件配色，UI 字号只影响面板；两者不改变相机曝光、RGB、tracker 参数版本、跟踪状态或录像内容。以 C++ 界面作为样式基准；原生下拉箭头增加内边距以缩小三角形，点击区域不变，随面板字号缩放。tracker 图像文字以 C++ `project/modules/vision/debug_images.cpp` 为基准，日夜模式共用相同文字、描边、精度和状态颜色。`Save frame` 固定保存当前显示帧的图像、结果和实际相机参数；`display.json` 另外记录主题、面板字号与各格查看选项。主题和字号只在当前窗口有效，不混入算法参数 JSON。
 
-ROS 的 rqt 仍使用原 perspective 中的四个 `rqt_image_view` 和一个 `rqt_reconfigure`；本轮不修改 ROS 节点、DDS 或实机参数回调。rqt 是 Qt 插件容器，控件配色可另行通过 Qt 主题统一，而已叠在图像中的 tracker 文字由 ROS 节点生成。建议先保留实机流程，后续在 Ubuntu / ROS 2 Humble 上验证 rqt 配色与 perspective；Windows 两版调试通过不等于 ROS 或硬件验证通过。
+ROS 的 rqt 仍使用原 perspective 中的四个 `rqt_image_view` 和一个 `rqt_reconfigure`；此前 UI 工作未修改 DDS 或实机参数回调。rqt 是 Qt 插件容器，已叠在图像中的 tracker 文字由 ROS 节点生成。当前 ROS 适配层已接入已有板法线与 PnP 尺寸配置，但未在 Ubuntu / ROS 2 Humble 编译运行；Windows 调试通过不等于 ROS 或硬件验证通过。
 
 本轮源码审查、日夜切换、保存帧和两版 tracker 图像对照的结果与限制见[Windows UI 收尾记录](../outputs/windows_ui_review_20261026/checks.json)。rqt 的职责参见 [ROS 官方说明](https://index.ros.org/p/rqt/)；此处保留原 ROS 行为，不把 Windows 主题方案直接套进 rqt 插件。
 
@@ -91,7 +91,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 原生启动配置下调默认相对增益，配套于提高场景照明的调整；曝光设置与独立灯条发光强度保留，限制视觉相机对更亮场景的放大。数值以 `virtual_camera.json` 为准，不等同于实拍海康界面的增益 16.0。场景明暗调整、当前红蓝检出、跟踪及数字分类限制由[仿真灯条成像](../../README.md#画质灯条与反光)统一维护；本次未改检测器、分类器或原 tracker。此前只提高整幅图像增益的[历史调参记录](../../outputs/led_emission_20261024/previous_gain_tuning.json)仅证明当时蓝靶成功、红靶未检出，不能代表本轮模型。
 
-调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/detector/img_armor_processed`、`/detector/bin_img`；仍可切换原始 RGB、tracking_state_img、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
+调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。当前分支默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/tracker/tracking_state_img`、`/detector/bin_img`；跟踪图显示估计车心、四块名义模型板及匹配/选中标记，弹道图显示 HOLD 原因与到达标准差。仍可切换原始 RGB、img_armor_processed、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
 
 右侧仍分相机、检测器、追踪器三页，包含 tracker 日志、参数应用/保存/加载 JSON、保存当前图像与窗口截图。顶栏 `UI font` 独立调整面板字号，行高、侧栏宽度和图像工具栏随之缩放；只在当前窗口有效，不保存到算法参数，也不重置 tracker。布尔参数使用复选框；检测器 `cls_model_file` 可编辑字符串，JSON 沿用顶层 `model` 字段，模型相对 `src/rm_detector/model` 解析。Apply 重建上下文，失败保留原上下文；不会写回源 YAML。图像查看选项仅在当前窗口有效，不随参数 JSON 保存。显示异常只关闭显示。
 
