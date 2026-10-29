@@ -1,0 +1,44 @@
+Test project D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+      Start  1: shared_body_ekf
+ 1/10 Test  #1: shared_body_ekf .......................   Passed    0.03 sec
+      Start  2: relative_aim
+ 2/10 Test  #2: relative_aim ..........................   Passed    0.13 sec
+      Start  3: native_media
+ 3/10 Test  #3: native_media ..........................   Passed    0.16 sec
+      Start  4: archived_tracker_baseline
+ 4/10 Test  #4: archived_tracker_baseline .............   Passed    0.18 sec
+      Start  5: tracker_body_integration
+ 5/10 Test  #5: tracker_body_integration ..............   Passed    0.41 sec
+      Start  6: noisy_switching_actual_yaml
+ 6/10 Test  #6: noisy_switching_actual_yaml ...........   Passed    0.12 sec
+      Start  7: hardware_protocol
+ 7/10 Test  #7: hardware_protocol .....................   Passed    0.02 sec
+      Start  8: native_pipeline
+ 8/10 Test  #8: native_pipeline .......................   Passed    0.59 sec
+      Start  9: native_transport
+ 9/10 Test  #9: native_transport ......................   Passed    0.03 sec
+      Start 10: calibrated_pnp_and_optical_rotation
+10/10 Test #10: calibrated_pnp_and_optical_rotation ...   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   1.69 sec
+Start testing: Oct 29 19:16 �й���׼ʱ��
+----------------------------------------------------------
+6/10 Testing: noisy_switching_actual_yaml
+6/10 Test: noisy_switching_actual_yaml
+Command: "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/dt46_tracker_switch_check.exe" "D:/project/RobotMaster/sim_vision/DT46_V/src/rm_tracker/config/tracker_params_infantry.yaml" "D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full/switch_results"
+Directory: D:/project/RobotMaster/sim_vision/DT46_V/build/aim-validation-full
+"noisy_switching_actual_yaml" start time: Oct 29 19:16 �й���׼ʱ��
+Output:
+----------------------------------------------------------
+actual YAML, single plate, rejected invalid normals, noisy switching, duplicates and missing-frame gates passed
+<end of output>
+Test time =   2.89 sec
+----------------------------------------------------------
+Test Passed.
+"noisy_switching_actual_yaml" end time: Oct 29 19:16 �й���׼ʱ��
+"noisy_switching_actual_yaml" time elapsed: 00:00:02
+----------------------------------------------------------
+
+End testing: Oct 29 19:16 �й���׼ʱ��

@@ -179,8 +179,6 @@ public:
 
 private:
     BodyEkf body_ekf_;
-    std::optional<BodyEkf> body_mirror_;
-    double body_hypothesis_age_=0,body_hypothesis_log_odds_=0;
     bool body_spin_mode_=false;
     double body_spin_enter_s_=0,body_spin_exit_s_=0;
     double fire_yaw_tolerance_deg_=0,fire_pitch_tolerance_deg_=0;

@@ -1,0 +1,244 @@
+{
+  "manual-original": {
+    "light_height_mm": 58.0,
+    "light_spacing_mm": 135.0,
+    "normal_error_rad": {
+      "p50": 0.021441196221458778,
+      "p95": 0.19686235748458358,
+      "rmse": 0.07939423549104564
+    },
+    "observations": 3926,
+    "position_error_m": {
+      "p50": 0.02085323207429594,
+      "p95": 0.09157013797242203,
+      "rmse": 0.04234570546164342
+    },
+    "reprojection_px": {
+      "p50": 1.130063237066795,
+      "p95": 2.9255292282405816,
+      "rmse": 1.482495489504919
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "manual-fitted": {
+    "light_height_mm": 56.9822631068,
+    "light_spacing_mm": 130.4154336474,
+    "normal_error_rad": {
+      "p50": 0.03417575334535615,
+      "p95": 0.09171070681669795,
+      "rmse": 0.06853512340205938
+    },
+    "observations": 3926,
+    "position_error_m": {
+      "p50": 0.005898312373214473,
+      "p95": 0.06444907452841997,
+      "rmse": 0.02691844073926226
+    },
+    "reprojection_px": {
+      "p50": 1.2046633720378281,
+      "p95": 2.977390403055246,
+      "rmse": 1.532061280966498
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "manual-cad": {
+    "light_height_mm": 59.47,
+    "light_spacing_mm": 125.8,
+    "normal_error_rad": {
+      "p50": 0.1817682792952855,
+      "p95": 0.39062073145907067,
+      "rmse": 0.23597772174324225
+    },
+    "observations": 3926,
+    "position_error_m": {
+      "p50": 0.040285002524986444,
+      "p95": 0.11824829231617215,
+      "rmse": 0.05992684890911163
+    },
+    "reprojection_px": {
+      "p50": 1.5650412102175988,
+      "p95": 3.2292399689777462,
+      "rmse": 1.8188078919437896
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "stationary_off-original": {
+    "light_height_mm": 58.0,
+    "light_spacing_mm": 135.0,
+    "normal_error_rad": {
+      "p50": 0.21635478548755702,
+      "p95": 0.2656631660262182,
+      "rmse": 0.21153948157417812
+    },
+    "observations": 84,
+    "position_error_m": {
+      "p50": 0.014115337388936618,
+      "p95": 0.03202031331054617,
+      "rmse": 0.017550121408420806
+    },
+    "reprojection_px": {
+      "p50": 0.26282611058153016,
+      "p95": 0.42207668702105805,
+      "rmse": 0.28286090995763497
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "stationary_off-calibrated": {
+    "light_height_mm": 56.9822631068,
+    "light_spacing_mm": 130.4154336474,
+    "normal_error_rad": {
+      "p50": 0.12176943382481269,
+      "p95": 0.19324995096110326,
+      "rmse": 0.1414448831978084
+    },
+    "observations": 84,
+    "position_error_m": {
+      "p50": 0.004396406136399791,
+      "p95": 0.01325524195568083,
+      "rmse": 0.007081530762721449
+    },
+    "reprojection_px": {
+      "p50": 0.20689735941474044,
+      "p95": 0.2922263689503247,
+      "rmse": 0.207075909465855
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "stationary_constant-original": {
+    "light_height_mm": 58.0,
+    "light_spacing_mm": 135.0,
+    "normal_error_rad": {
+      "p50": 0.029756026489638508,
+      "p95": 0.1449423474330851,
+      "rmse": 0.06737811296884123
+    },
+    "observations": 268,
+    "position_error_m": {
+      "p50": 0.023649682884848575,
+      "p95": 0.06148149626264982,
+      "rmse": 0.03332701953636882
+    },
+    "reprojection_px": {
+      "p50": 0.9070114777994974,
+      "p95": 1.9432177712497363,
+      "rmse": 1.113507315843601
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "stationary_constant-calibrated": {
+    "light_height_mm": 56.9822631068,
+    "light_spacing_mm": 130.4154336474,
+    "normal_error_rad": {
+      "p50": 0.03763705632714582,
+      "p95": 0.08212836301374167,
+      "rmse": 0.053569440423228726
+    },
+    "observations": 268,
+    "position_error_m": {
+      "p50": 0.008605194148117685,
+      "p95": 0.040263227103167,
+      "rmse": 0.01953826977731161
+    },
+    "reprojection_px": {
+      "p50": 0.9654383545335445,
+      "p95": 1.9765525264450667,
+      "rmse": 1.1548573300977725
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "constant_constant-original": {
+    "light_height_mm": 58.0,
+    "light_spacing_mm": 135.0,
+    "normal_error_rad": {
+      "p50": 0.1450837828904985,
+      "p95": 1.8438068154423009,
+      "rmse": 0.9821916798699262
+    },
+    "observations": 816,
+    "position_error_m": {
+      "p50": 0.10012810634877678,
+      "p95": 0.18500294029860773,
+      "rmse": 0.1160782870688555
+    },
+    "reprojection_px": {
+      "p50": 0.4259361829513428,
+      "p95": 1.3259281126136642,
+      "rmse": 0.6595515991940086
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "constant_constant-calibrated": {
+    "light_height_mm": 56.9822631068,
+    "light_spacing_mm": 130.4154336474,
+    "normal_error_rad": {
+      "p50": 0.154438455408708,
+      "p95": 1.764508112368079,
+      "rmse": 0.8125610075772046
+    },
+    "observations": 875,
+    "position_error_m": {
+      "p50": 0.04967679994027336,
+      "p95": 0.17206548877395292,
+      "rmse": 0.08686408887023454
+    },
+    "reprojection_px": {
+      "p50": 0.4309556227141701,
+      "p95": 1.3268354290985869,
+      "rmse": 0.6664651915183826
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "sine_sine-original": {
+    "light_height_mm": 58.0,
+    "light_spacing_mm": 135.0,
+    "normal_error_rad": {
+      "p50": 0.10680890701276807,
+      "p95": 1.8755138798676687,
+      "rmse": 0.9193422972540505
+    },
+    "observations": 775,
+    "position_error_m": {
+      "p50": 0.0881617082905063,
+      "p95": 0.18565666680994558,
+      "rmse": 0.10975974784176172
+    },
+    "reprojection_px": {
+      "p50": 0.43489317526737886,
+      "p95": 1.3602538008658687,
+      "rmse": 0.7087776650362149
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  },
+  "sine_sine-calibrated": {
+    "light_height_mm": 56.9822631068,
+    "light_spacing_mm": 130.4154336474,
+    "normal_error_rad": {
+      "p50": 0.13740965892506213,
+      "p95": 1.7329214291783472,
+      "rmse": 0.7535185978487364
+    },
+    "observations": 844,
+    "position_error_m": {
+      "p50": 0.036374467052440226,
+      "p95": 0.1695672461169716,
+      "rmse": 0.08185948608521615
+    },
+    "reprojection_px": {
+      "p50": 0.4380839688787902,
+      "p95": 1.3541067227444499,
+      "rmse": 0.7046958619988745
+    },
+    "scope": "Offline only; nearest truth within 20 ms, candidate nearest a board within 0.2 m; AM02 outward normal tilted 15 degrees. No truth is used online.",
+    "selected_higher_reprojection": 0
+  }
+}

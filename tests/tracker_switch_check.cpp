@@ -45,7 +45,8 @@ int main(int argc,char** argv){try{
                 Eigen::Vector3d measured=truth;for(int axis=0;axis<3;++axis)measured[axis]+=position_noise(random);
                 if(mode==3)measured+=truth.normalized()*(.01*truth.squaredNorm()*depth_noise(random));
                 double yaw=angle+yaw_noise(random);
-                if(frame%7<3)yaw=2*std::atan2(measured.y(),measured.x())-yaw;
+                // Occasional invalid normals should be gated, not rewritten to fit the state.
+                if(frame%31==0)yaw=2*std::atan2(measured.y(),measured.x())-yaw;
                 if(frame%19==0)yaw+=M_PI;
                 observations.emplace_back(2,measured.x(),measured.y(),measured.z(),normalize_angle(yaw));
             }
@@ -76,5 +77,5 @@ int main(int argc,char** argv){try{
         passed=passed&&(mode==0?partial_shots>5:rmse<.06&&maximum<.15);
     }
     require(passed,"actual YAML noisy switching / useful firing / body continuity regression failed; see summary.csv");
-    std::cout<<"actual YAML, single plate, mirrored yaw, noisy switching, duplicates and missing-frame gates passed\n";return 0;
+    std::cout<<"actual YAML, single plate, rejected invalid normals, noisy switching, duplicates and missing-frame gates passed\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

@@ -1,0 +1,30 @@
+{
+  "frames": 4743,
+  "identical_observations": true,
+  "window_s": [
+    74,
+    88
+  ],
+  "before": {
+    "late_center_rmse_cm": 27.86599700470602,
+    "screenshot_time_s": 77.71700000000703,
+    "screenshot_center_world_m": [
+      0.14222207299598988,
+      -2.2381010528880685,
+      0.20002946644917988
+    ],
+    "screenshot_body_yaw_deg": -113.23338903549339,
+    "screenshot_raw_pnp_normal_error_deg": 0.2339864557639784
+  },
+  "after": {
+    "late_center_rmse_cm": 7.384037575289542,
+    "screenshot_time_s": 77.71700000000703,
+    "screenshot_center_world_m": [
+      -0.07244163734273412,
+      -2.007305321379787,
+      0.2000296036295686
+    ],
+    "screenshot_body_yaw_deg": 179.83776015280154,
+    "screenshot_raw_pnp_normal_error_deg": 0.2339864557639784
+  }
+}

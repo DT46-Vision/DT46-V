@@ -77,12 +77,9 @@ int BodyEkf::update(const std::vector<Observation>& observations,double sigma,do
         for(int i=0;i<4;++i){
             const auto prediction=plate(i);const auto h=jacobian(i);
             Eigen::Vector4d residual;residual.head<3>()=obs.position-prediction.head<3>();residual[3]=wrap(obs.yaw-prediction[3]);
-            const double bearing=std::atan2(obs.position.y(),obs.position.x());
-            double yaw=obs.yaw;
-            // A planar PnP mirror is a reflection about the sightline, not just a pi flip.
-            for(double candidate:{obs.yaw,2*bearing-obs.yaw,obs.yaw+pi,2*bearing-obs.yaw+pi})
-                if(std::abs(wrap(candidate-prediction[3]))<std::abs(wrap(yaw-prediction[3])))yaw=candidate;
-            residual[3]=wrap(yaw-prediction[3]);
+            // PnP already selected a pose from the image. Reflecting its normal to fit
+            // our prediction creates a different measurement and can lock a wrong body.
+            const double yaw=obs.yaw;
             if(residual.head<3>().norm()>match_distance_||std::abs(residual[3])>match_yaw_)continue;
             const Eigen::Matrix4d s=h*p_*h.transpose()+measurement_covariance(obs.position,sigma,yaw_variance,depth_sigma);const auto ldlt=s.ldlt();
             if(ldlt.info()!=Eigen::Success||!ldlt.isPositive())continue;

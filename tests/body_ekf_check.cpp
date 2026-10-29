@@ -75,16 +75,23 @@ int main(int argc,char** argv){try{
     auto mirrored=f,ordinary=f;
     const auto observed=f.plate(0);
     ordinary.update({{observed.head<3>(),observed[3]}},.008,.0025);
-    mirrored.update({{observed.head<3>(),observed[3]+3.141592653589793}},.008,.0025);
-    require((ordinary.state()-mirrored.state()).norm()<1e-8,"mirror branch inconsistent");
+    require(mirrored.update({{observed.head<3>(),observed[3]+3.141592653589793}},.008,.0025)<0,"reversed normal was silently repaired");
+    require((mirrored.state()-f.state()).norm()==0,"rejected reversed normal changed state");
     auto duplicate=f,once=f;
     once.update({{observed.head<3>(),observed[3]}},.008,.0025);
     duplicate.update({{observed.head<3>(),observed[3]},{observed.head<3>(),observed[3]}},.008,.0025);
     require((duplicate.covariance()-once.covariance()).norm()<1e-10,"duplicate observation double counted");
-    auto reflected=f;
-    const double bearing=std::atan2(observed[1],observed[0]);
-    reflected.update({{observed.head<3>(),2*bearing-observed[3]}},.008,.0025);
-    require((ordinary.state()-reflected.state()).norm()<1e-8,"sightline mirror branch inconsistent");
+    // A correct selected normal must pull a wrong prior towards the observation,
+    // even when its sightline reflection fits that prior exactly.
+    BodyEkf raw_normal;auto wrong=BodyEkf::State::Zero().eval();
+    const Eigen::Vector3d position(3,.2,.4);const double measured_yaw=.45;
+    const double bearing=std::atan2(position.y(),position.x());
+    wrong[6]=2*bearing-measured_yaw;wrong[8]=wrong[9]=.26;
+    wrong[0]=position.x()+.26*std::cos(wrong[6]);wrong[2]=position.y()+.26*std::sin(wrong[6]);wrong[4]=position.z();
+    raw_normal.init(wrong,BodyEkf::Covariance::Identity());raw_normal.set_limits(.1,.5,.1,.8);
+    const double error_before=std::abs(std::remainder(wrong[6]-measured_yaw,2*3.141592653589793));
+    require(raw_normal.update({{position,measured_yaw}},.008,.0025)>=0,"selected normal rejected with uncertain prior");
+    require(std::abs(std::remainder(raw_normal.state()[6]-measured_yaw,2*3.141592653589793))<.2*error_before,"selected normal was reflected back to wrong prior");
     const auto future=f.forecast(.2);
     require(future.plate_covariance(0).allFinite(),"arrival covariance invalid");
     require(future.plate_covariance(0).trace()>f.plate_covariance(0).trace(),"future process uncertainty missing");

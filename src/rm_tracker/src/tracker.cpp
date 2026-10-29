@@ -154,12 +154,6 @@ void Tracker::init_ekf(const Armor& armor) {
     const BodyEkf::Covariance covariance=transform*prior*transform.transpose();
     body_ekf_.init(body,covariance);body_plate_index_=0;selected_body_plate_=-1;body_matched_=false;detect_elapsed_s_=lost_elapsed_s_=0;
     body_ekf_.set_limits(radius_params.r_min,radius_params.r_max,max_match_distance,max_match_yaw_diff);
-    const double reflected=normalize_angle(2*std::atan2(ya,xa)-last_yaw_);
-    body[6]=reflected;body[0]=xa+r_init*std::cos(reflected);body[2]=ya+r_init*std::sin(reflected);
-    transform(0,6)=-r_init*std::sin(reflected);transform(2,6)=r_init*std::cos(reflected);
-    transform(0,8)=std::cos(reflected);transform(2,8)=std::sin(reflected);
-    body_mirror_=body_ekf_;body_mirror_->init(body,transform*prior*transform.transpose());
-    body_hypothesis_age_=body_hypothesis_log_odds_=0;
     body_spin_mode_=false;body_spin_enter_s_=body_spin_exit_s_=0;
 }
 void Tracker::reset_plate(const Armor& armor) {
@@ -757,18 +751,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     const double yaw_scale=std::max(1.0,distance/std::max(.1,ekf_QR_params.stable_dist));
     const double depth_sigma=ekf_QR_params.r_depth_factor>0?.005+ekf_QR_params.r_depth_factor*.01*distance*distance:0;
     const double yaw_variance=std::clamp(ekf_QR_params.r_yaw*yaw_scale*yaw_scale,1e-6,10.0);
-    int matched=body_ekf_.update(observations,sigma,yaw_variance,depth_sigma);
-    if(body_mirror_){
-        body_mirror_->predict(dt,ekf_QR_params.q_xyz,ekf_QR_params.q_yaw,ekf_QR_params.q_r);
-        const int alternative=body_mirror_->update(observations,sigma,yaw_variance,depth_sigma);
-        body_hypothesis_age_+=dt;
-        if(!observations.empty())body_hypothesis_log_odds_=.99*body_hypothesis_log_odds_+
-            std::clamp(body_ekf_.association_cost()-body_mirror_->association_cost(),-20.0,20.0);
-        if(body_hypothesis_age_>=.25&&std::abs(body_hypothesis_log_odds_)>12){
-            if(body_hypothesis_log_odds_>0){body_ekf_=*body_mirror_;matched=alternative;selected_body_plate_=-1;}
-            body_mirror_.reset();
-        }
-    }
+    const int matched=body_ekf_.update(observations,sigma,yaw_variance,depth_sigma);
     body_matched_=matched>=0;
     if(body_matched_)body_plate_index_=matched;
     const auto& state=body_ekf_.state();
@@ -790,7 +773,6 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     const bool plate_ok=body_matched_;
     logs.emplace_back("body_nis",std::to_string(body_ekf_.last_nis()));
     logs.emplace_back("body_association",body_ekf_.rejection_reason());
-    logs.emplace_back("body_yaw_hypothesis",body_mirror_?"ambiguous":"resolved");
     // Keep existing frame-count configuration as nominal 10 ms durations, independent of delivery rate.
     if(plate_ok){
         lost_elapsed_s_=0;detect_elapsed_s_+=dt;
@@ -1093,11 +1075,6 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     if(!body_ekf_.established())fire_blockers_.push_back("insufficient_updates");
     if(tracker_state!=TrackerState::TRACKING)fire_blockers_.push_back("not_tracking");
     if(!prediction_consistent)fire_blockers_.push_back("flight_consistency");
-    if(body_mirror_){
-        double disagreement=std::numeric_limits<double>::infinity();
-        for(int i=0;i<4;++i)disagreement=std::min(disagreement,(body_mirror_->plate(i,actual_flight+std::max(0.0,system_delay)+std::max(0.0,controller_delay_)).head<3>()-arrival.head<3>()).norm());
-        if(disagreement>.025)fire_blockers_.push_back("yaw_hypothesis");
-    }
     if(2*aim_lateral_sigma_>width*.5*.85||2*aim_vertical_sigma_>height*.5*.8)
         fire_blockers_.push_back("arrival_uncertainty");
     std::get<2>(final_gimbal)=fire_blockers_.empty();

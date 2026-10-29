@@ -1,0 +1,14 @@
+{
+  "count": 3760,
+  "height_mm": {
+    "median": 56.72103441294307,
+    "p05": 53.95713691303508,
+    "p95": 57.38532913706385
+  },
+  "scope": "Offline rendered stationary target, all observations; known plane inclination 15 degrees. Not a hardware calibration.",
+  "width_mm": {
+    "median": 131.80733217679847,
+    "p05": 130.1775156191913,
+    "p95": 134.68305776333
+  }
+}
