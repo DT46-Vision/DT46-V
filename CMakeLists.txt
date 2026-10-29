@@ -6,6 +6,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CTest)
 include(FetchContent)
+option(DT46_RELATIVE_AIM_ONLY "Build the isolated sensor experiment without camera/runtime dependencies" OFF)
+find_path(EIGEN3_INCLUDE_DIR Eigen/Dense PATH_SUFFIXES eigen3 REQUIRED)
+add_library(dt46_relative_aim project/modules/vision/relative_aim.cpp)
+target_include_directories(dt46_relative_aim PUBLIC project ${EIGEN3_INCLUDE_DIR})
+if(BUILD_TESTING)
+    add_executable(dt46_relative_aim_check tests/relative_aim_check.cpp)
+    target_link_libraries(dt46_relative_aim_check PRIVATE dt46_relative_aim)
+    add_test(NAME relative_aim COMMAND dt46_relative_aim_check "${CMAKE_CURRENT_BINARY_DIR}/relative_aim_results"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/data/relative_aim_delays.cfg")
+endif()
+if(DT46_RELATIVE_AIM_ONLY)
+    return()
+endif()
 include(cmake/hardware.cmake)
 
 if(NOT TARGET nlohmann_json::nlohmann_json)
@@ -21,7 +34,6 @@ endif()
 
 # Existing native installations can be supplied through normal CMake cache paths.
 find_package(OpenCV REQUIRED COMPONENTS core imgproc calib3d dnn)
-find_path(EIGEN3_INCLUDE_DIR Eigen/Dense PATH_SUFFIXES eigen3 REQUIRED)
 add_subdirectory(standalone)
 
 add_library(dt46_pipeline project/modules/vision/pipeline.cpp project/modules/vision/virtual_camera.cpp)

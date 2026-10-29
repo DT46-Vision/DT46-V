@@ -7,6 +7,8 @@
 
 ## 原始 tracker 基线
 
+本次重新开展的实车输入边界实验位于独立分支 `codex/relative-aim-restart`，从个人集成基线 `6c3e6f8` 出发；尚未接入原生或 ROS 在线控制。共享车心、独立视觉 IMU、时间补偿配置、理想云台实验及失败条件见[实验报告](../outputs/relative_aim_restart_20261029/report.md)。仅构建隔离实验可设置 `-DDT46_RELATIVE_AIM_ONLY=ON`，依赖 Eigen，不依赖 OpenCV。此报告不能替代下面的原 tracker 历史验证。
+
 2026-10-28 按用户要求，从仿真 main 固定基线逐项比较 Glenn 视觉。本次个人分支 `codex/glenn-stepwise` 先仅合入 Glenn `58235b9` 的 `tracker.cpp` / `tracker.hpp`；归一化行尾后的文件与该提交完全一致。配套源码摘要采用 Glenn `dee69bc` 的两项值，`ekf.cpp` / `ekf.hpp` 和 ROS `node.cpp` 继续锁定 `3c41f0b`。`original_tracker_baseline` 仅校验源码身份，不代表跟踪问题已修复。算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护，真实逐项验证见[本轮报告](../../outputs/glenn_integration_20261028/report.md)。
 
 Windows 接入保留在原生适配层；`RmTF` 额外接收光学旋转和真实标定主点，ROS 调用仍走原默认路径。原 tracker 重力固定为 9.81 m/s²；配置其他重力时明确拒绝，不能声称已跟随仿真重力。弹速、阻力和枪口偏移继续读取相应反馈。每帧有效性由适配层读取原始弹道求解器的结果，不在 tracker 中新增状态或改变选板、EKF、弹道和发弹判据。
