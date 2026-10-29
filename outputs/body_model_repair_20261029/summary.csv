@@ -1,0 +1,4 @@
+"run","frames","center_rmse_m","center_max_m","fire_frames","matched","rA_m","rB_m","hB_m","acceleration_center_rmse_m","acceleration_center_max_m"
+"body","1200","0.00144882","0.00545773",,"1190","0.220073","0.319861","0.0692154","0.000894819","0.00109026"
+"tracker","900","0.000130937","0.000359587","245",,,,,,
+"baseline","900","0.249611","0.323304","280",,,,,,

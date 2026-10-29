@@ -2,9 +2,9 @@
 
 装甲板追踪与弹道解算节点（C++ / ROS 2 Humble）。消费 `rm_detector` 的装甲板观测、`dm_imu` 的姿态和相机内参，完成
 
-相机系 → 世界系坐标变换 → 目标选择/装甲板跳变处理 → 9 维 EKF 状态估计 → 反小陀螺判定 → 空气阻力弹道解算 → 输出云台 `yaw/pitch` 与 `can_fire`。
+相机系 → 世界系坐标变换 → 目标选择/装甲板跳变处理 → 11 维共享车心 EKF 状态估计 → 反小陀螺判定 → 空气阻力弹道解算 → 输出云台 `yaw/pitch` 与 `can_fire`。
 
-代码分为两层：`tracker_core`（`tracker.cpp` / `ekf.cpp` / `rm_tf_tools.cpp`，纯算法）与 `rm_tracker_node`（`node.cpp`，ROS 通信、线程、渲染）。
+代码分为两层：`tracker_core`（`tracker.cpp` / `body_ekf.cpp` / `rm_tf_tools.cpp`，纯算法；`ekf.cpp` 保留作旧算法辅助）与 `rm_tracker_node`（`node.cpp`，ROS 通信、线程、渲染）。
 
 无 ROS 接入见 [standalone](../../standalone/README.md)。`RmTF` 可接收直接光学旋转，并通过 `set_camera_info(..., false)` 保留标定主点；原 ROS 调用保持原默认行为。
 
@@ -35,19 +35,21 @@
 - `/imu/rpy` 必须是**度**。`dm_imu` 的 `publish_rpy_in_degree` 默认 true，所以默认兼容；若把它改成 false，追踪会完全错乱。
 - 没有 IMU 就不会追踪：`armors_cb` 在收到第一帧 `/imu/rpy` 之前直接丢弃装甲板数据（`imu_initialized_` 门控）。只回放 bag 时需要自己补一个 `/imu/rpy` 发布者。
 - `can_fire` 在 `GimbalControl` 里是 `int32`，节点写 0/1。
-- 发出的 yaw/pitch 经过 EMA 平滑：`smooth = 0.25 * raw + 0.75 * smooth`（`can_fire == false` 时重置为下一帧直接对齐）。
+- 发出的 yaw/pitch 就是发弹门控所评估的原始解，不再于门控之后额外 EMA 平滑。
 
 ## 数据流与算法
 
-1. **颜色过滤 + 坐标变换**（`node.cpp`）：`target_color == 0` 只保留 `armor_id >= 6`（红方），`== 1` 只保留 `armor_id < 6`（蓝方）。相机系坐标 `dx/dy/dz`（mm → m）经 `RmTF::cam_to_world()` 结合 IMU RPY 转到世界系；观测 yaw 取反后与云台 yaw 相加得到世界系绝对 yaw。
-2. **时间步长**：`dt` 由 `ArmorsMsg.header.stamp` 差分得到；`dt <= 1ms` 时使用 10ms，`dt > 100ms` 时截断到 100ms，其余使用实际间隔。
-3. **目标选择与跳变**（`tracker.cpp`）：先用位置消歧观测 yaw，并据此计算匹配角差；原实现传入 EKF 的匹配观测仍保留原始 yaw，不将消歧结果写回。当前位置、角差分别通过 `max_match_distance` 和 `max_match_yaw_diff` 时直接更新；否则仅在观测更接近其他预测板、且换板冷却结束时处理跳变。
-4. **EKF**：9 维状态 `[xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r]`，观测为 4 维 `[x, y, z, yaw]`；Q/R 由 `ekf_QR_*` 参数在线计算，半径 `r` 用 `radius_r_min/max` 限幅。
-5. **状态机**：`LOST → DETECTING`（连续 `tracking_thres` 帧）`→ TRACKING → TEMP_LOST → LOST`（连续 `lost_thres` 帧）。状态切换会打印到终端。
-6. **反小陀螺**：同向换板连续两次进入 SPIN；没有继续换板时，结合板运动速度计时退出。双板或板轨迹圆拟合收敛前，`spin_center_converged_` 为假，SPIN 只跟随当前板。拟合要求至少 16 个板位、时间跨度不少于 0.35 s，半径落在 0.12–0.45 m。换板间隔至少 3 次且相对标准差小于 15%，并且飞行时间加 `system_delay` 内转角小于 75° 时，才按到达时刻预测下一块正前板；预测点离开当前观测板超过 0.45 m 则放弃。车心已收敛且不是慢速时才把平移速度加入这次预测，切换仍有滞回。
-7. **弹道解算**：`build_ballistic_lut()` 用 `bullet_speed`、固定重力 9.81 m/s² 与 `k_v2`（平方空气阻力 `a = -k·v²`）预建 25×15 查找表（距离 0.1–12 m 步长 0.5，高度 −3.5–3.5 m 步长 0.5）。原 `solve_ballistic()` 在水平距离小于 1.5 m 时直接几何瞄准，不加重力/阻力补偿；其余表内距离查表，超出表范围回退到几何角。目标外推使用弹丸飞行时间、`system_delay` 和 `controller_delay`，并转换相机→枪口外参 `cam_to_gun_*`。
-8. **开火判定**：目标距离 ≤ `shootable_dist`，yaw 误差位于装甲左右边缘角窗内，pitch 误差通过动态门限。SPIN 额外比较目标的正对误差与装甲宽度窗口：原地跟板使用当前板朝向，平移正前路径使用到达时刻所选板；正前路径不可用时回退跟板，没有额外强制关闭许可。交替半径和板高随选板同步；`controller_delay` 只影响瞄准点外推，不改变选板的到达时刻。基线和历史修复取舍见 [原始 tracker 基线](../../standalone/README.md#原始-tracker-基线)。
+当前实验分支 `codex/relative-aim-restart` 重写车体更新与预测；下面描述当前代码，不再保证与 Glenn tracker 源码一致。参考来源、同输入基线比较和验收限制见[底层修复实验](../../outputs/body_model_repair_20261029/report.md)。此前理想传感器实验保留为历史证据，不能据此宣称实车命中。
 
+1. **输入与坐标**：颜色过滤和相机坐标变换沿用现有链路。只用独立视觉 IMU，不补 MCU 姿态；变换后的坐标仍是以移动相机为原点的相对目标位置，不能将速度当成敌方绝对速度。ROS 只有板 yaw，没有完整板法线，倾斜姿态仍有信息损失；本轮没有新增消息或硬件能力。
+2. **时间**：ROS 和原生入口共用 `FrameClock`。首帧建轨不预测；重复、倒序、非有限戳拒绝且不移动时间基准；所有正间隔原样使用，包括 0.5 ms 和 200 ms。超过 0.5 s 断流失效、重建轨，不把长间隔截成短间隔。这个阈值是当前恢复策略，不是已测延迟。主机戳的采样误差依然存在，配置补偿语义见[独立传感器实验](../../outputs/relative_aim_restart_20261029/report.md#延迟配置与计算语义)。
+3. **共享车体**：`BodyEkf` 状态为 `[cx,vx,cy,vy,zA,vz,theta,omega,rA,rB,hB]`。四板角度为 `theta+i*pi/2`，位置为 `(cx-r*cos(angle),cy-r*sin(angle),zA+group*hB)`，组别取 `i%2`。同组相差 180°且保留同组高度；两个半径和高度差独立估计。zA 取 A 组板平面，不能称为已测底盘中心高度。90°来自现有模型的名义拓扑，尚无本次实车标定证据。车型表半径仅用于初始化先验，不再冻结为精确尺寸。
+4. **关联与融合**：所有匿名观测先相对于同一预测状态枚举四板，结合位置/yaw/NIS，利用位置分支消解 yaw 的 pi 二义；重复分配只用一次，同帧最多处理 16 个候选、最多更新四板。NIS 大于 18.47 或候选差小于 1 时拒绝。没有换板冷却、状态半径交换或冻结车心；半径列包含真实观测雅可比，交叉协方差不清零。连续白噪声 Q 使用真实 dt，LDLT 检查正定性，Joseph 更新并对称化 P。几何先验仍可能不可观测，ready 还要求两组半径与车心水平协方差足够小。
+5. **状态机**：建轨/失锁按真实累计时间；为兼容已有配置，`tracking_thres`/`lost_thres` 的数值按名义 10 ms 换算为持续时间，超过断流阈值直接重建。只有车体关联成功才算有效跟踪，检测存在不再自动表示车心有效。
+6. **选板与预测**：共享车心按相对速度传播、相位按角速度传播，枚举到达时刻真实四板；选板使用 0.08 rad 切换惩罚。选板和瞄准共用 `system_delay+controller_delay` 时域，不再在圆柱正前面虚构一块板，不把静止 SPIN 的切向运动置零。飞行时间作一次直接估计，使用弹道表求解后重检到达时刻预测偏差，超过 25 mm 不放行，没有新增迭代求解器。
+7. **弹道与许可**：沿用平方阻力 LUT 的预计算方法和固定重力 9.81；0.2 m 起使用表补偿，表外拒绝，不再几何瞄准并标有效；查表坐标钳制避免权重外推。只有 TRACKING、本帧车体匹配、几何协方差就绪、弹道有效及预测一致时，才继续原装甲投影边缘/正对窗口判定。输出不再门控后平滑。许可不等于真实 MCU 执行、发射或命中；模型误差、IMU 时间误差、弹速误差和真实云台响应尚无严格保证。
+
+旧单板速度估计仍用于兼容调试输出和 SPIN 标志。旧九维 EKF、圆拟合/冻结车心、半径交换与车心伪观测辅助函数留在源码供对照，已退出当前车体更新路径，不应再据它们解释当前估计。原生适配器仍有光学/枪口真值输入，因此原生测试仅是软件回归，不能作为实车输入公平的闭环证据。
 ## 参数
 
 参数文件：`config/tracker_params.yaml`（通用）、`tracker_params_hero.yaml`、`tracker_params_infantry.yaml`、`tracker_params_sentry.yaml`。
@@ -64,10 +66,10 @@
 | `cam_to_gun_pos_x/y/z` | double | `0 / 0.125 / 0` | 相机 → 枪口平移外参（m） |
 | `cam_to_gun_rpy_r/p/y` | double | `0 / 0 / 0` | 相机 → 枪口旋转外参（度） |
 | `max_match_distance` | double | `0.2` | 观测关联的最大位置偏差（m） |
-| `max_match_yaw_diff` | double | `57.0` | 判定装甲板跳变的 yaw 差阈值（度） |
-| `jump_cooldown_max` | int | `20` | 跳变后的冷却帧数 |
-| `tracking_thres` | int | `5` | 连续命中多少帧进入 TRACKING |
-| `lost_thres` | int | `20` | 连续丢失多少帧进入 LOST |
+| `max_match_yaw_diff` | double | `57.0` | 车体观测关联的 yaw 偏差上限（度） |
+| `jump_cooldown_max` | int | `20` | 保留兼容参数；当前车体关联不使用跳变冷却 |
+| `tracking_thres` | int | `5` | 有效关联持续时间 / 10 ms |
+| `lost_thres` | int | `20` | 丢失持续时间 / 10 ms |
 | `dist_tol` | double | `0.15` | 预处理阶段两块板深度接近的容差（m） |
 | `ekf_QR_q_xyz` | double | `2.5` | 位置过程噪声谱密度（越大越信任观测） |
 | `ekf_QR_q_yaw` | double | `15.0` | 角度过程噪声谱密度 |
@@ -141,7 +143,7 @@ ros2 param set /rm_tracker display true       # 打开调试图
 - 编译选项：`-Wall -Wextra -Wpedantic -O3 -march=native`。
 - 运行前置：
   - `/detector/armors_info`（`rm_detector`）
-  - `/imu/rpy`（`dm_imu`，或串口节点 `pub_rpy: true`；单位必须是度）
+  - `/imu/rpy`（当前分支使用独立 `dm_imu`；单位必须是度，不接 MCU 姿态）
   - `/camera_info`（相机驱动；只用于渲染与投影，不参与 EKF）
 
 ## 注意事项 / 已知问题
@@ -152,4 +154,4 @@ ros2 param set /rm_tracker display true       # 打开调试图
 4. **渲染依赖 `/camera_info`**：`res_img_cb` 在 `tf_.has_camera_info()` 为 false 时直接返回，表现为"开了 display 也没有图像"。
 5. **`/nav/decision` 缺失时不会切色**：`follow_decision: true` 的英雄/步兵配置依赖 `rm_serial` 转发裁判系统颜色；纯视觉 launch 下该话题不存在，会一直用 YAML 里的 `target_color`。
 6. **两个 `/imu/rpy` 发布者会冲突**：`dm_imu`（默认开）与 `rm_serial`（`pub_rpy`，默认 false）都会发这个话题，且 `rm_serial` 直通下位机数据、单位不一定与 `dm_imu` 一致，不要同时开。
-7. **`dt` 保护会掩盖时间戳问题**：帧间隔 ≤1 ms 时改用 10 ms，超过 100 ms 时截断为 100 ms；其余使用实际间隔。如果速度和预测明显异常，先确认 `/detector/armors_info` 的时间戳。
+7. **时间戳仍需测量**：本轮已移除 dt 替换/截断，但相机与 IMU 主机戳不等于曝光/硬件采样时间；真实同步和抖动仍未验证。

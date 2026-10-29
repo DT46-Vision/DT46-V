@@ -235,27 +235,18 @@ void RmTrackerNode::processing_worker() {
         // 把原版调用 Tracker 进行 EKF 更新的代码加回来
         rclcpp::Time ros_clock = data.msg->header.stamp;
 
-        // 动态获取真实 dt
-        static rclcpp::Time last_time = data.msg->header.stamp;
-        rclcpp::Time current_time = data.msg->header.stamp;
-
-        double dt = (current_time - last_time).nanoseconds() / 1e9;
-        last_time = current_time;
-
-        // 防抖保护：时间戳异常/零间隔用 10ms 兜底；真实帧间隔直接用，
-        // 只有断流超过 100ms（比如丢包、切场景）才截断，避免把 40ms 的真实间隔当成 10ms。
-        if (dt <= 0.001) {
-            dt = 0.01;
-        } else if (dt > 0.1) {
-            dt = 0.1;
+        const auto step=frame_clock_.advance(data.msg->header.stamp.sec+data.msg->header.stamp.nanosec*1e-9);
+        if(!step.accepted){
+            rm_interfaces::msg::GimbalControl invalid;invalid.header=data.msg->header;
+            invalid.can_fire=0;pub_gimbal_control_->publish(invalid);continue;
         }
-
-
+        const double dt=step.dt;
         // 2. 线程同步锁：开始调用核心预测状态机与滤波器
         std::tuple<double, double, bool> gimbal_cmd;
         std::vector<std::pair<std::string, std::string>> tracker_logs;
         {
             std::lock_guard<std::mutex> lock(tracker_lock_);
+            if(step.reset)tracker_.tracker_state=TrackerState::LOST;
             process_counter_++;
             imu_offset_acc_ms_ += data.imu_stamp_offset_ms;
             imu_offset_count_++;
@@ -287,18 +278,8 @@ void RmTrackerNode::processing_worker() {
         double raw_pitch = std::get<1>(gimbal_cmd);
         bool can_fire = static_cast<bool>(std::get<2>(gimbal_cmd));
 
-        if (!smooth_ready_) {
-            smooth_yaw_ = raw_yaw;
-            smooth_pitch_ = raw_pitch;
-            smooth_ready_ = true;
-        } else {
-            smooth_yaw_   = 0.25 * raw_yaw   + 0.75 * smooth_yaw_;
-            smooth_pitch_ = 0.25 * raw_pitch + 0.75 * smooth_pitch_;
-        }
-        if (!can_fire) smooth_ready_ = false;
-
-        gb_msg.yaw = smooth_yaw_;
-        gb_msg.pitch = smooth_pitch_;
+        gb_msg.yaw = raw_yaw;
+        gb_msg.pitch = raw_pitch;
         // 显式规避 bool 隐式转换风险
         gb_msg.can_fire = static_cast<int>(can_fire);
         pub_gimbal_control_->publish(gb_msg);

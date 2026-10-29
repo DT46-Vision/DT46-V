@@ -7,6 +7,8 @@
 
 ## 原始 tracker 基线
 
+本节以下是个人集成基线 `6c3e6f8` 的历史来源；本实验分支现已替换实际 tracker 的车体更新、时间与预测路径，不再声称当前源码与 Glenn 一致。当前算法以 [rm_tracker 数据流与算法](../src/rm_tracker/README.md#数据流与算法)为唯一说明，测量结果见[底层修复报告](../outputs/body_model_repair_20261029/report.md)。
+
 本次重新开展的实车输入边界实验位于独立分支 `codex/relative-aim-restart`，从个人集成基线 `6c3e6f8` 出发；尚未接入原生或 ROS 在线控制。共享车心、独立视觉 IMU、时间补偿配置、理想云台实验及失败条件见[实验报告](../outputs/relative_aim_restart_20261029/report.md)。仅构建隔离实验可设置 `-DDT46_RELATIVE_AIM_ONLY=ON`，依赖 Eigen，不依赖 OpenCV。此报告不能替代下面的原 tracker 历史验证。
 
 2026-10-28 按用户要求，从仿真 main 固定基线逐项比较 Glenn 视觉。本次个人分支 `codex/glenn-stepwise` 先仅合入 Glenn `58235b9` 的 `tracker.cpp` / `tracker.hpp`；归一化行尾后的文件与该提交完全一致。配套源码摘要采用 Glenn `dee69bc` 的两项值，`ekf.cpp` / `ekf.hpp` 和 ROS `node.cpp` 继续锁定 `3c41f0b`。`original_tracker_baseline` 仅校验源码身份，不代表跟踪问题已修复。算法行为由 [rm_tracker](../src/rm_tracker/README.md#数据流与算法)维护，真实逐项验证见[本轮报告](../../outputs/glenn_integration_20261028/report.md)。
@@ -58,7 +60,7 @@ ctest --preset release
 
 依赖下载及校验值由 [bootstrap.cmake](../cmake/bootstrap.cmake) 维护；本工程另固定 nlohmann/json 和 GLFW。OpenCV 使用 CPU DNN，并启用图像和视频读写。Windows 运行前，将 OpenCV 安装目录下的 `x64/mingw/bin`（或相应编译器目录）加入当前进程 PATH；程序与依赖应使用兼容的编译器。FFmpeg 插件随 OpenCV 安装，录制时需要该插件。Linux 视频后端依赖本机 OpenCV/FFmpeg 构建配置。
 
-当前构建提供 6 项原生测试：原始 tracker 基线、标定 PnP/光学旋转、管线、通信、MCU/IMU 字节协议及媒体。最新执行结果与限制见[本次审查](../docs/reviews/native-parity-20261023/README.md#验证结果)。此前迁移时的 40 帧回放和 1,914 个数值对照属于恢复 tracker 之前的历史结果，不能证明当前分支全链路与原 ROS 等价。ROS 节点与实机串口未验证，本机没有可用的 ROS 2 / WSL 环境。
+默认构建提供 9 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖，运行本轮实际验证的 8 项：共享车体 EKF、旧隔离实验、归档基线身份、实际 tracker 集成、硬件字节协议、原生管线、通信及标定 PnP/光学旋转。执行证据与复现命令见[底层修复报告](../outputs/body_model_repair_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。此前迁移数值不是本轮结果；ROS 节点与实机串口未验证。
 
 ## 虚拟相机与独立调试
 

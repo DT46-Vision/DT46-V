@@ -27,6 +27,7 @@ find_package(Eigen3 REQUIRED)
 # ==============================================================================
 add_library(tracker_core
   src/ekf.cpp
+  src/body_ekf.cpp
   src/rm_tf_tools.cpp
   src/tracker.cpp
 )

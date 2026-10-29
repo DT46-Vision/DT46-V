@@ -11,6 +11,7 @@ add_library(dt46_aim SHARED
     ${SOURCE_ROOT}/rm_detector/src/classifier.cpp
     ${SOURCE_ROOT}/rm_detector/src/pnp.cpp
     ${SOURCE_ROOT}/rm_tracker/src/ekf.cpp
+    ${SOURCE_ROOT}/rm_tracker/src/body_ekf.cpp
     ${SOURCE_ROOT}/rm_tracker/src/rm_tf_tools.cpp
     ${SOURCE_ROOT}/rm_tracker/src/tracker.cpp)
 target_include_directories(dt46_aim PRIVATE

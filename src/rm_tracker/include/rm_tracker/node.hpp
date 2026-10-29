@@ -1,4 +1,5 @@
 #pragma once
+#include "frame_clock.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -74,6 +75,7 @@ private:
 
     // =============== 组件与状态 ===============
     Tracker tracker_;
+    FrameClock frame_clock_;
     RmTF tf_;
 
     Eigen::Vector3d imu_rpy_;

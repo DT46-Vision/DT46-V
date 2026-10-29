@@ -1,6 +1,10 @@
 # tracker.cpp/hpp locked to aim fd6a7c7; ekf and node.cpp locked to 3c41f0b. Line endings are normalized.
 function(check_original path expected)
-    file(READ "${DT46_ROOT}/${path}" source)
+    execute_process(COMMAND git show "6c3e6f81fd6e193b9318961da5e140cbc9064074:${path}"
+        WORKING_DIRECTORY "${DT46_ROOT}" OUTPUT_VARIABLE source RESULT_VARIABLE result ENCODING UTF-8)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "Cannot read archived baseline: ${path}")
+    endif()
     string(REPLACE "\r\n" "\n" source "${source}")
     string(SHA256 actual "${source}")
     if(NOT actual STREQUAL expected)
@@ -12,4 +16,4 @@ check_original("src/rm_tracker/include/rm_tracker/tracker.hpp" "f83bc62d3ae2ef09
 check_original("src/rm_tracker/src/ekf.cpp" "153ecec8accb03b91de7751c28852d19eac0425e90eddc0a4f31d717cb95d331")
 check_original("src/rm_tracker/include/rm_tracker/ekf.hpp" "7d5c26d0749c8c5cab70ed1989f973d912499066e12a5ce6f437b4e4100cf767")
 check_original("src/rm_tracker/src/node.cpp" "d48003505c48424f891ee1375ac89a8566c0d75e9da7028ceb7fb5eddc26139b")
-message(STATUS "tracker.cpp/hpp match aim fd6a7c7; ekf and node.cpp match 3c41f0b")
+message(STATUS "Archived integration baseline intact; current tracker is intentionally rewritten")

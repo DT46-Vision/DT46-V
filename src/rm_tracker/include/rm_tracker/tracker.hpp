@@ -11,6 +11,7 @@
 
 // 提前声明 EKF 和 TF 工具类
 #include "ekf.hpp"
+#include "body_ekf.hpp"
 #include "rm_tf_tools.hpp"
 
 namespace dt46_vision {
@@ -68,6 +69,9 @@ enum class TrackerState { LOST, DETECTING, TRACKING, TEMP_LOST };
 
 // 渲染快照结构体
 struct RenderSnapshot {
+    BodyEkf::State body_state = BodyEkf::State::Zero();
+    BodyEkf::Covariance body_covariance = BodyEkf::Covariance::Identity();
+    bool body_ready = false;
     TrackerState tracker_state;
     Eigen::Matrix<double, 9, 1> target_state;
     double another_r;
@@ -131,7 +135,7 @@ public:
     RadiusParams radius_params;
 
     double system_delay = 0.1;
-    // 云台多出来的跟踪滞后；只加在瞄准点外推，不影响选板/正对判定（FYT controller_delay）。
+    // 额外执行延迟；选板与瞄准使用同一到达时刻。
     double controller_delay_ = 0.02;
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
@@ -169,6 +173,11 @@ public:
     void build_ballistic_lut();
 
 private:
+    BodyEkf body_ekf_;
+    int body_plate_index_ = 0;
+    bool body_matched_ = false;
+    int selected_body_plate_ = -1;
+    double detect_elapsed_s_ = 0, lost_elapsed_s_ = 0;
     ExtendedKalmanFilter ekf_;
     std::vector<RobotAppearance> robot_list_;
 

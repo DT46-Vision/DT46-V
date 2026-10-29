@@ -2,6 +2,7 @@
 #include "rm_detector/detector.hpp"
 #include "rm_detector/pnp.hpp"
 #include "rm_tracker/tracker.hpp"
+#include "rm_tracker/frame_clock.hpp"
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
@@ -55,6 +56,9 @@ struct Pipeline {
     dt46_vision::Tracker tracker;
     dt46_vision::RmTF transform;
     double previous_time = -1.0;
+    dt46_vision::FrameClock frame_clock;
+    double frame_interval_s = 0;
+    bool frame_reinitialized = true;
     int previous_color = -1;
     int detect_color = -1;
     double smooth_yaw = 0.0, smooth_pitch = 0.0;
@@ -127,6 +131,10 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
     cv::FileStorage json(".json", cv::FileStorage::WRITE | cv::FileStorage::MEMORY |
                                   cv::FileStorage::FORMAT_JSON);
     json << "spin" << int(s.spin) << "bullet_speed_m_s" << s.bullet_speed;
+    json << "frame_interval_s" << pipeline.frame_interval_s << "frame_reinitialized" << int(pipeline.frame_reinitialized);
+    json << "body_ready" << int(s.body_ready) << "body_ekf_state" << "[";
+    for(int i=0;i<11;++i)json<<s.body_state[i];json<<"]"<<"body_covariance_diagonal"<<"[";
+    for(int i=0;i<11;++i)json<<s.body_covariance(i,i);json<<"]";
     json << "yaw_tolerance_deg" << s.yaw_tolerance_deg << "pitch_tolerance_deg" << s.pitch_tolerance_deg;
     json << "gravity_m_s2" << 9.81 << "quadratic_drag_per_m" << pipeline.tracker.k_v2;
     json << "gimbal_control" << "[" << std::get<0>(s.gimbal_control)
@@ -246,10 +254,12 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         cv::cvtColor(source, pipeline.bgr, cv::COLOR_RGB2BGR);
         std::vector<dt46_vision::Armor> armors;
         observe(pipeline, *result, pipeline.bgr, rotation, armors);
-        double dt = pipeline.previous_time < 0.0 ? 0.01 : timestamp-pipeline.previous_time;
+        const auto step=pipeline.frame_clock.advance(timestamp);
+        if(!step.accepted)throw std::invalid_argument("Frame timestamps must increase");
+        if(step.reset){pipeline.tracker.tracker_state=dt46_vision::TrackerState::LOST;pipeline.smooth_ready=false;}
+        const double dt=step.dt;
+        pipeline.frame_interval_s=dt;pipeline.frame_reinitialized=step.reset;
         pipeline.previous_time = timestamp;
-        if (dt <= 0.001) dt = 0.01;
-        else dt = std::min(dt, 0.1);
         // These public caches only feed rendering; clear them so an early return cannot export an old aim.
         pipeline.tracker.target_cam_cache_.reset();
         pipeline.tracker.target_muzzle_cache_.reset();
@@ -266,16 +276,9 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         }
         result->yaw_command_deg = raw_yaw;
         result->pitch_command_deg = raw_pitch;
-        if (!pipeline.smooth_ready) {
-            pipeline.smooth_yaw = raw_yaw; pipeline.smooth_pitch = raw_pitch;
-        } else {
-            pipeline.smooth_yaw = 0.25*raw_yaw + 0.75*pipeline.smooth_yaw;
-            pipeline.smooth_pitch = 0.25*raw_pitch + 0.75*pipeline.smooth_pitch;
-        }
         result->can_fire = command[2] != 0.0;
-        pipeline.smooth_ready = result->can_fire;
-        result->yaw_error_deg = pipeline.smooth_yaw;
-        result->pitch_error_deg = pipeline.smooth_pitch;
+        result->yaw_error_deg = raw_yaw;
+        result->pitch_error_deg = raw_pitch;
         result->state = static_cast<int>(pipeline.tracker.tracker_state);
         result->tracked_id = result->state ? pipeline.tracker.tracked_id : -1;
         const auto position = pipeline.tracker.plate_position();
