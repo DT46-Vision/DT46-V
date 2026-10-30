@@ -1,0 +1,1534 @@
+[
+  {
+    "run": "scan-20261030-144254/d1.4-y-30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 9.338297158478667e-05,
+        "std": 0.0,
+        "max_abs": 9.338297158478667e-05
+      },
+      "position_error_mm": {
+        "mean": 9.437163783994695e-05,
+        "std": 0.0,
+        "max_abs": 9.437163783994695e-05
+      },
+      "normal_error_deg": {
+        "mean": 1.3845881787227385e-05,
+        "std": 0.0,
+        "max_abs": 1.3845881787227385e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 15.511228741048573,
+        "std": 0.0,
+        "max_abs": 15.511228741048573
+      },
+      "position_error_mm": {
+        "mean": 15.637284493185854,
+        "std": 0.0,
+        "max_abs": 15.637284493185854
+      },
+      "normal_error_deg": {
+        "mean": 0.25502405641968806,
+        "std": 0.0,
+        "max_abs": 0.25502405641968806
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.09344841024833059,
+        "std": 4.148955294870869,
+        "max_abs": 12.802621598811271
+      },
+      "position_error_mm": {
+        "mean": 3.2887610389942448,
+        "std": 2.5379032944942725,
+        "max_abs": 12.803695631604034
+      },
+      "normal_error_deg": {
+        "mean": 0.2752904831891269,
+        "std": 0.21178619708970936,
+        "max_abs": 1.4630010976797299
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y-60",
+    "side": "front",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.0004301403366982212,
+        "std": 0.0,
+        "max_abs": 0.0004301403366982212
+      },
+      "position_error_mm": {
+        "mean": 0.0004301569963471659,
+        "std": 0.0,
+        "max_abs": 0.0004301569963471659
+      },
+      "normal_error_deg": {
+        "mean": 2.8851991601561074e-05,
+        "std": 0.0,
+        "max_abs": 2.8851991601561074e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 15.566319478500631,
+        "std": 0.0,
+        "max_abs": 15.566319478500631
+      },
+      "position_error_mm": {
+        "mean": 15.673963008988506,
+        "std": 0.0,
+        "max_abs": 15.673963008988506
+      },
+      "normal_error_deg": {
+        "mean": 0.54252045725724,
+        "std": 0.0,
+        "max_abs": 0.54252045725724
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.054279955630819346,
+        "std": 4.132067489063282,
+        "max_abs": 14.387739793755742
+      },
+      "position_error_mm": {
+        "mean": 3.343167296773075,
+        "std": 2.4356685598445806,
+        "max_abs": 14.390149833542806
+      },
+      "normal_error_deg": {
+        "mean": 0.2815109498875383,
+        "std": 0.2096253864295592,
+        "max_abs": 1.2183789702225825
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y0",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.00027001994822867877,
+        "std": 0.0,
+        "max_abs": 0.00027001994822867877
+      },
+      "position_error_mm": {
+        "mean": 0.00027005593626307716,
+        "std": 0.0,
+        "max_abs": 0.00027005593626307716
+      },
+      "normal_error_deg": {
+        "mean": 3.925502304313921e-05,
+        "std": 0.0,
+        "max_abs": 3.925502304313921e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 38.24896012174361,
+        "std": 0.0,
+        "max_abs": 38.24896012174361
+      },
+      "position_error_mm": {
+        "mean": 38.249423951587374,
+        "std": 0.0,
+        "max_abs": 38.249423951587374
+      },
+      "normal_error_deg": {
+        "mean": 0.10514101115379859,
+        "std": 0.0,
+        "max_abs": 0.10514101115379859
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.11088460118566831,
+        "std": 1.6249415082958605,
+        "max_abs": 6.261709950185582
+      },
+      "position_error_mm": {
+        "mean": 1.328185545140731,
+        "std": 0.9581256485025312,
+        "max_abs": 6.262353484048517
+      },
+      "normal_error_deg": {
+        "mean": 0.3134972872194703,
+        "std": 0.24910537997505897,
+        "max_abs": 1.5526748083090205
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.00013047324610478958,
+        "std": 0.0,
+        "max_abs": 0.00013047324610478958
+      },
+      "position_error_mm": {
+        "mean": 0.00013249120237382523,
+        "std": 0.0,
+        "max_abs": 0.00013249120237382523
+      },
+      "normal_error_deg": {
+        "mean": 6.830189170012755e-06,
+        "std": 0.0,
+        "max_abs": 6.830189170012755e-06
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 23.3538983776144,
+        "std": 0.0,
+        "max_abs": 23.3538983776144
+      },
+      "position_error_mm": {
+        "mean": 23.419720499420574,
+        "std": 0.0,
+        "max_abs": 23.419720499420574
+      },
+      "normal_error_deg": {
+        "mean": 0.0021039653982849182,
+        "std": 0.0,
+        "max_abs": 0.0021039653982849182
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.03894095979261039,
+        "std": 4.15191242921553,
+        "max_abs": 12.780216826531717
+      },
+      "position_error_mm": {
+        "mean": 3.304814704791669,
+        "std": 2.520049303812438,
+        "max_abs": 12.78044046708179
+      },
+      "normal_error_deg": {
+        "mean": 0.27616821082399795,
+        "std": 0.21493066500371158,
+        "max_abs": 1.054044727100914
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y60",
+    "side": "rear",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 3.7983393731282257e-05,
+        "std": 0.0,
+        "max_abs": 3.7983393731282257e-05
+      },
+      "position_error_mm": {
+        "mean": 3.824533061125366e-05,
+        "std": 0.0,
+        "max_abs": 3.824533061125366e-05
+      },
+      "normal_error_deg": {
+        "mean": 5.263014220319209e-06,
+        "std": 0.0,
+        "max_abs": 5.263014220319209e-06
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 18.842601932703687,
+        "std": 0.0,
+        "max_abs": 18.842601932703687
+      },
+      "position_error_mm": {
+        "mean": 18.95888385902486,
+        "std": 0.0,
+        "max_abs": 18.95888385902486
+      },
+      "normal_error_deg": {
+        "mean": 0.30189289650512036,
+        "std": 0.0,
+        "max_abs": 0.30189289650512036
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.15677322797392135,
+        "std": 4.111109703149463,
+        "max_abs": 13.642635387620226
+      },
+      "position_error_mm": {
+        "mean": 3.2857488757484794,
+        "std": 2.482280822099226,
+        "max_abs": 13.643279326437078
+      },
+      "normal_error_deg": {
+        "mean": 0.26493831809591906,
+        "std": 0.20684023638225124,
+        "max_abs": 1.2206049867524065
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d3-y-30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.0017070279736281747,
+        "std": 0.0,
+        "max_abs": 0.0017070279736281747
+      },
+      "position_error_mm": {
+        "mean": 0.0017071286078753094,
+        "std": 0.0,
+        "max_abs": 0.0017071286078753094
+      },
+      "normal_error_deg": {
+        "mean": 7.159491473062831e-05,
+        "std": 0.0,
+        "max_abs": 7.159491473062831e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -38.138547241732404,
+        "std": 0.0,
+        "max_abs": 38.138547241732404
+      },
+      "position_error_mm": {
+        "mean": 38.18527973124779,
+        "std": 0.0,
+        "max_abs": 38.18527973124779
+      },
+      "normal_error_deg": {
+        "mean": 3.2718027752281014,
+        "std": 0.0,
+        "max_abs": 3.2718027752281014
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.41939162179708667,
+        "std": 37.83049391230888,
+        "max_abs": 121.08205575642405
+      },
+      "position_error_mm": {
+        "mean": 30.391173921538275,
+        "std": 22.536593504791792,
+        "max_abs": 121.0822292503612
+      },
+      "normal_error_deg": {
+        "mean": 1.1997663445403126,
+        "std": 0.9126870532290727,
+        "max_abs": 4.699457867451228
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d3-y-60",
+    "side": "front",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.0017482644982437202,
+        "std": 0.0,
+        "max_abs": 0.0017482644982437202
+      },
+      "position_error_mm": {
+        "mean": 0.0017483556687359078,
+        "std": 0.0,
+        "max_abs": 0.0017483556687359078
+      },
+      "normal_error_deg": {
+        "mean": 0.00013363125905811371,
+        "std": 0.0,
+        "max_abs": 0.00013363125905811371
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 104.52974575708316,
+        "std": 0.0,
+        "max_abs": 104.52974575708316
+      },
+      "position_error_mm": {
+        "mean": 104.54480159225287,
+        "std": 0.0,
+        "max_abs": 104.54480159225287
+      },
+      "normal_error_deg": {
+        "mean": 1.6981466967568695,
+        "std": 0.0,
+        "max_abs": 1.6981466967568695
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -2.153791694169006,
+        "std": 37.31892128499193,
+        "max_abs": 117.90210065488678
+      },
+      "position_error_mm": {
+        "mean": 30.208805418882218,
+        "std": 22.021657851380468,
+        "max_abs": 117.90210964768762
+      },
+      "normal_error_deg": {
+        "mean": 1.1951871092821422,
+        "std": 0.8779681625407727,
+        "max_abs": 5.48477681161618
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d3-y0",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -5.395022857110848e-05,
+        "std": 0.0,
+        "max_abs": 5.395022857110848e-05
+      },
+      "position_error_mm": {
+        "mean": 5.832801974921232e-05,
+        "std": 0.0,
+        "max_abs": 5.832801974921232e-05
+      },
+      "normal_error_deg": {
+        "mean": 0.00016341905598153878,
+        "std": 0.0,
+        "max_abs": 0.00016341905598153878
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 76.68591316811856,
+        "std": 0.0,
+        "max_abs": 76.68591316811856
+      },
+      "position_error_mm": {
+        "mean": 76.69334719608258,
+        "std": 0.0,
+        "max_abs": 76.69334719608258
+      },
+      "normal_error_deg": {
+        "mean": 0.9563342435110668,
+        "std": 0.0,
+        "max_abs": 0.9563342435110668
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -1.69612108024436,
+        "std": 11.014636242053259,
+        "max_abs": 33.82739512767629
+      },
+      "position_error_mm": {
+        "mean": 9.046445639444364,
+        "std": 6.522839531657823,
+        "max_abs": 33.827740712082125
+      },
+      "normal_error_deg": {
+        "mean": 1.4308240710652211,
+        "std": 1.033105918986663,
+        "max_abs": 5.288735588471541
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d3-y30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.0012638089917303994,
+        "std": 0.0,
+        "max_abs": 0.0012638089917303994
+      },
+      "position_error_mm": {
+        "mean": 0.0012649668026328777,
+        "std": 0.0,
+        "max_abs": 0.0012649668026328777
+      },
+      "normal_error_deg": {
+        "mean": 2.8213311528866332e-05,
+        "std": 0.0,
+        "max_abs": 2.8213311528866332e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 57.60942616697127,
+        "std": 0.0,
+        "max_abs": 57.60942616697127
+      },
+      "position_error_mm": {
+        "mean": 57.63546946169133,
+        "std": 0.0,
+        "max_abs": 57.63546946169133
+      },
+      "normal_error_deg": {
+        "mean": 0.417865695885395,
+        "std": 0.0,
+        "max_abs": 0.417865695885395
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.4762236888398865,
+        "std": 38.2077172242036,
+        "max_abs": 116.47363949847865
+      },
+      "position_error_mm": {
+        "mean": 30.486741446979117,
+        "std": 23.039359318244188,
+        "max_abs": 116.47482485038212
+      },
+      "normal_error_deg": {
+        "mean": 1.186747243819358,
+        "std": 0.8893516518264999,
+        "max_abs": 4.934022647221343
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d3-y60",
+    "side": "rear",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.002390405370693791,
+        "std": 0.0,
+        "max_abs": 0.002390405370693791
+      },
+      "position_error_mm": {
+        "mean": 0.0023905650972630642,
+        "std": 0.0,
+        "max_abs": 0.0023905650972630642
+      },
+      "normal_error_deg": {
+        "mean": 0.00011557837557145748,
+        "std": 0.0,
+        "max_abs": 0.00011557837557145748
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -17.977677525980646,
+        "std": 0.0,
+        "max_abs": 17.977677525980646
+      },
+      "position_error_mm": {
+        "mean": 18.08438847137954,
+        "std": 0.0,
+        "max_abs": 18.08438847137954
+      },
+      "normal_error_deg": {
+        "mean": 2.5762171764725563,
+        "std": 0.0,
+        "max_abs": 2.5762171764725563
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -1.4142831492205803,
+        "std": 38.00527270130148,
+        "max_abs": 145.77305419222444
+      },
+      "position_error_mm": {
+        "mean": 30.39879072987209,
+        "std": 22.858254074708938,
+        "max_abs": 145.7731144068347
+      },
+      "normal_error_deg": {
+        "mean": 1.212587514811741,
+        "std": 0.8953576616027304,
+        "max_abs": 4.93422955044484
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y-30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.00612254429081971,
+        "std": 0.0,
+        "max_abs": 0.00612254429081971
+      },
+      "position_error_mm": {
+        "mean": 0.006122844776708457,
+        "std": 0.0,
+        "max_abs": 0.006122844776708457
+      },
+      "normal_error_deg": {
+        "mean": 0.00017013461735946377,
+        "std": 0.0,
+        "max_abs": 0.00017013461735946377
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 465.1725210892707,
+        "std": 0.0,
+        "max_abs": 465.1725210892707
+      },
+      "position_error_mm": {
+        "mean": 465.1749701487062,
+        "std": 0.0,
+        "max_abs": 465.1749701487062
+      },
+      "normal_error_deg": {
+        "mean": 12.694193271759204,
+        "std": 0.0,
+        "max_abs": 12.694193271759204
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -2.8624539840637744,
+        "std": 131.66326456594282,
+        "max_abs": 391.02750774327626
+      },
+      "position_error_mm": {
+        "mean": 106.02120187486895,
+        "std": 78.12486619535653,
+        "max_abs": 391.02761091118776
+      },
+      "normal_error_deg": {
+        "mean": 2.5057413536332342,
+        "std": 1.903007550738823,
+        "max_abs": 9.641740414260276
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y-60",
+    "side": "front",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.0002936394669394922,
+        "std": 0.0,
+        "max_abs": 0.0002936394669394922
+      },
+      "position_error_mm": {
+        "mean": 0.000306117993933686,
+        "std": 0.0,
+        "max_abs": 0.000306117993933686
+      },
+      "normal_error_deg": {
+        "mean": 3.8788018280980796e-05,
+        "std": 0.0,
+        "max_abs": 3.8788018280980796e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 505.5830838384945,
+        "std": 0.0,
+        "max_abs": 505.5830838384945
+      },
+      "position_error_mm": {
+        "mean": 505.5861283358666,
+        "std": 0.0,
+        "max_abs": 505.5861283358666
+      },
+      "normal_error_deg": {
+        "mean": 8.783818592451102,
+        "std": 0.0,
+        "max_abs": 8.783818592451102
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -7.294300771810576,
+        "std": 130.1439239935506,
+        "max_abs": 407.39443059723226
+      },
+      "position_error_mm": {
+        "mean": 104.37983552986823,
+        "std": 78.07732053817678,
+        "max_abs": 407.39471050040163
+      },
+      "normal_error_deg": {
+        "mean": 2.4645914145480083,
+        "std": 1.8819072347969878,
+        "max_abs": 12.932260796908084
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y0",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.001032763886674229,
+        "std": 0.0,
+        "max_abs": 0.001032763886674229
+      },
+      "position_error_mm": {
+        "mean": 0.0010332846487633635,
+        "std": 0.0,
+        "max_abs": 0.0010332846487633635
+      },
+      "normal_error_deg": {
+        "mean": 0.0004386834887950083,
+        "std": 0.0,
+        "max_abs": 0.0004386834887950083
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 80.597072379302,
+        "std": 0.0,
+        "max_abs": 80.597072379302
+      },
+      "position_error_mm": {
+        "mean": 80.60175952849055,
+        "std": 0.0,
+        "max_abs": 80.60175952849055
+      },
+      "normal_error_deg": {
+        "mean": 0.539888665879347,
+        "std": 0.0,
+        "max_abs": 0.539888665879347
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -9.99005400523759,
+        "std": 36.91007104999075,
+        "max_abs": 141.46062151582902
+      },
+      "position_error_mm": {
+        "mean": 30.313065678562438,
+        "std": 23.32094547267279,
+        "max_abs": 141.4621115856698
+      },
+      "normal_error_deg": {
+        "mean": 2.9566181947665164,
+        "std": 2.275171464287842,
+        "max_abs": 11.971944342793273
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y30",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.002546560534363908,
+        "std": 0.0,
+        "max_abs": 0.002546560534363908
+      },
+      "position_error_mm": {
+        "mean": 0.002546677591050612,
+        "std": 0.0,
+        "max_abs": 0.002546677591050612
+      },
+      "normal_error_deg": {
+        "mean": 9.777851769365743e-05,
+        "std": 0.0,
+        "max_abs": 9.777851769365743e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -49.94303420432408,
+        "std": 0.0,
+        "max_abs": 49.94303420432408
+      },
+      "position_error_mm": {
+        "mean": 49.96938237889954,
+        "std": 0.0,
+        "max_abs": 49.96938237889954
+      },
+      "normal_error_deg": {
+        "mean": 4.069997684280134,
+        "std": 0.0,
+        "max_abs": 4.069997684280134
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -9.361009306021161,
+        "std": 125.00359307229522,
+        "max_abs": 505.2372658006745
+      },
+      "position_error_mm": {
+        "mean": 99.4870367721644,
+        "std": 76.26566242083564,
+        "max_abs": 505.2376101643574
+      },
+      "normal_error_deg": {
+        "mean": 2.3494227280916378,
+        "std": 1.8798883442362402,
+        "max_abs": 10.299801939541414
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y60",
+    "side": "rear",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.0063523689150058885,
+        "std": 0.0,
+        "max_abs": 0.0063523689150058885
+      },
+      "position_error_mm": {
+        "mean": 0.006352668025348972,
+        "std": 0.0,
+        "max_abs": 0.006352668025348972
+      },
+      "normal_error_deg": {
+        "mean": 0.00012479998126538368,
+        "std": 0.0,
+        "max_abs": 0.00012479998126538368
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -68.00267597016958,
+        "std": 0.0,
+        "max_abs": 68.00267597016958
+      },
+      "position_error_mm": {
+        "mean": 68.02363581554677,
+        "std": 0.0,
+        "max_abs": 68.02363581554677
+      },
+      "normal_error_deg": {
+        "mean": 3.8344918349416566,
+        "std": 0.0,
+        "max_abs": 3.8344918349416566
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -1.0800345303344412,
+        "std": 129.22082709689593,
+        "max_abs": 488.65861831668315
+      },
+      "position_error_mm": {
+        "mean": 102.1817243285307,
+        "std": 79.11185810530445,
+        "max_abs": 488.65881462638924
+      },
+      "normal_error_deg": {
+        "mean": 2.345581205460631,
+        "std": 1.8894672539004533,
+        "max_abs": 13.420252671693792
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d7-y0",
+    "side": "right",
+    "source": "probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.0074120369130412835,
+        "std": 0.0,
+        "max_abs": 0.0074120369130412835
+      },
+      "position_error_mm": {
+        "mean": 0.007412356967474044,
+        "std": 0.0,
+        "max_abs": 0.007412356967474044
+      },
+      "normal_error_deg": {
+        "mean": 1.1229639039294084e-05,
+        "std": 0.0,
+        "max_abs": 1.1229639039294084e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 216.49884999890145,
+        "std": 0.0,
+        "max_abs": 216.49884999890145
+      },
+      "position_error_mm": {
+        "mean": 216.50793284898725,
+        "std": 0.0,
+        "max_abs": 216.50793284898725
+      },
+      "normal_error_deg": {
+        "mean": 3.7864199379115964,
+        "std": 0.0,
+        "max_abs": 3.7864199379115964
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -30.58940446067537,
+        "std": 80.7487787304911,
+        "max_abs": 525.1324097808774
+      },
+      "position_error_mm": {
+        "mean": 66.10287333335911,
+        "std": 55.56668057855077,
+        "max_abs": 525.1332814620148
+      },
+      "normal_error_deg": {
+        "mean": 4.334305908434432,
+        "std": 3.3121841398659906,
+        "max_abs": 20.423367545892535
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y-30",
+    "side": "right",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 9.338297158478667e-05,
+        "std": 0.0,
+        "max_abs": 9.338297158478667e-05
+      },
+      "position_error_mm": {
+        "mean": 9.437163783994695e-05,
+        "std": 0.0,
+        "max_abs": 9.437163783994695e-05
+      },
+      "normal_error_deg": {
+        "mean": 1.3845881787227385e-05,
+        "std": 0.0,
+        "max_abs": 1.3845881787227385e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 15.511228741048573,
+        "std": 0.0,
+        "max_abs": 15.511228741048573
+      },
+      "position_error_mm": {
+        "mean": 15.637284493185854,
+        "std": 0.0,
+        "max_abs": 15.637284493185854
+      },
+      "normal_error_deg": {
+        "mean": 0.25502405641968806,
+        "std": 0.0,
+        "max_abs": 0.25502405641968806
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.09344841024833059,
+        "std": 4.148955294870869,
+        "max_abs": 12.802621598811271
+      },
+      "position_error_mm": {
+        "mean": 3.2887610389942448,
+        "std": 2.5379032944942725,
+        "max_abs": 12.803695631604034
+      },
+      "normal_error_deg": {
+        "mean": 0.2752904831891269,
+        "std": 0.21178619708970936,
+        "max_abs": 1.4630010976797299
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 1,
+      "depth_error_mm": null,
+      "position_error_mm": null,
+      "normal_error_deg": null
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 18.06065375732272,
+        "std": 0.0,
+        "max_abs": 18.06065375732272
+      },
+      "position_error_mm": {
+        "mean": 18.169929057762374,
+        "std": 0.0,
+        "max_abs": 18.169929057762374
+      },
+      "normal_error_deg": {
+        "mean": 0.24550106575095665,
+        "std": 0.0,
+        "max_abs": 0.24550106575095665
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y-60",
+    "side": "front",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.0004301403366982212,
+        "std": 0.0,
+        "max_abs": 0.0004301403366982212
+      },
+      "position_error_mm": {
+        "mean": 0.0004301569963471659,
+        "std": 0.0,
+        "max_abs": 0.0004301569963471659
+      },
+      "normal_error_deg": {
+        "mean": 2.8851991601561074e-05,
+        "std": 0.0,
+        "max_abs": 2.8851991601561074e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 15.566319478500631,
+        "std": 0.0,
+        "max_abs": 15.566319478500631
+      },
+      "position_error_mm": {
+        "mean": 15.673963008988506,
+        "std": 0.0,
+        "max_abs": 15.673963008988506
+      },
+      "normal_error_deg": {
+        "mean": 0.54252045725724,
+        "std": 0.0,
+        "max_abs": 0.54252045725724
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.054279955630819346,
+        "std": 4.132067489063282,
+        "max_abs": 14.387739793755742
+      },
+      "position_error_mm": {
+        "mean": 3.343167296773075,
+        "std": 2.4356685598445806,
+        "max_abs": 14.390149833542806
+      },
+      "normal_error_deg": {
+        "mean": 0.2815109498875383,
+        "std": 0.2096253864295592,
+        "max_abs": 1.2183789702225825
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 1,
+      "depth_error_mm": null,
+      "position_error_mm": null,
+      "normal_error_deg": null
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 17.819638754775095,
+        "std": 0.0,
+        "max_abs": 17.819638754775095
+      },
+      "position_error_mm": {
+        "mean": 17.93073367404666,
+        "std": 0.0,
+        "max_abs": 17.93073367404666
+      },
+      "normal_error_deg": {
+        "mean": 0.25062296007209944,
+        "std": 0.0,
+        "max_abs": 0.25062296007209944
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y0",
+    "side": "right",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.00027001994822867877,
+        "std": 0.0,
+        "max_abs": 0.00027001994822867877
+      },
+      "position_error_mm": {
+        "mean": 0.00027005593626307716,
+        "std": 0.0,
+        "max_abs": 0.00027005593626307716
+      },
+      "normal_error_deg": {
+        "mean": 3.925502304313921e-05,
+        "std": 0.0,
+        "max_abs": 3.925502304313921e-05
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 38.24896012174361,
+        "std": 0.0,
+        "max_abs": 38.24896012174361
+      },
+      "position_error_mm": {
+        "mean": 38.249423951587374,
+        "std": 0.0,
+        "max_abs": 38.249423951587374
+      },
+      "normal_error_deg": {
+        "mean": 0.10514101115379859,
+        "std": 0.0,
+        "max_abs": 0.10514101115379859
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.11088460118566831,
+        "std": 1.6249415082958605,
+        "max_abs": 6.261709950185582
+      },
+      "position_error_mm": {
+        "mean": 1.328185545140731,
+        "std": 0.9581256485025312,
+        "max_abs": 6.262353484048517
+      },
+      "normal_error_deg": {
+        "mean": 0.3134972872194703,
+        "std": 0.24910537997505897,
+        "max_abs": 1.5526748083090205
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 1,
+      "depth_error_mm": null,
+      "position_error_mm": null,
+      "normal_error_deg": null
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 35.18054967499613,
+        "std": 0.0,
+        "max_abs": 35.18054967499613
+      },
+      "position_error_mm": {
+        "mean": 35.1805570890077,
+        "std": 0.0,
+        "max_abs": 35.1805570890077
+      },
+      "normal_error_deg": {
+        "mean": 0.04733113630339763,
+        "std": 0.0,
+        "max_abs": 0.04733113630339763
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y30",
+    "side": "right",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.00013047324610478958,
+        "std": 0.0,
+        "max_abs": 0.00013047324610478958
+      },
+      "position_error_mm": {
+        "mean": 0.00013249120237382523,
+        "std": 0.0,
+        "max_abs": 0.00013249120237382523
+      },
+      "normal_error_deg": {
+        "mean": 6.830189170012755e-06,
+        "std": 0.0,
+        "max_abs": 6.830189170012755e-06
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 23.3538983776144,
+        "std": 0.0,
+        "max_abs": 23.3538983776144
+      },
+      "position_error_mm": {
+        "mean": 23.419720499420574,
+        "std": 0.0,
+        "max_abs": 23.419720499420574
+      },
+      "normal_error_deg": {
+        "mean": 0.0021039653982849182,
+        "std": 0.0,
+        "max_abs": 0.0021039653982849182
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.03894095979261039,
+        "std": 4.15191242921553,
+        "max_abs": 12.780216826531717
+      },
+      "position_error_mm": {
+        "mean": 3.304814704791669,
+        "std": 2.520049303812438,
+        "max_abs": 12.78044046708179
+      },
+      "normal_error_deg": {
+        "mean": 0.27616821082399795,
+        "std": 0.21493066500371158,
+        "max_abs": 1.054044727100914
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 1,
+      "depth_error_mm": null,
+      "position_error_mm": null,
+      "normal_error_deg": null
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 17.997275305053066,
+        "std": 0.0,
+        "max_abs": 17.997275305053066
+      },
+      "position_error_mm": {
+        "mean": 18.106029730572633,
+        "std": 0.0,
+        "max_abs": 18.106029730572633
+      },
+      "normal_error_deg": {
+        "mean": 0.2682945257888908,
+        "std": 0.0,
+        "max_abs": 0.2682945257888908
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d1.4-y60",
+    "side": "rear",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 3.7983393731282257e-05,
+        "std": 0.0,
+        "max_abs": 3.7983393731282257e-05
+      },
+      "position_error_mm": {
+        "mean": 3.824533061125366e-05,
+        "std": 0.0,
+        "max_abs": 3.824533061125366e-05
+      },
+      "normal_error_deg": {
+        "mean": 5.263014220319209e-06,
+        "std": 0.0,
+        "max_abs": 5.263014220319209e-06
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 18.842601932703687,
+        "std": 0.0,
+        "max_abs": 18.842601932703687
+      },
+      "position_error_mm": {
+        "mean": 18.95888385902486,
+        "std": 0.0,
+        "max_abs": 18.95888385902486
+      },
+      "normal_error_deg": {
+        "mean": 0.30189289650512036,
+        "std": 0.0,
+        "max_abs": 0.30189289650512036
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 0.15677322797392135,
+        "std": 4.111109703149463,
+        "max_abs": 13.642635387620226
+      },
+      "position_error_mm": {
+        "mean": 3.2857488757484794,
+        "std": 2.482280822099226,
+        "max_abs": 13.643279326437078
+      },
+      "normal_error_deg": {
+        "mean": 0.26493831809591906,
+        "std": 0.20684023638225124,
+        "max_abs": 1.2206049867524065
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 1,
+      "depth_error_mm": null,
+      "position_error_mm": null,
+      "normal_error_deg": null
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 17.881999487557458,
+        "std": 0.0,
+        "max_abs": 17.881999487557458
+      },
+      "position_error_mm": {
+        "mean": 17.99448293716618,
+        "std": 0.0,
+        "max_abs": 17.99448293716618
+      },
+      "normal_error_deg": {
+        "mean": 0.2343344682793604,
+        "std": 0.0,
+        "max_abs": 0.2343344682793604
+      }
+    }
+  },
+  {
+    "run": "scan-20261030-144254/d5-y0",
+    "side": "right",
+    "source": "mesh-probe-results.jsonl",
+    "ideal": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -0.001032763886674229,
+        "std": 0.0,
+        "max_abs": 0.001032763886674229
+      },
+      "position_error_mm": {
+        "mean": 0.0010332846487633635,
+        "std": 0.0,
+        "max_abs": 0.0010332846487633635
+      },
+      "normal_error_deg": {
+        "mean": 0.0004386834887950083,
+        "std": 0.0,
+        "max_abs": 0.0004386834887950083
+      }
+    },
+    "measured": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 80.597072379302,
+        "std": 0.0,
+        "max_abs": 80.597072379302
+      },
+      "position_error_mm": {
+        "mean": 80.60175952849055,
+        "std": 0.0,
+        "max_abs": 80.60175952849055
+      },
+      "normal_error_deg": {
+        "mean": 0.539888665879347,
+        "std": 0.0,
+        "max_abs": 0.539888665879347
+      }
+    },
+    "noise_0.25px": {
+      "trials": 1000,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": -9.113389951259927,
+        "std": 35.69619145448638,
+        "max_abs": 128.7726285042729
+      },
+      "position_error_mm": {
+        "mean": 29.45276521339109,
+        "std": 22.145075590573008,
+        "max_abs": 128.77771136329974
+      },
+      "normal_error_deg": {
+        "mean": 2.8549913679462025,
+        "std": 2.169367871892417,
+        "max_abs": 11.094434325112413
+      }
+    },
+    "uncovered_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 262.81099556363466,
+        "std": 0.0,
+        "max_abs": 262.81099556363466
+      },
+      "position_error_mm": {
+        "mean": 262.815125156359,
+        "std": 0.0,
+        "max_abs": 262.815125156359
+      },
+      "normal_error_deg": {
+        "mean": 0.04504110858342211,
+        "std": 0.0,
+        "max_abs": 0.04504110858342211
+      }
+    },
+    "visible_mesh": {
+      "trials": 1,
+      "rejected": 0,
+      "depth_error_mm": {
+        "mean": 147.8312043270856,
+        "std": 0.0,
+        "max_abs": 147.8312043270856
+      },
+      "position_error_mm": {
+        "mean": 147.83337153639152,
+        "std": 0.0,
+        "max_abs": 147.83337153639152
+      },
+      "normal_error_deg": {
+        "mean": 0.006136023443103299,
+        "std": 0.0,
+        "max_abs": 0.006136023443103299
+      }
+    }
+  }
+]
