@@ -1,0 +1,306 @@
+{
+  "count": 1122,
+  "loss": 0.843447208404541,
+  "loss_terms": {
+    "armor": 0.033245526254177094,
+    "sticker": 0.5166458487510681,
+    "team": 0.03891727328300476,
+    "position": 0.026837650686502457,
+    "rotation": 0.06022515892982483
+  },
+  "presence": {
+    "threshold": 0.5,
+    "tp": 883,
+    "fp": 7,
+    "fn": 3,
+    "tn": 229,
+    "precision": 0.9921348314606742,
+    "recall": 0.9966139954853274
+  },
+  "pose_all_supervised": {
+    "count": 886,
+    "invalid_rotation_count": 0,
+    "depth_bias_m": 0.02218102663755417,
+    "depth_std_m": 0.7583527565002441,
+    "depth_absolute_p50_m": 0.4289434850215912,
+    "depth_absolute_p95_m": 1.5808168649673462,
+    "translation_rmse_m": 0.7721987962722778,
+    "lateral_rmse_m": 0.14387498795986176,
+    "rotation_mean_deg": 31.10548210144043,
+    "rotation_p95_deg": 57.46691131591797
+  },
+  "sticker": {
+    "count": 886,
+    "accuracy": 0.8623024821281433
+  },
+  "team": {
+    "count": 884,
+    "accuracy": 0.9898189902305603
+  },
+  "depth_bins_m": {
+    "[0,2)": {
+      "count": 376,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.2820259630680084,
+      "depth_std_m": 0.38317596912384033,
+      "depth_absolute_p50_m": 0.29697954654693604,
+      "depth_absolute_p95_m": 0.973389744758606,
+      "translation_rmse_m": 0.47881579399108887,
+      "lateral_rmse_m": 0.05387125536799431,
+      "rotation_mean_deg": 32.112998962402344,
+      "rotation_p95_deg": 58.76839065551758
+    },
+    "[2,4)": {
+      "count": 244,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.14919118583202362,
+      "depth_std_m": 0.6877652406692505,
+      "depth_absolute_p50_m": 0.46505749225616455,
+      "depth_absolute_p95_m": 1.3659131526947021,
+      "translation_rmse_m": 0.7133501768112183,
+      "lateral_rmse_m": 0.11657386273145676,
+      "rotation_mean_deg": 28.38249397277832,
+      "rotation_p95_deg": 54.76288604736328
+    },
+    "[4,8)": {
+      "count": 266,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": -0.4616241455078125,
+      "depth_std_m": 0.9642664790153503,
+      "depth_absolute_p50_m": 0.76249098777771,
+      "depth_absolute_p95_m": 1.9181056022644043,
+      "translation_rmse_m": 1.0932918787002563,
+      "lateral_rmse_m": 0.22886767983436584,
+      "rotation_mean_deg": 32.17909240722656,
+      "rotation_p95_deg": 57.366981506347656
+    },
+    "[8,inf)": {
+      "count": 0
+    }
+  },
+  "incidence_bins_deg": {
+    "[0,20)": {
+      "count": 310,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.00608754763379693,
+      "depth_std_m": 0.740694522857666,
+      "depth_absolute_p50_m": 0.4203530550003052,
+      "depth_absolute_p95_m": 1.57779061794281,
+      "translation_rmse_m": 0.7530739903450012,
+      "lateral_rmse_m": 0.13584963977336884,
+      "rotation_mean_deg": 14.316164016723633,
+      "rotation_p95_deg": 26.18499755859375
+    },
+    "[20,40)": {
+      "count": 294,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.015401750802993774,
+      "depth_std_m": 0.7537102103233337,
+      "depth_absolute_p50_m": 0.3964524269104004,
+      "depth_absolute_p95_m": 1.58828866481781,
+      "translation_rmse_m": 0.7651655077934265,
+      "lateral_rmse_m": 0.13100355863571167,
+      "rotation_mean_deg": 31.364032745361328,
+      "rotation_p95_deg": 44.20722579956055
+    },
+    "[40,60)": {
+      "count": 282,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.04694020748138428,
+      "depth_std_m": 0.7813901901245117,
+      "depth_absolute_p50_m": 0.4660242199897766,
+      "depth_absolute_p95_m": 1.572904109954834,
+      "translation_rmse_m": 0.7997689843177795,
+      "lateral_rmse_m": 0.16387933492660522,
+      "rotation_mean_deg": 49.292266845703125,
+      "rotation_p95_deg": 64.63011169433594
+    },
+    "[60,181)": {
+      "count": 0
+    }
+  },
+  "checkpoint_epoch": 18,
+  "backend": "ONNX Runtime CPU",
+  "onnx_sha256": "8b14ceb80577235d12cfb2809205064d346e6d887580a8fa027dc262b42592b1",
+  "manifest_sha256": "4ef4a11b55ff6758f16cc35ba4aa3a6d8027921b1567e3a64c7efa916dba4999",
+  "split": "test",
+  "cpu_export_parity": {
+    "crops": 1122,
+    "batch_size": 64,
+    "atol": 0.0001,
+    "rtol": 0.0001,
+    "maximum_absolute_error": {
+      "armor_logit": 2.8133392333984375e-05,
+      "sticker_logits": 3.361701965332031e-05,
+      "team_logits": 2.0265579223632812e-05,
+      "position_camera_m": 1.239776611328125e-05,
+      "rotation_6d": 1.4901161193847656e-06
+    },
+    "passed": true
+  },
+  "output_origin": {
+    "network": [
+      "armor_logit",
+      "sticker_logits",
+      "team_logits",
+      "position_camera_m",
+      "rotation_6d"
+    ],
+    "derived": [
+      "depth_m = position_camera_m[2]",
+      "range_m = norm(position_camera_m)",
+      "bearing_yaw/pitch = angles of position_camera_m",
+      "incidence = angle between board normal and direction to camera"
+    ],
+    "independent_depth_range_angle_heads": false
+  },
+  "classification_counts": {
+    "presence": {
+      "correct": 1112,
+      "scored": 1122
+    },
+    "sticker": {
+      "correct": 764,
+      "scored": 886
+    },
+    "team": {
+      "correct": 875,
+      "scored": 884
+    }
+  },
+  "joint_recognition": {
+    "correct": 758,
+    "scored": 884,
+    "fields": [
+      "presence",
+      "sticker",
+      "team"
+    ]
+  },
+  "per_sticker": {
+    "base_small": {
+      "count": 130,
+      "correct": 122
+    },
+    "engineer_2": {
+      "count": 160,
+      "correct": 131
+    },
+    "infantry_3": {
+      "count": 132,
+      "correct": 114
+    },
+    "infantry_4": {
+      "count": 146,
+      "correct": 121
+    },
+    "outpost": {
+      "count": 172,
+      "correct": 140
+    },
+    "sentry": {
+      "count": 146,
+      "correct": 136
+    }
+  },
+  "sticker_confusion": {
+    "base_small": {
+      "base_small": 122,
+      "engineer_2": 0,
+      "infantry_3": 0,
+      "infantry_4": 3,
+      "outpost": 1,
+      "sentry": 4
+    },
+    "engineer_2": {
+      "base_small": 2,
+      "engineer_2": 131,
+      "infantry_3": 9,
+      "infantry_4": 5,
+      "outpost": 9,
+      "sentry": 4
+    },
+    "infantry_3": {
+      "base_small": 0,
+      "engineer_2": 10,
+      "infantry_3": 114,
+      "infantry_4": 1,
+      "outpost": 6,
+      "sentry": 1
+    },
+    "infantry_4": {
+      "base_small": 3,
+      "engineer_2": 6,
+      "infantry_3": 9,
+      "infantry_4": 121,
+      "outpost": 6,
+      "sentry": 1
+    },
+    "outpost": {
+      "base_small": 7,
+      "engineer_2": 0,
+      "infantry_3": 5,
+      "infantry_4": 13,
+      "outpost": 140,
+      "sentry": 7
+    },
+    "sentry": {
+      "base_small": 5,
+      "engineer_2": 3,
+      "infantry_3": 0,
+      "infantry_4": 0,
+      "outpost": 2,
+      "sentry": 136
+    }
+  },
+  "derived_errors": {
+    "depth_m": {
+      "count": 886,
+      "mean_signed": 0.022181029849881243,
+      "absolute_mean": 0.5730042380215621,
+      "absolute_p50": 0.4289434850215912,
+      "absolute_p95": 1.5808168649673462
+    },
+    "range_m": {
+      "count": 886,
+      "mean_signed": 0.024196386835600592,
+      "absolute_mean": 0.5628538025414681,
+      "absolute_p50": 0.4218662316929147,
+      "absolute_p95": 1.5620144408009238
+    },
+    "bearing_yaw_deg": {
+      "count": 886,
+      "mean_signed": -0.4594992864206566,
+      "absolute_mean": 2.0437589405711702,
+      "absolute_p50": 1.6164507555587386,
+      "absolute_p95": 5.71126639742912
+    },
+    "bearing_pitch_deg": {
+      "count": 886,
+      "mean_signed": 0.6259745758699937,
+      "absolute_mean": 1.5011340820446326,
+      "absolute_p50": 1.2066273642568452,
+      "absolute_p95": 3.9709275281244554
+    },
+    "incidence_deg": {
+      "count": 886,
+      "mean_signed": -21.724020354047298,
+      "absolute_mean": 23.008742014960742,
+      "absolute_p50": 22.35212592566721,
+      "absolute_p95": 48.7678888420933
+    },
+    "rotation_deg": {
+      "count": 886,
+      "mean_signed": 31.105479168570508,
+      "absolute_mean": 31.105479168570508,
+      "absolute_p50": 30.44404793339113,
+      "absolute_p95": 57.466911949153086
+    }
+  },
+  "previous_gpu_comparison": {
+    "classification_counts_match": true,
+    "depth_p50_delta_m": 0.0003972053527832031,
+    "depth_p95_delta_m": -0.0011632442474365234,
+    "note": "CPU measurements are reported directly; GPU summary is historical, not a per-output export parity reference."
+  }
+}
