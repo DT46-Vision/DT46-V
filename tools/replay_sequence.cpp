@@ -38,7 +38,7 @@ int main(int argc,char** argv) {
             const bool detection=!result.at("observations").empty();detected+=detection;tracking+=result.at("state")=="TRACKING";fire+=result.at("can_fire").get<bool>();
             final=dt46::ballistic_image(dt46::tracking_image(rgb,result),result);
             if(count==1||(detection&&!saved)){image(output/"input.png",rgb);image(output/"detection.png",final);saved=detection;
-                if(dump&&detection){for(const auto* view:{"result","crop_img","bin_img","img_armor","img_armor_processed","img_debug","gray"})image(output/(std::string("debug_")+view+".png"),pipeline.debug_image(view));}}
+                if(dump&&detection){for(const auto* view:{"result","crop_img","bin_img","model_input","img_debug","gray"})image(output/(std::string("debug_")+view+".png"),pipeline.debug_image(view));}}
             if(recorder&&recorder->due(frame.metadata.at("time"),generation)){recorder->write(final);result["recorded"]=true;}
             log<<result.dump()<<'\n';if(!log)throw std::runtime_error("Cannot write result log");last=std::move(result);
         }

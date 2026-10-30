@@ -1,0 +1,21 @@
+{
+  "model": ".cache/armor-pose-runs/bootstrap_20261030/armor_pose_opencv.onnx",
+  "detector": {
+    "binary_val": 120,
+    "light_area_min": 5,
+    "light_h_w_ratio": 2.0,
+    "light_angle_max": 75,
+    "light_color_difference": 20,
+    "height_rate_tol": 2.5,
+    "height_multiplier_min": 0.5,
+    "height_multiplier_max": 4.0,
+    "crop_height": 2.2,
+    "crop_margin": 1.35,
+    "presence_threshold": 0.5,
+    "roi_crop": false,
+    "roi_scale": 0.4,
+    "detect_color": -1,
+    "display_mode": false,
+    "print_period_ms": 1000
+  }
+}

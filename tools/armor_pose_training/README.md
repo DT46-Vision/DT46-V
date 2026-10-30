@@ -52,4 +52,12 @@ CUDA 框架包含运行所需的 CUDA 库；是否能实际训练以 GPU 前向�
 
 ONNX 导出后实际检查图模型，并用最多 32 张验证裁图、batch=1/2/4 比较 PyTorch CPU 和 ONNX Runtime CPU 的全部输出。模型旁的同名 JSON 是该权重的部署接口快照，保存 RGB 范围、K/D 特征顺序、单位、旋转排列、类别、模型哈希及一致性检查结果。分类输出为 logits；存在性分数尚未做概率校准，也不等于位姿置信度或测量协方差。
 
-导出计时仅覆盖预处理完成后的 ORT CPU 前向，不包括候选提取、原图裁剪/缩放、输入准备、几何解码和 IO，因此不能作为完整视觉单拍耗时。模型文件尚未接入现有 C++ 检测/PnP/EKF 或开火链路；现有 OpenCV DNN 兼容性、候选召回、位姿精度和完整时延仍须独立验证。K/D 作为输入也不自动保证未训练标定的泛化。
+导出计时仅覆盖预处理完成后的 ORT CPU 前向，不包括候选提取、原图裁剪/缩放、输入准备、几何解码和 IO，因此不能作为完整视觉单拍耗时。模型已接入原生候选、识别、定位及车辆 EKF，部署契约见 [standalone](../../standalone/README.md#管线接口与坐标)，完整时延和精度见[模型运行验证](../../outputs/armor_model_runtime_20261030/report.md)。K/D 作为输入也不自动保证未训练标定的泛化。
+
+原生 OpenCV 部署使用同一导出命令加 `--fixed-batch`，输出另存，保留训练用动态批量文件：
+
+```powershell
+.cache/armor-training-env/Scripts/python.exe -m tools.armor_pose_training.export --manifest ../outputs/armor_batch_20261030/dataset_10000/training/training.jsonl --checkpoint .cache/armor-pose-runs/bootstrap_20261030/best.pt --output .cache/armor-pose-runs/bootstrap_20261030/armor_pose_opencv.onnx --fixed-batch
+```
+
+此选项仅固定 batch=1，导出检查与计时只跑 batch=1；不修改权重、输入内容、输出头或损失。部署时 ONNX 与同名 JSON 一起使用，原生路径由 [armor_model.json](../../standalone/armor_model.json)维护。更换 checkpoint 后先重新核对独立测试集与整帧结果。

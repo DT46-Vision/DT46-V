@@ -22,6 +22,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cpu-threads", type=int, default=4)
     parser.add_argument("--repeats", type=int, default=100)
+    parser.add_argument("--fixed-batch", action="store_true", help="Batch 1 for native OpenCV CPU deployment")
     args = parser.parse_args()
     if args.cpu_threads < 1 or args.repeats < 10:
         parser.error("Use positive thread count and at least ten timing repetitions")
@@ -41,7 +42,7 @@ def main() -> None:
     with torch.inference_mode():
         torch.onnx.export(model, (images[:1], cameras[:1]), str(args.output),
                           input_names=["image", "camera"], output_names=OUTPUT_NAMES,
-                          dynamic_axes=dynamic, opset_version=17, dynamo=False)
+                          dynamic_axes=None if args.fixed_batch else dynamic, opset_version=17, dynamo=False)
     onnx.checker.check_model(str(args.output))
     options = ort.SessionOptions()
     options.intra_op_num_threads = args.cpu_threads
@@ -50,7 +51,7 @@ def main() -> None:
     errors: dict[str, float] = {name: 0.0 for name in OUTPUT_NAMES}
     timings = {}
     with torch.inference_mode():
-        for batch in (1, 2, 4):
+        for batch in ((1,) if args.fixed_batch else (1, 2, 4)):
             for offset in range(0, len(samples), batch):
                 x, k = images[offset:offset + batch], cameras[offset:offset + batch]
                 actual = session.run(None, {"image": x.numpy(), "camera": k.numpy()})
@@ -70,7 +71,7 @@ def main() -> None:
                                    "p95_ms": float(np.quantile(elapsed, .95)),
                                    "repeats": args.repeats}
     metadata = {
-        "format_version": 1, "checkpoint_epoch": state["epoch"], "classes": state["classes"],
+        "format_version": 1, "batch_size": 1 if args.fixed_batch else "dynamic", "checkpoint_epoch": state["epoch"], "classes": state["classes"],
         "teams": TEAMS, "catalog": state["catalog"], "image_size": IMAGE_SIZE,
         "inputs": {"image": "float32 NCHW RGB in [0,1]; normalization is inside the model",
                    "camera": "float32 [log(fx/128),log(fy/128),cx/128,cy/128,k1,k2,p1,p2,k3]; crop K/D"},
@@ -82,7 +83,7 @@ def main() -> None:
         "onnx_sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(),
         "training_manifest_sha256": state["manifest_sha256"],
         "validation": {"onnx_checker": "passed", "cpu_provider": session.get_providers(),
-                       "parity_crops": len(samples), "batch_sizes": [1, 2, 4],
+                       "parity_crops": len(samples), "batch_sizes": [1] if args.fixed_batch else [1, 2, 4],
                        "absolute_tolerance": 1e-4, "relative_tolerance": 1e-4,
                        "maximum_absolute_error": errors},
         "benchmark": {"scope": "ORT CPU inference only; prepared 128x128 crops. Excludes candidate extraction, crop/resize, preprocessing, pose decoding and IO.",

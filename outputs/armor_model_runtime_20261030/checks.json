@@ -1,0 +1,21 @@
+{
+  "files": {
+    "DT46_V/build/native/bin/dt46_vision.exe": "cab7768d9d13979b2db044179488db3c6a85b6165efb14dd0c75c68196353e12",
+    "DT46_V/build/native/bin/dt46_aim.dll": "17be19bb1a85cc8d8b4b44d585c4786ff8070081d64e72bee0e900f863fc7036",
+    "DT46_V/standalone/armor_model.json": "eb35bfc2f601b334234eb4ade4d53e8b7d5dde0bf65894024a6c460b3ad0da22",
+    "build/release/rm_sim.exe": "a3d512adc9fda8d534d9919c86e1d841be9e727159b337caaac691e8247d6e78"
+  },
+  "tests": {
+    "armor_model_geometry": "passed",
+    "tracker_body_integration": "passed",
+    "native_pipeline": "passed",
+    "native_transport": "passed",
+    "auto_aim_control": "passed"
+  },
+  "live_checks": "../../../outputs/armor_model_live_final_20261030/model_checks.json",
+  "full_windows_workflow": {
+    "passed": false,
+    "run": "../../../outputs/cpp_migration/workflow_37512",
+    "reason": "Timeout waiting for rendering.json after appearance panel operations; later aiming steps not reached"
+  }
+}

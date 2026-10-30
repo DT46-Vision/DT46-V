@@ -1,8 +1,10 @@
 # DT46-V 原生视觉运行
 
-仓库根 CMake 构建 C++20 运行程序。检测、ONNX 分类、PnP、EKF、目标选择与直接弹道解算复用 `src/rm_detector`、`src/rm_tracker`；`project/modules/vision` 维护原生接口和调试显示，`project/platform` 维护本机通信与窗口控制，`tools` 维护离线工具。ROS 节点是可选适配层，不是原生程序的运行前提。
+当前模型实验分支为 `codex/armor-pose-training`。原生链路是 **RGB → 灯条候选区域 → 原始裁图与 K/D → 装甲模型 → 阵营/编号/相机系位姿 → 车辆 EKF**。`standalone/armor_model.cpp` 负责候选和 CPU 推理，`src/rm_tracker` 保留跟踪、选板及弹道。在线构建不链接旧 detector、NumberClassifier 或 PnP；不设 PnP 回退。ROS 源码暂不迁移。
 
-当前速度优化及验证见[视觉速度与弹道验证](../outputs/vision_speed_20261030/report.md)。原生适配器持有一份 RGB 图像供调试读取，检测直接处理 RGB；原图、裁剪和装甲裁剪按 RGB 返回，带标注图仍在 BGR 上绘制后输出 RGB。`AimResult` ABI 不变，新增只读 `dt46_stage_times(context, double[5])` 返回最近一帧的准备、检测、PnP、跟踪（含弹道）、快照耗时，单位 ms；不含 UI、相机和传输。四格显示仅在尺寸改变时分配纹理，普通刷新更新已有纹理。
+优化后的 PnP 对照已保存在本地附注标签 `2026-10-30-pnp-baseline`，指向 `3c961fb278aab86b4679e95bf90c031fc461a200`；未推送。原生模型接线、误差与速度证据见[模型运行验证](../outputs/armor_model_runtime_20261030/report.md)。链路可运行不代表首版权重达到瞄准精度。
+
+原生适配器保留一份 RGB 图像供调试读取，所有彩色预览均为 RGB。`AimResult` 布局保持；其中 `confidence` 现在为装甲存在性分数，不能作位姿协方差。`dt46_stage_times(context, double[5])` 返回准备、候选、模型、跟踪（含弹道）、快照耗时，单位 ms，不含相机、传输或 UI。
 
 个人集成分支为 [`codex/sim-vision-work`](https://github.com/DT46-Vision/DT46-V/tree/codex/sim-vision-work)；`codex/aim-tracking-scenario` 的同帧评测接口、增益与调试记录在验证后汇回此分支，推送目标为 `origin/codex/sim-vision-work`，`codex/vision-threading` 未纳入。原始起点是 GlennAde 的 `aim_test@3c41f0b02a05bf06ad28ca8440bc8099545498ab`（“修了一下平移限定”）。工作历史汇集原 `codex/cpp-migration` 的 14 个开发提交和 `codex/docs-aim-test-review` 的 6 个审查/修复提交；不以后来混入这些改动的上游合并提交作为原始基线。主线恢复原 tracker 之前的逻辑快照保留在 `codex/sim-vision-tracker-changes`，与本线的 tracker 差异见下节。远端默认分支仍为 `stable`（2026-10-23 核对）。后续 Git 操作遵守[工作区分支隔离规范](../../README.md#git-分支隔离)。
 此前工作分支汇集见[独立工作分支检查记录](../../outputs/branch_isolation_20261023/checks.json)；前次配套整合与原生回归结果见[整合收尾检查](../../outputs/integration_closeout_20261025/checks.json)。当前分支继续合入 `codex/camera-lighting@fd97680` 的原生相机增益更新，配置实际生效、同帧评测接口和原生回归的本次结果见[增益整合检查](../../outputs/vision_gain_merge_20261025/checks.json)；该记录明确配套仿真照明是否参与测试，不沿用旧精度数字代表新参数。
@@ -64,13 +66,13 @@ ctest --preset release
 
 最新仿真视觉追踪与发弹验证见[优化记录](../outputs/vision_tracking_20261030/report.md)，当前算法语义由 [detector](../src/rm_detector/README.md#处理流程) 和 [tracker](../src/rm_tracker/README.md) 维护。
 
-默认构建提供 11 项测试；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖后为 10 项。`detector_pairing` 使用已入库的失败帧裁剪，覆盖数字轮廓遮挡配对、相邻板、交叉候选、ROI 坐标、颜色/几何/分类拒绝和旧缓存清理；结果见[检测器精简验证](../outputs/detector_simplify_20261030/report.md)。切板回归读取实际步兵 YAML，覆盖错误法线拒绝、漏检、重复观测、离群点及距离相关噪声；车体回归另验证正确原始法线能够纠正镜像先验。相关精度边界见[静止画面复核](../outputs/pnp_static_diagnosis_20261029/report.md)及[自瞄链路复核](../outputs/aim_model_validation_20261029/report.md)。归档基线测试检查固定 Git 历史，不再要求新算法源码等于旧文件。ROS 节点与实机串口未验证。
+默认构建包含模型裁图/标定/旋转检查、原生接口与 tracker 回归；`-DDT46_HEADLESS_TESTS=ON` 跳过显示/媒体依赖。`armor_model_geometry` 检查 RGB letterbox、像素中心变换和退化旋转拒绝；`native_pipeline` 检查空帧、单调时间、配置事务、模型筛色和原图归属。旧 detector/PnP 工具仍保留在源码和标签中，已退出本分支默认构建。完整裁图数值一致性及整帧指标由[模型运行验证](../outputs/armor_model_runtime_20261030/report.md)维护。
 
 ## 虚拟相机与独立调试
 
 Windows 仿真接口保留两条个人开发分支：本 C++ 应用为 `codex/sim-vision-work`，Python 外壳调用同一 C++ 算法核心为 `codex/python-outer`（流程在该分支的 `src/rm_vision_windows/README.md`）。暂不据此选定最终实现，也不把外壳差别合入原 tracker。两版顶栏均提供 `Theme: Day / Night` 和 `UI font`；[debug_ui.json](debug_ui.json) 是共同的配色与字号定义，C++ 默认 Night，Python 默认 Day。C++ 窗口使用 Nuklear，Python 使用 Tk/ttk，统一功能布局、文字和颜色，不承诺不同控件库像素级相同。
 
-主题只改变窗口控件配色，UI 字号只影响面板；两者不改变相机曝光、RGB、tracker 参数版本、跟踪状态或录像内容。以 C++ 界面作为样式基准；原生下拉箭头增加内边距以缩小三角形，点击区域不变，随面板字号缩放。原生跟踪图的原始 PnP 叠加、颜色及误差含义由 [rm_detector](../src/rm_detector/README.md#处理流程)维护。tracker 图像文字以 C++ `project/modules/vision/debug_images.cpp` 为基准，日夜模式共用相同文字、描边、精度和状态颜色。`Save frame` 固定保存当前显示帧的图像、结果和实际相机参数；`display.json` 另外记录主题、面板字号与各格查看选项。主题和字号只在当前窗口有效，不混入算法参数 JSON。
+主题只改变窗口控件配色，UI 字号只影响面板；两者不改变相机曝光、RGB、tracker 参数版本、跟踪状态或录像内容。以 C++ 界面作为样式基准；原生下拉箭头增加内边距以缩小三角形，点击区域不变，随面板字号缩放。原生跟踪图显示黄色检测端点、模型阵营/类别/深度及青绿橙 EKF 板；已取消 PnP 重投影、像素残差和法线箭头。tracker 图像文字以 C++ `project/modules/vision/debug_images.cpp` 为基准，日夜模式共用相同文字、描边、精度和状态颜色。`Save frame` 固定保存当前显示帧的图像、结果和实际相机参数；`display.json` 另外记录主题、面板字号与各格查看选项。主题和字号只在当前窗口有效，不混入算法参数 JSON。
 
 ROS 的 rqt 仍使用原 perspective 中的四个 `rqt_image_view` 和一个 `rqt_reconfigure`；此前 UI 工作未修改 DDS 或实机参数回调。rqt 是 Qt 插件容器，已叠在图像中的 tracker 文字由 ROS 节点生成。当前 ROS 适配层已接入已有板法线与 PnP 尺寸配置，但未在 Ubuntu / ROS 2 Humble 编译运行；Windows 调试通过不等于 ROS 或硬件验证通过。
 
@@ -85,7 +87,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 仿真驾驶默认启动第一条命令对应的独立进程。识别默认在后台运行，调试窗口读取同一管线；关闭、重开显示不会重建检测器或追踪器。调试命令通过本工程 `.cache/virtual_camera/session.json` 找到当前任务，可用 `--debug-session` 指定实例。退出只清理自己创建的会话。相机正常关闭后视觉结束；协议错误与超时记录为失败。视觉断开不得影响驾驶，完整边界和操作验收见 [rm_sim 项目规范](../../README.md#项目规范工程边界与使用流程)。
 
-`--profile infantry|sentry|hero` 选择原 YAML/ONNX；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
+`--profile infantry|sentry|hero` 选择 tracker YAML（不扩展模型已训练的类别）；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
 原生虚拟相机入口支持 `--no-logs` / `--logs` 总开关，以及可重复的 `--log NAME` / `--no-log NAME`；分项为 `frames`、`events`、`parameters`、`reports`，默认全部开启。总开关先应用，显式分项再覆盖，例如 `--no-logs --log events` 仅记录调试事件。关闭记录仍正常采图和识别，保留调试控制连接、手动保存与显式录像；仿真启动时的统一配置和对应分项由[仿真日志开关](../../README.md#日志开关)维护。
 
@@ -95,9 +97,9 @@ build/native/bin/dt46_vision.exe --save-debug
 
 原生启动配置下调默认相对增益，配套于提高场景照明的调整；曝光设置与独立灯条发光强度保留，限制视觉相机对更亮场景的放大。数值以 `virtual_camera.json` 为准，不等同于实拍海康界面的增益 16.0。场景明暗调整、当前红蓝检出、跟踪及数字分类限制由[仿真灯条成像](../../README.md#画质灯条与反光)统一维护；本次未改检测器、分类器或原 tracker。此前只提高整幅图像增益的[历史调参记录](../../outputs/led_emission_20261024/previous_gain_tuning.json)仅证明当时蓝靶成功、红靶未检出，不能代表本轮模型。
 
-调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。当前分支默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/tracker/tracking_state_img`、`/detector/bin_img`；跟踪图显示估计车心、四块名义模型板及匹配/选中标记，弹道图显示 HOLD 原因与到达标准差。仍可切换原始 RGB、img_armor_processed、crop_img、img_armor、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
+调试窗口以 [Kielas_Vision.perspective](../Kielas_Vision.perspective) 实际启用的四个 `rqt_image_view` 和一个 `rqt_reconfigure` 为功能基准，保留原生四格 UI。当前分支默认四图为 `/detector/result`、`/tracker/ballistic_img`、`/tracker/tracking_state_img`、`/detector/bin_img`；跟踪图显示估计车心、四块名义模型板及匹配/选中标记，弹道图显示 HOLD 原因与到达标准差。仍可切换原始 RGB、model_input（最后一块 128×128 RGB 候选）、crop_img、img_debug、gray。灰度图显示前转为 RGB。各格提供平滑、1:1 滚动查看、网格和 90° 步进旋转；这些只影响查看。默认关闭平滑、1:1、网格和旋转，与保存的 rqt 配置一致。
 
-右侧仍分相机、检测器、追踪器三页，包含 tracker 日志、参数应用/保存/加载 JSON、保存当前图像与窗口截图。顶栏 `UI font` 独立调整面板字号，行高、侧栏宽度和图像工具栏随之缩放；只在当前窗口有效，不保存到算法参数，也不重置 tracker。布尔参数使用复选框；检测器 `cls_model_file` 可编辑字符串，JSON 沿用顶层 `model` 字段，模型相对 `src/rm_detector/model` 解析。Apply 重建上下文，失败保留原上下文；不会写回源 YAML。图像查看选项仅在当前窗口有效，不随参数 JSON 保存。显示异常只关闭显示。
+右侧仍分相机、检测器、追踪器三页，包含 tracker 日志、参数应用/保存/加载 JSON、保存当前图像与窗口截图。顶栏 `UI font` 独立调整面板字号，行高、侧栏宽度和图像工具栏随之缩放；只在当前窗口有效，不保存到算法参数，也不重置 tracker。布尔参数使用复选框；检测器 `pose_model_file` 可编辑字符串，JSON 沿用顶层 `model` 字段；路径相对视觉仓库根目录解析，也接受绝对路径。Apply 重建上下文，失败保留原上下文；不会写回源 YAML。图像查看选项仅在当前窗口有效，不随参数 JSON 保存。显示异常只关闭显示。
 
 | 原 rqt / 节点功能 | 原生实现与适配边界 |
 |---|---|
@@ -115,11 +117,11 @@ build/native/bin/dt46_vision.exe --save-debug
 
 ## 管线接口与坐标
 
-[AimPipeline](../project/modules/vision/pipeline.hpp) 按序处理一路相机；同一实例不支持并发调用。`reset()` 清除追踪、PnP 历史及时间戳，析构释放算法上下文。`configure()` 原子重建，成功后清除历史，不改写源 YAML。允许的参数由实现中的白名单维护。
+[AimPipeline](../project/modules/vision/pipeline.hpp) 按序处理一路相机；同一实例不支持并发调用。`reset()` 重建模型上下文、清除追踪及时间戳，析构释放算法上下文。`configure()` 原子重建，成功后清除历史，不改写源 YAML。允许的参数由实现中的白名单维护。
 
 | 输入 | 约定 |
 |---|---|
-| `rgb` | 实际采样、原始畸变 RGB8；内部转换为检测器使用的 BGR |
+| `rgb` | 实际采样、原始畸变 RGB8，候选与模型始终按 RGB 读取 |
 | `timestamp` | 单调递增秒；暂停不重复提交，复位先清除历史 |
 | `K` / `D` | 当前输出尺寸的 3×3 内参、五项 plumb_bob 畸变；保留真实主点 |
 | `optical_rotation` | 光学 right/down/forward 轴到世界轴的 3×3 旋转 |
@@ -131,11 +133,15 @@ build/native/bin/dt46_vision.exe --save-debug
 
 非 `LOST` 帧的只读 `tracker_debug.ekf_state` 顺序为 `[xc,vx,yc,vy,za,vz,yaw,vyaw,r]`，位置单位米、速度米/秒、角度弧度、角速度弧度/秒。车心 XY 与装甲基准高度 za 均以采样时的相机光心为原点、按世界轴表达；转换世界位置只加 `input.optical_transform` 的平移，不能再次旋转。速度包含相机原点运动的影响。适配层同时导出原 `RenderSnapshot` 的 `ekf_second_radius_m`（另一对板半径）与 `ekf_alternate_height_m`（相邻板高度差 dz）。完整十一维共享状态、板序号与几何定义以 [tracker](../src/rm_tracker/README.md) 为准。`position_camera_origin_world_axes_m` / `velocity_world_axes_m_s` 来自该共享模型的当前观测板，含旋转切向速度。此状态重建与最终弹道目标不同；仿真同帧真值和评测流程见[自瞄验证场景](../../README.md#自瞄运动与预测验证场景)。
 
-`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。Tracker 每帧开始清空目标缓存和有效性，适配层直接读取本帧解算结果；提前退出不会导出旧帧有效性，也不重复求弹道。顶层同名角度继续保留 EMA，供现有日志使用；执行端使用 `aim` 内的原始角，避免将不同相机姿态下的平滑误差混入当前帧。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
+`aim` 提供当前帧原始解算：`valid`、`yaw_error_deg`、`pitch_error_deg`、`can_fire`。`valid` 表示本次弹道解算有效，与允许开火分开。Tracker 每帧开始清空目标缓存和有效性，适配层直接读取本帧解算结果；提前退出不会导出旧帧有效性，也不重复求弹道。顶层同名角度与 `aim` 内原始角相同，不再保留过时的 EMA 缓存。`AimResult` 新增有效性和原始角字段，C 接口使用者须用当前头文件重新编译。管线 `revision()` 在成功 reset/configure 后递增，失败不变；原生会话撤销旧 revision 的反馈，调试窗口开关不改变 revision。
 
-图像处理对齐原 ROS 链路：相机发布 `image_raw`，检测器和 tracker 调试订阅原图；所核对的 `mv.launch.xml` / `infantry.launch.xml` 没有图像矫正节点。检测前不调用整图 `undistort`，板位姿解算使用原始像素和 K/D，在 IPPE 或倾角约束直接解中补偿畸变；原生步兵当前使用后者，详见 detector 说明。原生调试页继续显示原图及其检测/跟踪/弹道叠加，新 UI 保留；没有另建仿真专用的拉直图或识别算法。源码依据为 [ROS 检测节点](../src/rm_detector/src/node.cpp)、[原 PnP](../src/rm_detector/src/pnp.cpp) 和 [原生显示入口](../project/modules/vision/debug_window.cpp)。合成中心/边缘对照由 `calibrated_pnp_and_optical_rotation` 检查；这不等于实机镜头标定验收。
+原生候选提取只看亮度、色差和双灯条形状；色差只排除无色轮廓，不决定阵营。先枚举候选并推理，再按装甲存在性分数去重，最多保留 64 根灯条、推理 64 个候选。`detect_color` 在模型判定阵营后生效。没有透视展开、数字二值化、独立数字分类或米制尺寸测距。
 
-`debug_image()` 返回独立内存的 RGB 或灰度图；须启用显示参数，无当前图像时返回空。跟踪和弹道图由 [debug_images.cpp](../project/modules/vision/debug_images.cpp) 按原快照绘制，叠加文字使用抗锯齿、随字号加粗的笔画及黑色描边；开火许可为绿色，等待开火为黄色。红圈为含飞行时间/系统延迟的预测目标，绿十字为枪口相对目标，紫十字为原图像中心。绿十字不是弹道落点；HUD Pitch/Yaw 沿用原 tracker 指令，顶层结果角误差沿用 EMA 输出。投影使用完整 K/D。
+`crop_height` 从灯条长度估计裁图高度，`crop_margin` 扩展周边；它们只定位图像区域，不参与深度公式。裁图保持透视，letterbox 到 128×128，填充值 RGB(20,20,20)，按半像素中心变换同步 K，D 不变。网络已返回 XYZ 米和两列旋转向量；原生只做 Gram–Schmidt，深度/距离/视线偏角/入射角从同一份 p/R 直接计算，不调用 PnP。非法旋转或非有限输出计入 `invalid_pose_count` 并丢弃，不交给 KF 修复。
+
+每项观测的 `model` 包含 `sticker_type`、`team`、`robot_number`、三个分类分数、旋转矩阵、派生几何量及 `tracker_eligible`。现词表的 2/3/4/7 号车映射到旧车辆 ID：蓝色 1/2/3/5，红色加 6；基地/前哨站 `robot_number=armor_id=-1`，仍输出定位，但不送入四板车辆 EKF。`corners_px` 是候选灯条端点，仅用于画图。原生输出不再含 `pnp`、重投影残差或旧 `classifier_score`。
+
+`debug_image()` 返回独立内存的 RGB 或灰度图；须启用显示参数，无当前图像时返回空。跟踪和弹道图由 [debug_images.cpp](../project/modules/vision/debug_images.cpp) 按原快照绘制，叠加文字使用抗锯齿、随字号加粗的笔画及黑色描边；开火许可为绿色，等待开火为黄色。红圈为含飞行时间/系统延迟的预测目标，绿十字为枪口相对目标，紫十字为原图像中心。绿十字不是弹道落点；HUD Pitch/Yaw 沿用原 tracker 指令，顶层结果角误差与原始指令一致。投影使用完整 K/D。
 
 ## 本机相机接口 v1
 
@@ -164,7 +170,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 ## 离线回放、录像与标定
 
-装甲位姿学习由独立的 [GPU 训练与 CPU 导出工具](../tools/armor_pose_training/README.md)负责，读取仿真生成的选定裁图清单。训练环境不参与本 C++ 构建；导出权重尚未替换在线 PnP。
+装甲位姿学习由独立的 [GPU 训练与 CPU 导出工具](../tools/armor_pose_training/README.md)负责。原生启动读 [armor_model.json](armor_model.json) 的候选参数与模型路径，模型同名 `.json` 提供词表、单位和旋转契约。权重留在本机 `.cache`；首次运行须按训练说明使用 `export --fixed-batch` 生成部署文件，缺失或不兼容时明确报错，不切回旧分类/PnP。OpenCV 4.12 对当前网络的动态批量 Concat 导入失败，部署固定 batch=1；网络权重及学习目标不变。
 
 仿真使用 `sim_sequence` 导出 PNG 与 `frames.jsonl`，DT46 独立读取：
 

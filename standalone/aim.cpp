@@ -1,6 +1,5 @@
 #include "aim.h"
-#include "rm_detector/detector.hpp"
-#include "rm_detector/pnp.hpp"
+#include "armor_model.hpp"
 #include "rm_tracker/tracker.hpp"
 #include "rm_tracker/frame_clock.hpp"
 #include <algorithm>
@@ -56,10 +55,9 @@ void configure_tracker(dt46_vision::Tracker& tracker, const cv::FileNode& config
 }
 
 struct Pipeline {
-    std::unique_ptr<DT46_VISION::ArmorDetector> detector;
-    DT46_VISION::PNP pnp;
-    DT46_VISION::CameraCalibration calibration{};
-    std::optional<double> armor_tilt_deg;
+    std::unique_ptr<dt46::ArmorModel> detector;
+    cv::Matx33d calibration_k{};
+    cv::Vec<double,5> calibration_d{};
     dt46_vision::Tracker tracker;
     dt46_vision::RmTF transform;
     double previous_time = -1.0;
@@ -68,87 +66,44 @@ struct Pipeline {
     bool frame_reinitialized = true;
     int previous_color = -1;
     int detect_color = -1;
-    double smooth_yaw = 0.0, smooth_pitch = 0.0;
-    bool smooth_ready = false;
     cv::Mat rgb_frame;
     std::string snapshot = "{}";
     double stage_ms[5]{};
     std::vector<Eigen::Vector3d> observed_normals_camera;
-    std::vector<DT46_VISION::PNP::Pose> observed_poses;
+    std::vector<dt46::ModelObservation> observed_poses;
 
     Pipeline(const char* model, const char* parameters) {
         cv::setNumThreads(1);
         cv::FileStorage config(parameters, cv::FileStorage::READ | cv::FileStorage::MEMORY |
                                            cv::FileStorage::FORMAT_JSON);
         const auto source = config["detector"];
-        DT46_VISION::Params p{};
-#define PARAM(member, fallback) p.member = parameter(source, #member, fallback)
-        PARAM(light_area_min, 5); PARAM(light_h_w_ratio, 2.0);
-        PARAM(light_angle_min, -35); PARAM(light_angle_max, 35);
-        PARAM(light_red_ratio, 1.0); PARAM(light_blue_ratio, 1.0);
-        PARAM(height_rate_tol, 1.8);
-        PARAM(height_multiplier_min, 1.0); PARAM(height_multiplier_max, 3.0);
-        PARAM(row_stretch, 2.22); PARAM(col_stretch, 0.7);
-        PARAM(roi_crop, 0); PARAM(roi_scale, 0.4);
-#undef PARAM
-        detector = std::make_unique<DT46_VISION::ArmorDetector>(
-            2, parameter(source, "display_mode", 0), parameter(source, "binary_val", 120), p);
-        detector->set_classifier(std::make_shared<DT46_VISION::NumberClassifier>(model));
+        detector = std::make_unique<dt46::ArmorModel>(model,source);
         detect_color = int(parameter(source,"detect_color",-1));
         configure_tracker(tracker, config["tracker"]);
-        if(!source["pnp_armor_tilt_deg"].empty())armor_tilt_deg=double(source["pnp_armor_tilt_deg"]);
-        pnp.setArmorGeometry(parameter(source,"pnp_light_spacing_mm",135.),parameter(source,"pnp_light_height_mm",58.));
     }
 };
 
 void observe(Pipeline& pipeline, AimResult& result, const cv::Mat& frame,
              const Eigen::Matrix3d& rotation, std::vector<dt46_vision::Armor>& armors) {
-    pipeline.pnp.beginFrame();
-    if(pipeline.armor_tilt_deg){
-        cv::Matx33d optical;for(int i=0;i<3;++i)for(int j=0;j<3;++j)optical(i,j)=rotation(i,j);
-        pipeline.pnp.setUprightConstraint(optical,*pipeline.armor_tilt_deg);
-    }
+    const int color=pipeline.detect_color<0?pipeline.tracker.target_color:pipeline.detect_color;
+    pipeline.observed_poses=pipeline.detector->detect(frame,pipeline.calibration_k,pipeline.calibration_d,color);
     pipeline.observed_normals_camera.clear();
-    pipeline.observed_poses.clear();
-    pipeline.detector->img_drawn.release();
-    pipeline.detector->img_armor.release();
-    pipeline.detector->img_armor_processed.release();
-    const auto begin_detection = Clock::now();
-    const auto detected = pipeline.detector->detect_armors(frame, true);
-    pipeline.stage_ms[1] = elapsed_ms(begin_detection);
-    const auto begin_pnp = Clock::now();
-    if (detected.size() > 64) throw std::runtime_error("More than 64 armor candidates");
-    result.light_count = static_cast<int>(pipeline.detector->lights.size());
-    for (const auto& armor : detected) {
-        auto [x, y, z, yaw, nx, ny, nz] = pipeline.pnp.processArmorCorners(
-            &pipeline.calibration, false, frame, armor, armor.armor_id);
-        if (!(z > 0.0) || !std::isfinite(x+y+z+yaw)) continue;
-        auto& output = result.observations[result.count++];
-        pipeline.observed_poses.push_back(pipeline.pnp.pose());
-        output.id = armor.armor_id;
-        output.confidence = armor.res.confidence;
-        output.position_camera_mm[0] = x;
-        output.position_camera_mm[1] = y;
-        output.position_camera_mm[2] = z;
-        output.yaw_deg = yaw;
-        const Eigen::Vector3d normal(nx,ny,nz);
-        pipeline.observed_normals_camera.push_back(normal.allFinite() ? normal : Eigen::Vector3d(0,0,0));
-        const cv::Point2f corners[] = {armor.light1_up, armor.light1_down,
-                                      armor.light2_up, armor.light2_down};
-        for (int i=0; i<4; ++i) {
-            output.corners[2*i] = corners[i].x;
-            output.corners[2*i+1] = corners[i].y;
-        }
-        const Eigen::Vector3d world = rotation * Eigen::Vector3d(x, y, z) / 1000.0;
-        const double heading = std::atan2(rotation(1, 2), rotation(0, 2));
-        const double world_yaw = pipeline.transform.armor_yaw_from_normal(normal,Eigen::Vector3d::Zero(),
-            dt46_vision::normalize_angle(heading - yaw*dt46_vision::DEG2RAD));
-        // Match the ROS node's color gate even when the detector displays both colors.
-        if ((pipeline.tracker.target_color == 0 && armor.armor_id < 6) ||
-            (pipeline.tracker.target_color == 1 && armor.armor_id >= 6)) continue;
-        armors.emplace_back(armor.armor_id, world.x(), world.y(), world.z(), world_yaw);
+    result.light_count=pipeline.detector->light_count;
+    for(const auto& armor:pipeline.observed_poses){
+        auto& output=result.observations[result.count++];
+        output.id=armor.armor_id;output.confidence=armor.presence;
+        for(int i=0;i<3;++i)output.position_camera_mm[i]=armor.position[i]*1000;
+        const Eigen::Vector3d normal(armor.rotation(0,2),armor.rotation(1,2),armor.rotation(2,2));
+        pipeline.observed_normals_camera.push_back(normal);
+        output.yaw_deg=std::atan2(-normal.x(),-normal.z())*dt46_vision::RAD2DEG;
+        for(int i=0;i<4;++i){output.corners[2*i]=armor.corners[i].x;output.corners[2*i+1]=armor.corners[i].y;}
+        if(!armor.vehicle||armor.team!=pipeline.tracker.target_color)continue;
+        const Eigen::Vector3d world=rotation*Eigen::Vector3d(armor.position[0],armor.position[1],armor.position[2]);
+        const double world_yaw=pipeline.transform.armor_yaw_from_normal(normal,Eigen::Vector3d::Zero(),0);
+        armors.emplace_back(armor.armor_id,world.x(),world.y(),world.z(),world_yaw);
     }
-    pipeline.stage_ms[2] = elapsed_ms(begin_pnp);
+    pipeline.stage_ms[1]=pipeline.detector->candidate_ms;
+    pipeline.stage_ms[2]=pipeline.detector->model_ms;
 }
 
 void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
@@ -160,13 +115,24 @@ void save_snapshot(Pipeline& pipeline, const Eigen::Matrix3d& rotation,
     json << "observation_normals_camera" << "[";
     for(const auto& n:pipeline.observed_normals_camera)json<<"["<<n.x()<<n.y()<<n.z()<<"]";
     json << "]";
-    json << "pnp_armors" << "[";
+    json << "model_armors" << "[";
     for(const auto& pose:pipeline.observed_poses){
-        json<<"{"<<"reprojection_error_px"<<pose.reprojection_error_px<<"corners_camera_m"<<"[";
-        for(const auto& p:pose.corners_camera_mm)json<<"["<<p.x*.001<<p.y*.001<<p.z*.001<<"]";
+        const double range=cv::norm(pose.position);
+        const cv::Vec3d normal(pose.rotation(0,2),pose.rotation(1,2),pose.rotation(2,2));
+        json<<"{"<<"sticker_type"<<pose.sticker<<"team"<<(pose.team==0?"red":"blue")
+            <<"robot_number"<<pose.robot_number<<"target_family"<<(pose.vehicle?"vehicle":"structure")
+            <<"presence_score"<<pose.presence<<"sticker_score"<<pose.sticker_score<<"team_score"<<pose.team_score
+            <<"tracker_eligible"<<int(pose.vehicle&&pose.team==pipeline.tracker.target_color)
+            <<"depth_m"<<pose.position[2]<<"range_m"<<range
+            <<"bearing_yaw_deg"<<std::atan2(pose.position[0],pose.position[2])*dt46_vision::RAD2DEG
+            <<"bearing_pitch_deg"<<std::atan2(-pose.position[1],std::hypot(pose.position[0],pose.position[2]))*dt46_vision::RAD2DEG
+            <<"incidence_deg"<<std::acos(std::clamp(normal.dot(-pose.position/range),-1.,1.))*dt46_vision::RAD2DEG
+            <<"roi_xywh"<<"["<<pose.roi.x<<pose.roi.y<<pose.roi.width<<pose.roi.height<<"]"
+            <<"rotation_camera_from_board"<<"[";
+        for(int i=0;i<3;++i){json<<"[";for(int j=0;j<3;++j)json<<pose.rotation(i,j);json<<"]";}
         json<<"]"<<"}";
     }
-    json<<"]";
+    json<<"]"<<"candidate_count"<<pipeline.detector->candidate_count<<"invalid_pose_count"<<pipeline.detector->invalid_pose_count;
     json << "frame_interval_s" << pipeline.frame_interval_s << "frame_reinitialized" << int(pipeline.frame_reinitialized);
     json << "body_ready" << int(s.body_ready) << "body_ekf_state" << "[";
     for(int i=0;i<11;++i)json<<s.body_state[i];json<<"]"<<"body_covariance_diagonal"<<"[";
@@ -235,30 +201,18 @@ int dt46_debug_image(void* context, int kind, uint8_t* pixels, int capacity,
                      int* width, int* height, int* channels) {
     try {
         auto& detector = *static_cast<Pipeline*>(context)->detector;
-        if (!detector.display_mode) {
+        if (!detector.display) {
             *width = *height = *channels = 0;
             return 0;
         }
-        cv::Mat frame;
-        switch (kind) {
-            case 0:
-                if (detector.img_drawn.empty() && !detector.img.empty()) detector.draw_img();
-                frame = detector.img_drawn; break;
-            case 1: frame = detector.crop_img; break;
-            case 2: frame = detector.img_binary; break;
-            case 3: frame = detector.img_armor; break;
-            case 4: frame = detector.img_armor_processed; break;
-            case 5: frame = detector.img; break;
-            case 6: frame = detector.gray_img_; break;
-            default: throw std::invalid_argument("Unknown detector debug image");
-        }
+        if(kind<0||kind>=int(detector.images.size()))throw std::invalid_argument("Unknown model debug image");
+        const cv::Mat& frame=detector.images[kind];
         *width=frame.cols; *height=frame.rows; *channels=frame.channels();
         const int size = frame.total()*frame.elemSize();
         if (!pixels || !size) return size;
         if (capacity < size) throw std::invalid_argument("Debug image buffer too small");
         cv::Mat destination(frame.rows, frame.cols, frame.type(), pixels);
-        if (frame.channels()==3 && (kind==0 || !detector.input_is_rgb)) cv::cvtColor(frame, destination, cv::COLOR_BGR2RGB);
-        else frame.copyTo(destination);
+        frame.copyTo(destination);
         return size;
     } catch (const std::exception& error) { last_error=error.what(); return -1; }
 }
@@ -288,22 +242,14 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         if (pipeline.previous_color != target_color) {
             pipeline.tracker.tracker_state = dt46_vision::TrackerState::LOST;
             pipeline.previous_color = target_color;
-            pipeline.smooth_ready = false;
         }
         pipeline.tracker.target_color = target_color;
-        pipeline.detector->update_detect_color(pipeline.detect_color < 0 ? target_color : pipeline.detect_color);
         if (measured_speed > 10.0 && std::abs(measured_speed-pipeline.tracker.bullet_speed) > 0.1) {
             pipeline.tracker.bullet_speed = measured_speed;
         }
-        DT46_VISION::CameraCalibration calibration;
-        std::copy(k, k+9, calibration.k.begin());
-        calibration.d.assign(d, d+5);
-        if (calibration.k != pipeline.calibration.k || calibration.d != pipeline.calibration.d) {
-            pipeline.pnp.resetCameraInfo();
-            pipeline.calibration = calibration;
-            pipeline.transform.set_camera_info(cv::Mat(3, 3, CV_64F, const_cast<double*>(k)),
-                cv::Mat(1, 5, CV_64F, const_cast<double*>(d)), width, height, false);
-        }
+        std::copy(k,k+9,pipeline.calibration_k.val);
+        std::copy(d,d+5,pipeline.calibration_d.val);
+        pipeline.transform.set_camera_info(cv::Mat(pipeline.calibration_k),cv::Mat(pipeline.calibration_d),width,height,false);
         Eigen::Matrix3d rotation;
         for (int row=0; row<3; ++row)
             for (int col=0; col<3; ++col) rotation(row, col) = optical_rotation[3*row+col];
@@ -317,7 +263,7 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
         observe(pipeline, *result, pipeline.rgb_frame, rotation, armors);
         const auto step=pipeline.frame_clock.advance(timestamp);
         if(!step.accepted)throw std::invalid_argument("Frame timestamps must increase");
-        if(step.reset){pipeline.tracker.tracker_state=dt46_vision::TrackerState::LOST;pipeline.smooth_ready=false;}
+        if(step.reset)pipeline.tracker.tracker_state=dt46_vision::TrackerState::LOST;
         const double dt=step.dt;
         pipeline.frame_interval_s=dt;pipeline.frame_reinitialized=step.reset;
         pipeline.previous_time = timestamp;
@@ -347,7 +293,7 @@ int dt46_process(void* context, const uint8_t* rgb, int width, int height,
     }
 }
 
-void dt46_stage_times(void* context, double* milliseconds) {
-    const auto& pipeline = *static_cast<Pipeline*>(context);
+void dt46_stage_times(const void* context, double* milliseconds) {
+    const auto& pipeline = *static_cast<const Pipeline*>(context);
     std::copy(std::begin(pipeline.stage_ms), std::end(pipeline.stage_ms), milliseconds);
 }

@@ -75,11 +75,11 @@ int main(int argc, char** argv) {
         if(manual.at("input").at("target_color")!=0||manual.at("light_count")!=1)throw std::runtime_error("Manual target/red detection ignored");
         pipeline.configure({{"detector",{{"detect_color",1}}},{"tracker",{{"follow_decision",true}}}});
         const auto blue=pipeline.process(red,0,k,{},cv::Matx33d::eye(),{},1);
-        if(blue.at("input").at("target_color")!=1||blue.at("light_count")!=0)throw std::runtime_error("Decision target/blue filter ignored");
+        if(blue.at("input").at("target_color")!=1||blue.at("light_count")!=1)throw std::runtime_error("Proposal extraction must not use a team gate");
         pipeline.configure({{"detector",{{"detect_color",2}}}});
         if(pipeline.process(red,0,k,{},cv::Matx33d::eye(),{},1).at("light_count")!=1)throw std::runtime_error("Both-color detection ignored");
         const auto* configured=pipeline.context();const auto configured_revision=pipeline.revision();
-        for(const auto& invalid:std::vector<dt46::Json>{{{"model","missing-rqt-test.onnx"}},{{"detector",{{"detect_color",3}}}},{{"detector",{{"pnp_light_spacing_mm",0}}}},{{"detector",{{"pnp_armor_tilt_deg",90}}}},{{"tracker",{{"min_hit_probability",0}}}},{{"tracker",{{"min_hit_probability",1.01}}}},{{"tracker",{{"text_size",0}}}},{{"tracker",{{"display",0.5}}}},{{"tracker",{{"ekf_QR_q_xyz",-1}}}},{{"tracker",{{"ekf_QR_r_depth_factor",-1}}}},{{"tracker",{{"ekf_QR_r_yaw",0}}}}}){
+        for(const auto& invalid:std::vector<dt46::Json>{{{"model","missing-rqt-test.onnx"}},{{"detector",{{"detect_color",3}}}},{{"detector",{{"presence_threshold",0}}}},{{"detector",{{"crop_margin",.5}}}},{{"detector",{{"pnp_armor_tilt_deg",15}}}},{{"tracker",{{"min_hit_probability",0}}}},{{"tracker",{{"min_hit_probability",1.01}}}},{{"tracker",{{"text_size",0}}}},{{"tracker",{{"display",0.5}}}},{{"tracker",{{"ekf_QR_q_xyz",-1}}}},{{"tracker",{{"ekf_QR_r_depth_factor",-1}}}},{{"tracker",{{"ekf_QR_r_yaw",0}}}}}){
             rejected=false;try{pipeline.configure(invalid);}catch(const std::exception&){rejected=true;}
             if(!rejected||pipeline.context()!=configured||pipeline.revision()!=configured_revision)throw std::runtime_error("Invalid model/display/color replaced context");
         }

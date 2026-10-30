@@ -41,7 +41,7 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
 endif()
 
 # Existing native installations can be supplied through normal CMake cache paths.
-find_package(OpenCV REQUIRED COMPONENTS core imgproc calib3d dnn)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc calib3d dnn imgcodecs)
 add_subdirectory(standalone)
 
 add_library(dt46_pipeline project/modules/vision/pipeline.cpp project/modules/vision/virtual_camera.cpp)
@@ -64,21 +64,18 @@ if(NOT DT46_HEADLESS_TESTS)
     target_compile_definitions(dt46_vision PRIVATE DT46_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 if(BUILD_TESTING)
+    add_executable(dt46_armor_model_check tests/armor_model_check.cpp)
+    target_link_libraries(dt46_armor_model_check PRIVATE dt46_armor_model)
+    add_test(NAME armor_model_geometry COMMAND dt46_armor_model_check)
+    add_executable(dt46_model_eval tools/check_armor_model.cpp)
+    target_link_libraries(dt46_model_eval PRIVATE dt46_armor_model dt46_pipeline ${OpenCV_LIBS})
+    if(NOT DT46_HEADLESS_TESTS)
+        target_link_libraries(dt46_model_eval PRIVATE dt46_debug)
+        target_compile_definitions(dt46_model_eval PRIVATE DT46_MODEL_DEBUG_IMAGES)
+    endif()
     add_test(NAME archived_tracker_baseline COMMAND ${CMAKE_COMMAND}
         "-DDT46_ROOT=${CMAKE_CURRENT_SOURCE_DIR}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_tracker_check.cmake")
     add_executable(dt46_aim_truth_check tools/check_aim_truth.cpp)
-    add_executable(dt46_pnp_check tools/check_pnp.cpp src/rm_detector/src/pnp.cpp src/rm_detector/src/detector.cpp src/rm_detector/src/classifier.cpp)
-    target_include_directories(dt46_pnp_check PRIVATE src/rm_detector/include ${OpenCV_INCLUDE_DIRS})
-    target_link_libraries(dt46_pnp_check PRIVATE nlohmann_json::nlohmann_json ${OpenCV_LIBS})
-    target_compile_definitions(dt46_pnp_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
-    add_executable(dt46_detector_check tests/detector_check.cpp
-        src/rm_detector/src/detector.cpp src/rm_detector/src/classifier.cpp)
-    target_include_directories(dt46_detector_check PRIVATE src/rm_detector/include ${OpenCV_INCLUDE_DIRS})
-    target_link_libraries(dt46_detector_check PRIVATE ${OpenCV_LIBS})
-    target_compile_definitions(dt46_detector_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
-    add_test(NAME detector_pairing COMMAND dt46_detector_check
-        "${CMAKE_CURRENT_SOURCE_DIR}/tests/data/detector_digit_obstruction.png"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/rm_detector/model/RM_Armor_CNN_sim.onnx")
     add_executable(dt46_armor_geometry_check tools/check_armor_geometry.cpp)
     target_include_directories(dt46_armor_geometry_check PRIVATE ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(dt46_armor_geometry_check PRIVATE nlohmann_json::nlohmann_json ${OpenCV_LIBS})
@@ -90,12 +87,6 @@ if(BUILD_TESTING)
     target_link_libraries(dt46_tracker_model_check PRIVATE ${OpenCV_LIBS})
     target_compile_definitions(dt46_tracker_model_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
     add_test(NAME tracker_body_integration COMMAND dt46_tracker_model_check "${CMAKE_CURRENT_BINARY_DIR}/tracker_model_results")
-    add_executable(dt46_tracker_log_check tools/check_tracker_log.cpp src/rm_tracker/src/tracker.cpp
-        src/rm_tracker/src/body_ekf.cpp src/rm_tracker/src/ekf.cpp src/rm_tracker/src/rm_tf_tools.cpp
-        src/rm_detector/src/pnp.cpp src/rm_detector/src/detector.cpp src/rm_detector/src/classifier.cpp)
-    target_include_directories(dt46_tracker_log_check PRIVATE src/rm_tracker/include src/rm_detector/include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
-    target_link_libraries(dt46_tracker_log_check PRIVATE nlohmann_json::nlohmann_json ${OpenCV_LIBS})
-    target_compile_definitions(dt46_tracker_log_check PRIVATE _USE_MATH_DEFINES NOMINMAX)
     add_executable(dt46_tracker_switch_check tests/tracker_switch_check.cpp src/rm_tracker/src/tracker.cpp
         src/rm_tracker/src/body_ekf.cpp src/rm_tracker/src/ekf.cpp src/rm_tracker/src/rm_tf_tools.cpp)
     target_include_directories(dt46_tracker_switch_check PRIVATE src/rm_tracker/include ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})

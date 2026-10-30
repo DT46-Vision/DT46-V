@@ -1,0 +1,126 @@
+{
+  "split": "validation",
+  "model_sha256": "bf450957f18d6ba483db47c45135b6851cfaaac1e8b315232b6384f787fb57ed",
+  "native_executable_sha256": "3c8fb7c538040e89c4e87866ec4c9fa08a651c66e17c580aa3c7024d1553e6cd",
+  "configuration": {
+    "model": ".cache/armor-pose-runs/bootstrap_20261030/armor_pose_opencv.onnx",
+    "detector": {
+      "binary_val": 120,
+      "light_area_min": 5,
+      "light_h_w_ratio": 2.0,
+      "light_angle_max": 75,
+      "light_color_difference": 20,
+      "height_rate_tol": 2.5,
+      "height_multiplier_min": 0.5,
+      "height_multiplier_max": 4.0,
+      "crop_height": 2.2,
+      "crop_margin": 1.35,
+      "presence_threshold": 0.5,
+      "roi_crop": false,
+      "roi_scale": 0.4,
+      "detect_color": -1,
+      "display_mode": false,
+      "print_period_ms": 1000
+    }
+  },
+  "crop_parity": {
+    "samples": 1098,
+    "max_absolute_error": {
+      "position_m": 1.4781951904296875e-05,
+      "rotation_matrix": 1.6241907921377141e-06,
+      "presence_score": 4.713368519898564e-06,
+      "sticker_score": 1.3376174001100694e-05,
+      "team_score": 6.939429912700135e-06
+    }
+  },
+  "crop_counts": {
+    "tp": 863,
+    "fp": 13,
+    "tn": 219,
+    "fn": 3,
+    "sticker_correct": 772,
+    "team_correct": 859,
+    "positive": 866,
+    "sticker_supervised": 866,
+    "team_supervised": 864
+  },
+  "crop_pose": {
+    "count": 866,
+    "depth_bias_m": 0.0030685379607997606,
+    "depth_absolute_p50_m": 0.4119855317245097,
+    "depth_absolute_p95_m": 1.6108189590444533,
+    "translation_rmse_m": 0.7770440008489653,
+    "rotation_mean_deg": 30.69795876042701
+  },
+  "full_frame_counts": {
+    "frames": 1000,
+    "positive_targets": 866,
+    "detections": 703,
+    "matched": 593,
+    "fp": 110,
+    "fn": 273,
+    "sticker_correct": 539,
+    "team_correct": 590,
+    "joint_correct": 536,
+    "negative_frames": 232,
+    "negative_frames_with_detections": 20,
+    "sticker_supervised": 593,
+    "team_supervised": 593,
+    "joint_supervised": 593
+  },
+  "matching": "one-to-one padded ROI IoU >= 0.3 against selected truth crops; not object AP",
+  "full_frame_pose_matched_only": {
+    "count": 593,
+    "depth_bias_m": 0.0942159209874007,
+    "depth_absolute_p50_m": 0.3789291849703271,
+    "depth_absolute_p95_m": 1.5587557654936024,
+    "translation_rmse_m": 0.7264694306549719,
+    "rotation_mean_deg": 30.96022142686519
+  },
+  "timing_ms": {
+    "columns": [
+      "process",
+      "preparation",
+      "candidates",
+      "model",
+      "tracker",
+      "snapshot"
+    ],
+    "p50": [
+      6.0421,
+      0.6033,
+      2.0124000000000004,
+      3.2788500000000003,
+      0.0016,
+      0.045
+    ],
+    "p95": [
+      39.1368449999999,
+      0.786145,
+      3.4626049999999964,
+      32.11014999999989,
+      0.0071,
+      0.09351
+    ]
+  },
+  "candidate_count": {
+    "mean": 3.4,
+    "p95": 10.049999999999955,
+    "max": 64
+  },
+  "repeated_frame_states": [
+    "DETECTING",
+    "DETECTING",
+    "DETECTING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING",
+    "TRACKING"
+  ],
+  "limits": "Full-frame errors use only matched detections. Independent frames reset tracker outside timing. Sequence is a wiring check, not dynamic tracking accuracy."
+}

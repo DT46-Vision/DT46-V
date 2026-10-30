@@ -30,20 +30,15 @@ void outlined_text(cv::Mat& image,const std::string& text,cv::Point origin,doubl
 cv::Mat tracking_image(const cv::Mat& rgb,const Json& result,double text_size) {
     cv::Mat output=rgb.clone();
     text_size=std::min(text_size,1.2);
-    outlined_text(output,"yellow: detected   magenta: raw PnP   cyan/green/orange: EKF",{12,24},.42*text_size,{255,255,255});
+    outlined_text(output,"yellow: model detection   cyan/green/orange: EKF",{12,24},.42*text_size,{255,255,255});
     int row=0;
     for(const auto& armor:result.at("observations")) {
         std::vector<cv::Point> corners;for(int i:{0,1,3,2})corners.emplace_back(int(std::nearbyint(armor.at("corners_px").at(i).at(0).get<double>())),int(std::nearbyint(armor.at("corners_px").at(i).at(1).get<double>())));
         cv::polylines(output,corners,true,cv::Scalar(255,220,0),2);
-        if(armor.contains("pnp")){
-            const auto& pose=armor.at("pnp");std::vector<cv::Point> pixels;
-            for(int i:{0,1,3,2})if(auto p=project(pose.at("corners_camera_m").at(i),result))pixels.push_back(*p);
-            if(pixels.size()==4){cv::polylines(output,pixels,true,cv::Scalar(255,0,255),1);for(const auto& p:pixels)cv::circle(output,p,3,{255,0,255},1);}
-            const auto& p=armor.at("position_camera_m");const auto& n=armor.at("normal_camera");
-            Json tip=Json::array();for(int i=0;i<3;++i)tip.push_back(p.at(i).get<double>()+.12*n.at(i).get<double>());
-            const auto start=project(p,result),end=project(tip,result);if(start&&end)cv::arrowedLine(output,*start,*end,{255,0,255},2,cv::LINE_AA,0,.2);
-            outlined_text(output,"PnP "+std::to_string(row)+": z="+number(p.at(2))+" m, reproj="+number(pose.at("reprojection_error_px"))+" px",{12,48+24*row},.45*text_size,{255,0,255});
-            ++row;
+        if(armor.contains("model")){
+            const auto& model=armor.at("model");
+            outlined_text(output,model.at("team").get<std::string>()+" "+model.at("sticker_type").get<std::string>()+
+                ": z="+number(model.at("depth_m"))+" m",{12,48+24*row++},.45*text_size,{255,220,0});
         }
     }
     const auto& debug=result.at("tracker_debug");

@@ -31,7 +31,7 @@
 
 namespace dt46 {
 namespace {
-std::array<const char*,10> views={"image_raw","ballistic_img","tracking_state_img","result","crop_img","bin_img","img_armor","img_armor_processed","img_debug","gray"};
+std::array<const char*,9> views={"image_raw","ballistic_img","tracking_state_img","result","crop_img","bin_img","model_input","img_debug","gray"};
 std::array<const char*,6> font_labels={"14 px","16 px","18 px","20 px","24 px","28 px"};
 constexpr std::array<const char*,NK_COLOR_COUNT> color_roles={"text","window","header","border","button","button_hover","button_active","toggle","toggle_hover","toggle_cursor","select","select_active","slider","slider_cursor","slider_cursor_hover","slider_cursor_active","property","edit","edit_cursor","combo","chart","chart_color","chart_color_highlight","scrollbar","scrollbar_cursor","scrollbar_cursor_hover","scrollbar_cursor_active","tab_header"};
 std::array<const char*,2> theme_names={"Day","Night"};
@@ -79,7 +79,7 @@ struct VisionDebug::Impl {
         apply_theme();
         for(GLuint texture:textures){glBindTexture(GL_TEXTURE_2D,texture);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);}
         Json groups={{"camera",camera.description.at("camera")},{"detector",pipeline.settings().at("detector")},{"tracker",pipeline.settings().at("tracker")}};
-        groups["detector"]["cls_model_file"]=pipeline.settings().at("model");field_types=groups;
+        groups["detector"]["pose_model_file"]=pipeline.settings().at("model");field_types=groups;
         for(const auto& [group,values]:groups.items())for(const auto& [key,value]:values.items()) {
             const std::string text=value.is_string()?value.get<std::string>():value.is_boolean()?(value.get<bool>()?"1":"0"):value.dump();auto& buffer=fields[group][key];std::copy_n(text.c_str(),std::min(text.size(),buffer.size()-1),buffer.data());
         }
@@ -94,7 +94,7 @@ struct VisionDebug::Impl {
     }
     Json settings()const {
         Json result=Json::object();for(const auto& [group,values]:fields)for(const auto& [key,text]:values) {
-            if(key=="cls_model_file"){result["model"]=text.data();continue;}
+            if(key=="pose_model_file"){result["model"]=text.data();continue;}
             std::size_t consumed=0;const std::string value=text.data();const double number=std::stod(value,&consumed);
             if(consumed!=value.size()||!std::isfinite(number))throw std::invalid_argument("Invalid parameter: "+key);
             if(field_types.at(group).at(key).is_boolean()){
@@ -111,7 +111,7 @@ struct VisionDebug::Impl {
         std::ifstream input(path);if(!input)throw std::runtime_error("Cannot open parameters");const auto values=Json::parse(input);if(!values.is_object())throw std::invalid_argument("Parameters must be an object");
         if(values.contains("camera"))camera.validate(values.at("camera"));
         for(auto& [group,entries]:fields)for(auto& [key,buffer]:entries)if(!physics_input(group,key)) {
-            const bool model=key=="cls_model_file"&&values.contains("model");
+            const bool model=key=="pose_model_file"&&values.contains("model");
             if(!model&&(!values.contains(group)||!values.at(group).contains(key)))continue;
             const auto& value=model?values.at("model"):values.at(group).at(key);const std::string text=value.is_string()?value.get<std::string>():value.is_boolean()?(value.get<bool>()?"1":"0"):value.dump();if(text.size()>=buffer.size())throw std::invalid_argument("Parameter text is too long");buffer.fill(0);std::copy(text.begin(),text.end(),buffer.begin());
         }apply();
@@ -171,7 +171,7 @@ struct VisionDebug::Impl {
     }
     void parameters(float x,float y,float width,float height) {
         if(nk_begin(ui,"Settings",nk_rect(x,y,width,height),NK_WINDOW_BORDER)) {
-            nk_layout_row_dynamic(ui,scaled(24),1);nk_label(ui,"Simulated camera / original vision",NK_TEXT_LEFT);
+            nk_layout_row_dynamic(ui,scaled(24),1);nk_label(ui,"Simulated camera / armor model",NK_TEXT_LEFT);
             constexpr const char* groups[]={"camera","detector","tracker"};nk_layout_row_dynamic(ui,scaled(24),3);
             for(int i=0;i<3;++i)if(nk_option_label(ui,groups[i],tab==i))tab=i;
             nk_layout_row_dynamic(ui,std::max(scaled(120),height-scaled(315)),1);
@@ -183,11 +183,11 @@ struct VisionDebug::Impl {
                     else if(field_types.at(groups[tab]).at(key).is_boolean()){
                         int enabled=std::string(buffer.data())=="1"||std::string(buffer.data())=="1.0";
                         if(nk_checkbox_label(ui,"Enabled",&enabled)){buffer.fill(0);buffer[0]=enabled?'1':'0';}
-                    }else nk_edit_string_zero_terminated(ui,NK_EDIT_FIELD,buffer.data(),int(buffer.size()),key=="cls_model_file"?nk_filter_default:nk_filter_float);
+                    }else nk_edit_string_zero_terminated(ui,NK_EDIT_FIELD,buffer.data(),int(buffer.size()),key=="pose_model_file"?nk_filter_default:nk_filter_float);
                 }
                 const auto note=[&](const std::string& text){nk_layout_row_dynamic(ui,scaled(42),1);nk_label_wrap(ui,text.c_str());};
                 if(tab==0){note("View rotation changes display only; vision uses the original camera image");note("camera_name / camera_info_url: frame camera and K/D; use_sensor_data_qos: ROS only");}
-                if(tab==1){note("detect_color: -1 follow target, 0 red, 1 blue, 2 both");note("use_geometric_center: false (frame calibration)");note("print_period_ms: native processing FPS log interval");}
+                if(tab==1){note("detect_color: -1 follow target, 0 red, 1 blue, 2 both");note("Raw RGB crop + calibrated K/D; no perspective warp");note("print_period_ms: native processing FPS log interval");}
                 if(tab==2){note("target_color: 0 red / 1 blue; follow_decision uses simulation feedback");
                     if(!last_result.is_null())note("cam_to_gun_pos [m], feedback: "+last_result.at("input").at("muzzle_offset_camera_m").dump());
                     note("rotation_rpy_*: ROS IMU adapter replaced by optical feedback");}
