@@ -87,7 +87,7 @@ build/native/bin/dt46_vision.exe --save-debug
 
 仿真驾驶默认启动第一条命令对应的独立进程。识别默认在后台运行，调试窗口读取同一管线；关闭、重开显示不会重建检测器或追踪器。调试命令通过本工程 `.cache/virtual_camera/session.json` 找到当前任务，可用 `--debug-session` 指定实例。退出只清理自己创建的会话。相机正常关闭后视觉结束；协议错误与超时记录为失败。视觉断开不得影响驾驶，完整边界和操作验收见 [rm_sim 项目规范](../../README.md#项目规范工程边界与使用流程)。
 
-`--profile infantry|sentry|hero` 选择 tracker YAML（不扩展模型已训练的类别）；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
+`--profile infantry|sentry|hero` 选择 tracker YAML（不扩展模型已训练的类别）；`--parameters` 加载调试窗口保存的 JSON；`--record result.mp4 --video-fps 20` 录制原跟踪/弹道叠加图；`--duration`、`--frames` 限制运行。采样不足时不会填入重复旧画面，所以 MP4 的固定帧率时长可能短于真实运行时长；采样时间以 `frames.jsonl` 为准。结果目录中的 `provenance.json` 由视觉自己记录本局实际加载的配置与模型哈希（`armor_model.json`、模型本体及其元数据、`tracker_params_<profile>.yaml`）；仿真不读取视觉配置文件。结果包含逐帧 JSON、结束报告及调试事件，录制和显示都不执行云台或开火指令。
 
 原生虚拟相机入口支持 `--no-logs` / `--logs` 总开关，以及可重复的 `--log NAME` / `--no-log NAME`；分项为 `frames`、`events`、`parameters`、`reports`，默认全部开启。总开关先应用，显式分项再覆盖，例如 `--no-logs --log events` 仅记录调试事件。关闭记录仍正常采图和识别，保留调试控制连接、手动保存与显式录像；仿真启动时的统一配置和对应分项由[仿真日志开关](../../README.md#日志开关)维护。
 

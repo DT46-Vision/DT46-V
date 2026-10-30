@@ -2,6 +2,7 @@
 #include "platform/debug_control.hpp"
 #include "modules/media/recorder.hpp"
 #include "modules/vision/debug_images.hpp"
+#include "platform/file_hash.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -61,6 +62,16 @@ public:
         pipeline.configure(settings);
         if(!o.record.empty())recorder=std::make_unique<dt46::Recorder>(o.record,o.video_fps);
         std::filesystem::create_directories(o.output);
+        // The simulator no longer reads vision files; this run records what it actually loaded.
+        {
+            const auto model=pipeline.root()/pipeline.settings().at("model").get<std::string>();
+            auto metadata=model;metadata.replace_extension(".json");
+            Json files=Json::array();
+            for(const auto& path:{pipeline.root()/"standalone/armor_model.json",model,metadata,
+                    pipeline.root()/"src/rm_tracker/config"/("tracker_params_"+o.profile+".yaml")})
+                files.push_back({{"path",path.string()},{"sha256",dt46::sha256(path)}});
+            write_json(o.output/"provenance.json",{{"schema",1},{"profile",o.profile},{"files",files}});
+        }
         for(const auto& [name,file,stream]:std::initializer_list<std::tuple<const char*,const char*,std::ofstream*>>{
                 {"frames","frames.jsonl",&log},{"events","debug_events.jsonl",&events},{"parameters","parameter_revisions.jsonl",&parameters_log}}){
             if(!o.logging.at(name).get<bool>())continue;
