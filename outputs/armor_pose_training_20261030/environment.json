@@ -1,0 +1,95 @@
+{
+  "command": [
+    "D:\\project\\RobotMaster\\sim_vision\\DT46_V\\tools\\armor_pose_training\\train.py",
+    "--manifest",
+    "../outputs/armor_batch_20261030/dataset_10000/training/training.jsonl",
+    "--output",
+    ".cache/armor-pose-runs/bootstrap_20261030",
+    "--epochs",
+    "5",
+    "--batch-size",
+    "128",
+    "--workers",
+    "0"
+  ],
+  "python": "3.13.14",
+  "torch": "2.11.0+cu128",
+  "torchvision": "0.26.0+cu128",
+  "cuda_runtime": "12.8",
+  "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "amp": true,
+  "parameter_count": 1004338,
+  "classes": [
+    "base_small",
+    "engineer_2",
+    "infantry_3",
+    "infantry_4",
+    "outpost",
+    "sentry"
+  ],
+  "catalog": {
+    "base_small": {
+      "target_family": "structure",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "engineer_2": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "infantry_3": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "infantry_4": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "outpost": {
+      "target_family": "structure",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "sentry": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    }
+  },
+  "manifest": "D:\\project\\RobotMaster\\rm_sim\\outputs\\armor_batch_20261030\\dataset_10000\\training\\training.jsonl",
+  "manifest_sha256": "4ef4a11b55ff6758f16cc35ba4aa3a6d8027921b1567e3a64c7efa916dba4999",
+  "train_samples": 8866,
+  "validation_samples": 1098,
+  "options": {
+    "manifest": "D:\\project\\RobotMaster\\rm_sim\\outputs\\armor_batch_20261030\\dataset_10000\\training\\training.jsonl",
+    "output": "D:\\project\\RobotMaster\\rm_sim\\DT46_V\\.cache\\armor-pose-runs\\bootstrap_20261030",
+    "epochs": 5,
+    "batch_size": 128,
+    "workers": 0,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0001,
+    "seed": 20261030,
+    "device": "cuda",
+    "amp": true,
+    "resume": null
+  },
+  "optimizer": {
+    "lr": 0.0003,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.0001,
+    "amsgrad": false,
+    "maximize": false,
+    "foreach": null,
+    "capturable": false,
+    "differentiable": false,
+    "fused": null,
+    "decoupled_weight_decay": true
+  }
+}

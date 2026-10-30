@@ -1,0 +1,5 @@
+--index-url https://pypi.org/simple
+numpy==2.5.4
+pillow==13.0.0
+onnx==1.23.2
+onnxruntime==1.31.1

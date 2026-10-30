@@ -1,0 +1,91 @@
+{
+  "gpu_forward_backward": {
+    "passed": true,
+    "capability": [
+      12,
+      0
+    ],
+    "compiled_architecture": "sm_120"
+  },
+  "unit_tests": {
+    "passed": 4,
+    "failed": 0,
+    "coverage": [
+      "group leakage and image duplication",
+      "label/input separation",
+      "negative-only presence gradients",
+      "camera scale and rotation column convention"
+    ]
+  },
+  "resume": {
+    "from_epoch": 5,
+    "to_epoch": 20,
+    "epochs_recorded": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "completed_run_guard_passed": true,
+    "guard_preserved_checkpoint_and_history_hashes": true
+  },
+  "training": {
+    "epochs": 20,
+    "best_epoch": 18,
+    "epoch_compute_seconds_sum": 259.38580199997523,
+    "steady_epoch_seconds_median": 9.636471300000267,
+    "maximum_cuda_allocated_mib": 410.578125,
+    "skipped_amp_steps_total": 3,
+    "initial_train_loss": 3.7846691953713703,
+    "final_train_loss": 0.19977565237127468,
+    "initial_validation_loss": 3.8696389198303223,
+    "best_validation_loss": 0.7068445086479187
+  },
+  "artifacts": {
+    "best.pt": {
+      "path": "D:\\project\\RobotMaster\\rm_sim\\DT46_V\\.cache\\armor-pose-runs\\bootstrap_20261030\\best.pt",
+      "bytes": 12298398,
+      "sha256": "009b9a3c2e0cb240ff4b9399dbcd57dda91107bef1ac6b17a3483f3409e464ad"
+    },
+    "last.pt": {
+      "path": "D:\\project\\RobotMaster\\rm_sim\\DT46_V\\.cache\\armor-pose-runs\\bootstrap_20261030\\last.pt",
+      "bytes": 12298398,
+      "sha256": "6c8a1847bb297ac6767caa9afae034c8f567c50f759b337b2f18bd4cd15ba640"
+    },
+    "armor_pose.onnx": {
+      "path": "D:\\project\\RobotMaster\\rm_sim\\DT46_V\\.cache\\armor-pose-runs\\bootstrap_20261030\\armor_pose.onnx",
+      "bytes": 4029704,
+      "sha256": "8b14ceb80577235d12cfb2809205064d346e6d887580a8fa027dc262b42592b1"
+    }
+  },
+  "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics",
+  "test_scope": "Saved crops from selected simulation data; no online candidate detector, PnP comparison, ROS or physical hardware integration",
+  "epoch5_mode_probe": {
+    "eval_fp32_loss": 3.8690454959869385,
+    "eval_amp_loss": 3.869229793548584,
+    "train_amp_loss": 1.2090191841125488,
+    "sampling": "128 validation crops, shuffle generator seed 17; checkpoint epoch 5; observation only, no parameter updates",
+    "batchnorm_momentum": 0.01
+  },
+  "dependency_install_notes": [
+    "CUDA wheel download resumed after network timeouts, then completed successfully",
+    "Configured Tsinghua PyPI mirror could not resolve ONNX; explicit official PyPI installation succeeded",
+    "Export used supported legacy TorchScript ONNX path with dynamo=False; deprecation warning recorded, checker and CPU parity passed"
+  ]
+}

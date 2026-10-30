@@ -1,0 +1,127 @@
+{
+  "count": 1122,
+  "loss": 0.8436161875724792,
+  "loss_terms": {
+    "armor": 0.03324489668011665,
+    "sticker": 0.5168086290359497,
+    "team": 0.038904279470443726,
+    "position": 0.026842191815376282,
+    "rotation": 0.06022373586893082
+  },
+  "presence": {
+    "threshold": 0.5,
+    "tp": 883,
+    "fp": 7,
+    "fn": 3,
+    "tn": 229,
+    "precision": 0.9921348314606742,
+    "recall": 0.9966139954853274
+  },
+  "pose_all_supervised": {
+    "count": 886,
+    "invalid_rotation_count": 0,
+    "depth_bias_m": 0.022639967501163483,
+    "depth_std_m": 0.7584120035171509,
+    "depth_absolute_p50_m": 0.428546279668808,
+    "depth_absolute_p95_m": 1.5819801092147827,
+    "translation_rmse_m": 0.7722694873809814,
+    "lateral_rmse_m": 0.14387086033821106,
+    "rotation_mean_deg": 31.10545539855957,
+    "rotation_p95_deg": 57.48029708862305
+  },
+  "sticker": {
+    "count": 886,
+    "accuracy": 0.8623024821281433
+  },
+  "team": {
+    "count": 884,
+    "accuracy": 0.9898189902305603
+  },
+  "depth_bins_m": {
+    "[0,2)": {
+      "count": 376,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.28240105509757996,
+      "depth_std_m": 0.3832326829433441,
+      "depth_absolute_p50_m": 0.29732197523117065,
+      "depth_absolute_p95_m": 0.9741920232772827,
+      "translation_rmse_m": 0.4790821373462677,
+      "lateral_rmse_m": 0.05387058109045029,
+      "rotation_mean_deg": 32.11294937133789,
+      "rotation_p95_deg": 58.77561569213867
+    },
+    "[2,4)": {
+      "count": 244,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.1496906280517578,
+      "depth_std_m": 0.687754213809967,
+      "depth_absolute_p50_m": 0.46497416496276855,
+      "depth_absolute_p95_m": 1.3663240671157837,
+      "translation_rmse_m": 0.7134459018707275,
+      "lateral_rmse_m": 0.11658432334661484,
+      "rotation_mean_deg": 28.38236427307129,
+      "rotation_p95_deg": 54.7598876953125
+    },
+    "[4,8)": {
+      "count": 266,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": -0.4610838294029236,
+      "depth_std_m": 0.9644648432731628,
+      "depth_absolute_p50_m": 0.7623775005340576,
+      "depth_absolute_p95_m": 1.9179356098175049,
+      "translation_rmse_m": 1.093235969543457,
+      "lateral_rmse_m": 0.22885432839393616,
+      "rotation_mean_deg": 32.17920684814453,
+      "rotation_p95_deg": 57.37434005737305
+    },
+    "[8,inf)": {
+      "count": 0
+    }
+  },
+  "incidence_bins_deg": {
+    "[0,20)": {
+      "count": 310,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.00658838078379631,
+      "depth_std_m": 0.740772545337677,
+      "depth_absolute_p50_m": 0.42077749967575073,
+      "depth_absolute_p95_m": 1.5783101320266724,
+      "translation_rmse_m": 0.7531597018241882,
+      "lateral_rmse_m": 0.13587555289268494,
+      "rotation_mean_deg": 14.316659927368164,
+      "rotation_p95_deg": 26.192821502685547
+    },
+    "[20,40)": {
+      "count": 294,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.015830276533961296,
+      "depth_std_m": 0.7537040114402771,
+      "depth_absolute_p50_m": 0.3959817886352539,
+      "depth_absolute_p95_m": 1.5898241996765137,
+      "translation_rmse_m": 0.765170156955719,
+      "lateral_rmse_m": 0.1310155838727951,
+      "rotation_mean_deg": 31.36394500732422,
+      "rotation_p95_deg": 44.207035064697266
+    },
+    "[40,60)": {
+      "count": 282,
+      "invalid_rotation_count": 0,
+      "depth_bias_m": 0.04738479480147362,
+      "depth_std_m": 0.7814968824386597,
+      "depth_absolute_p50_m": 0.4660683870315552,
+      "depth_absolute_p95_m": 1.5727698802947998,
+      "translation_rmse_m": 0.7998901605606079,
+      "lateral_rmse_m": 0.16383425891399384,
+      "rotation_mean_deg": 49.29173278808594,
+      "rotation_p95_deg": 64.62466430664062
+    },
+    "[60,181)": {
+      "count": 0
+    }
+  },
+  "split": "test",
+  "checkpoint_epoch": 18,
+  "manifest_sha256": "4ef4a11b55ff6758f16cc35ba4aa3a6d8027921b1567e3a64c7efa916dba4999",
+  "training_manifest_sha256": "4ef4a11b55ff6758f16cc35ba4aa3a6d8027921b1567e3a64c7efa916dba4999",
+  "scope": "Saved crops; pose metrics include all supervised positives, independent of presence threshold"
+}

@@ -1,0 +1,113 @@
+{
+  "format_version": 1,
+  "checkpoint_epoch": 18,
+  "classes": [
+    "base_small",
+    "engineer_2",
+    "infantry_3",
+    "infantry_4",
+    "outpost",
+    "sentry"
+  ],
+  "teams": [
+    "red",
+    "blue"
+  ],
+  "catalog": {
+    "base_small": {
+      "target_family": "structure",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "engineer_2": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "infantry_3": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "infantry_4": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "outpost": {
+      "target_family": "structure",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    },
+    "sentry": {
+      "target_family": "vehicle",
+      "panel_size": "small",
+      "geometry": "AM02_2019_small_full_mesh"
+    }
+  },
+  "image_size": 128,
+  "inputs": {
+    "image": "float32 NCHW RGB in [0,1]; normalization is inside the model",
+    "camera": "float32 [log(fx/128),log(fy/128),cx/128,cy/128,k1,k2,p1,p2,k3]; crop K/D"
+  },
+  "outputs": [
+    "armor_logit",
+    "sticker_logits",
+    "team_logits",
+    "position_camera_m",
+    "rotation_6d"
+  ],
+  "position_units": "metres",
+  "camera_axes": "right/down/forward",
+  "board_axes": "right/up/outward",
+  "rotation_6d_order": "first column of R_camera_from_board, then second column",
+  "decoding": "Apply Gram-Schmidt to two axes; reject nonfinite/zero/collinear axes or nonpositive depth. Range/bearing/incidence derive from the same p/R.",
+  "presence_score": "sigmoid(armor_logit); uncalibrated; not a pose uncertainty estimate",
+  "onnx_sha256": "8b14ceb80577235d12cfb2809205064d346e6d887580a8fa027dc262b42592b1",
+  "training_manifest_sha256": "4ef4a11b55ff6758f16cc35ba4aa3a6d8027921b1567e3a64c7efa916dba4999",
+  "validation": {
+    "onnx_checker": "passed",
+    "cpu_provider": [
+      "CPUExecutionProvider"
+    ],
+    "parity_crops": 32,
+    "batch_sizes": [
+      1,
+      2,
+      4
+    ],
+    "absolute_tolerance": 0.0001,
+    "relative_tolerance": 0.0001,
+    "maximum_absolute_error": {
+      "armor_logit": 1.621246337890625e-05,
+      "sticker_logits": 3.5881996154785156e-05,
+      "team_logits": 1.811981201171875e-05,
+      "position_camera_m": 7.62939453125e-06,
+      "rotation_6d": 1.2516975402832031e-06
+    }
+  },
+  "benchmark": {
+    "scope": "ORT CPU inference only; prepared 128x128 crops. Excludes candidate extraction, crop/resize, preprocessing, pose decoding and IO.",
+    "cpu": "AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+    "threads": 4,
+    "onnxruntime": "1.31.1",
+    "warmups": 10,
+    "batches": {
+      "1": {
+        "p50_ms": 0.6252,
+        "p95_ms": 0.6840449999999999,
+        "repeats": 100
+      },
+      "2": {
+        "p50_ms": 0.6145499999999999,
+        "p95_ms": 0.65157,
+        "repeats": 100
+      },
+      "4": {
+        "p50_ms": 1.7496,
+        "p95_ms": 1.8435249999999999,
+        "repeats": 100
+      }
+    }
+  }
+}

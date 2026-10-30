@@ -164,6 +164,8 @@ build/native/bin/dt46_vision.exe --save-debug
 
 ## 离线回放、录像与标定
 
+装甲位姿学习由独立的 [GPU 训练与 CPU 导出工具](../tools/armor_pose_training/README.md)负责，读取仿真生成的选定裁图清单。训练环境不参与本 C++ 构建；导出权重尚未替换在线 PnP。
+
 仿真使用 `sim_sequence` 导出 PNG 与 `frames.jsonl`，DT46 独立读取：
 
 ```powershell
