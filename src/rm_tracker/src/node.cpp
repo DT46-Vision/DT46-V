@@ -450,12 +450,16 @@ void RmTrackerNode::res_img_cb(const sensor_msgs::msg::Image::SharedPtr msg) {
 void RmTrackerNode::cb_opponent_color(const rm_interfaces::msg::Decision::SharedPtr msg) {
     if (follow_decision_) {
         if (target_color_ != msg->color) {
-            target_color_ = msg->color;
-            tracker_.target_color = msg->color;
-
-            std::lock_guard<std::mutex> lock(tracker_lock_);
-            tracker_.tracker_state = TrackerState::LOST;
-            tracker_.tracked_id = -1;
+            {
+                // 先释放锁，set_parameter 会触发 param_cb 再次加锁
+                std::lock_guard<std::mutex> lock(tracker_lock_);
+                target_color_ = msg->color;
+                tracker_.target_color = msg->color;
+                tracker_.tracker_state = TrackerState::LOST;
+                tracker_.tracked_id = -1;
+            }
+            // 同步回参数服务器，rqt/ros2 param 才能看到切换后的颜色
+            this->set_parameter(rclcpp::Parameter("target_color", target_color_));
             RCLCPP_INFO(this->get_logger(), "收到中央裁判系统下发决策，追踪颜色已重置切换为: %d", target_color_);
         }
     }
