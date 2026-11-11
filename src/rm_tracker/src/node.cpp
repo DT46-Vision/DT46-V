@@ -22,11 +22,19 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     follow_decision_ = this->declare_parameter("follow_decision", false);
     display_fps_limit_ = this->declare_parameter("display_fps_limit", true);
     text_size_ = this->declare_parameter("text_size", 1.0);
+    debug_zero_yaw_ = this->declare_parameter("debug_zero_yaw", false);
 
     // 2. 加载机械外参：轴固定偏移修正（例如 pitch/yaw 轴不共轴或相机倒置补偿）
     rotation_rpy_ << this->declare_parameter("rotation_rpy_r", 0.0),
                      this->declare_parameter("rotation_rpy_p", 0.0),
                      this->declare_parameter("rotation_rpy_y", -180.0);
+
+    // 2.4 云台 yaw 轴到相机光心的平移（body 系：x 前 / y 右 / z 上）。
+    // 云台转动时相机在绕 yaw 轴画圈，不补这个杆臂会让静止目标在 EKF 里产生假速度。
+    tf_.set_yaw_to_cam_pos(Eigen::Vector3d(
+        this->declare_parameter("yaw_to_cam_pos_x", 0.0),
+        this->declare_parameter("yaw_to_cam_pos_y", 0.0),
+        this->declare_parameter("yaw_to_cam_pos_z", 0.0)));
 
     // 2.5 加载相机到枪口外参
     tracker_.cam_to_gun_pos = Eigen::Vector3d(
@@ -79,6 +87,8 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     tracker_.yaw_rate_max_accel_deg_s2_ = this->declare_parameter("yaw_rate_max_accel_deg_s2", 1500.0);
     tracker_.yaw_rate_blend_time_ = this->declare_parameter("yaw_rate_blend_time", 0.10);
     tracker_.yaw_rate_hold_after_reset_ = this->declare_parameter("yaw_rate_hold_after_reset", 0.10);
+    tracker_.yaw_rate_deadzone_deg_s_ = this->declare_parameter("yaw_rate_deadzone_deg_s", 0.0);
+    tracker_.yaw_rate_deadzone_ramp_deg_s_ = this->declare_parameter("yaw_rate_deadzone_ramp_deg_s", 0.0);
 
     // 2.12 重新构建弹道查找表 (基于加载的弹速和k_v2)
     tracker_.build_ballistic_lut();
@@ -114,6 +124,8 @@ RmTrackerNode::RmTrackerNode(const rclcpp::NodeOptions& options)
     pub_enemy_nav_img_ = this->create_publisher<sensor_msgs::msg::Image>("/tracker/enemy_nav_img", sensor_qos);
     pub_gimbal_control_ = this->create_publisher<rm_interfaces::msg::GimbalControl>("/tracker/gimbal_control", sensor_qos);
     pub_enemy_datas_ = this->create_publisher<rm_interfaces::msg::EnemyCenter>("/tracker/enemy_datas", sensor_qos);
+    // 调试话题用默认可靠 QoS，方便 PlotJuggler 直接订阅
+    pub_ekf_debug_ = this->create_publisher<rm_interfaces::msg::EkfDebug>("/ekf/debug", 10);
 
     // 7. 注册动态参数热重载回调
     param_cb_handle_ = this->add_on_set_parameters_callback(
@@ -229,7 +241,7 @@ void RmTrackerNode::processing_worker() {
 
             // 2. 坐标系转换 (Cam -> World)
             Eigen::Vector3d raw_pos(a.dx / 1000.0, a.dy / 1000.0, a.dz / 1000.0);
-            Eigen::Vector3d world_pos = tf_.cam_to_world(raw_pos, data.imu_rpy);
+            Eigen::Vector3d world_pos = tf_.cam_to_world_pos(raw_pos, data.imu_rpy);
 
             // 角度对齐与转换 (Degree -> Radian)。PnP yaw 取反后再加云台 yaw。
             double gimbal_yaw_deg = data.imu_rpy(2);
@@ -267,6 +279,7 @@ void RmTrackerNode::processing_worker() {
         std::tuple<double, double, bool> gimbal_cmd;
         double yaw_rate_cmd = 0.0;
         std::vector<std::pair<std::string, std::string>> tracker_logs;
+        EkfDebugData ekf_debug;
         {
             std::lock_guard<std::mutex> lock(tracker_lock_);
             process_counter_++;
@@ -290,6 +303,7 @@ void RmTrackerNode::processing_worker() {
             // 数据拷贝：提取非阻塞式渲染快照
             std::lock_guard<std::mutex> r_lock(render_lock_);
             render_snapshot_ = tracker_.get_render_snapshot();
+            ekf_debug = tracker_.ekf_debug();
         }
 
         // 3. 构建并发布电控/微控制器需要的最终云台控制包
@@ -311,7 +325,7 @@ void RmTrackerNode::processing_worker() {
         }
         if (!can_fire) smooth_ready_ = false;
 
-        gb_msg.yaw = smooth_yaw_;
+        gb_msg.yaw = debug_zero_yaw_ ? 0.0 : smooth_yaw_;
         gb_msg.pitch = smooth_pitch_;
         // 显式规避 bool 隐式转换风险
         gb_msg.can_fire = static_cast<int>(can_fire);
@@ -339,7 +353,9 @@ void RmTrackerNode::processing_worker() {
             Eigen::Vector3d world_pos(nav_snapshot.target_state(0),
                                       nav_snapshot.target_state(2),
                                       nav_snapshot.target_state(4));
-            Eigen::Vector3d cam_pos = tf_.world_to_mount(world_pos, data.imu_rpy);
+            // EKF 状态现在以 yaw 轴为原点；导航接口仍按“相机安装系”发布，先减掉相机位置。
+            Eigen::Vector3d cam_world = tf_.cam_to_world_pos(Eigen::Vector3d::Zero(), data.imu_rpy);
+            Eigen::Vector3d cam_pos = tf_.world_to_mount(world_pos - cam_world, data.imu_rpy);
 
             // enemy_yaw：世界系方向向量转到安装系后再取 atan2
             double yaw_world = nav_snapshot.target_state(6);
@@ -363,6 +379,127 @@ void RmTrackerNode::processing_worker() {
             ec_msg.armor_id = -1;
         }
         pub_enemy_datas_->publish(ec_msg);
+
+        // 5. 发布 EKF 调试数据，供 PlotJuggler 观察
+        rm_interfaces::msg::EkfDebug dbg;
+        dbg.header.stamp = ros_clock;
+        dbg.header.frame_id = "world";
+
+        dbg.dt = ekf_debug.dt;
+        dbg.valid = ekf_debug.valid;
+
+        dbg.meas_x = ekf_debug.measurement(0);
+        dbg.meas_y = ekf_debug.measurement(1);
+        dbg.meas_z = ekf_debug.measurement(2);
+        dbg.meas_yaw = ekf_debug.measurement(3);
+
+        dbg.pred_x = ekf_debug.predicted_armor(0);
+        dbg.pred_y = ekf_debug.predicted_armor(1);
+        dbg.pred_z = ekf_debug.predicted_armor(2);
+        dbg.pred_yaw = ekf_debug.predicted_armor(3);
+
+        dbg.prior_x = ekf_debug.prior_state(0);
+        dbg.prior_vx = ekf_debug.prior_state(1);
+        dbg.prior_y = ekf_debug.prior_state(2);
+        dbg.prior_vy = ekf_debug.prior_state(3);
+        dbg.prior_z = ekf_debug.prior_state(4);
+        dbg.prior_vz = ekf_debug.prior_state(5);
+        dbg.prior_yaw = ekf_debug.prior_state(6);
+        dbg.prior_vyaw = ekf_debug.prior_state(7);
+        dbg.prior_r = ekf_debug.prior_state(8);
+
+        dbg.innov_x = ekf_debug.innovation(0);
+        dbg.innov_y = ekf_debug.innovation(1);
+        dbg.innov_z = ekf_debug.innovation(2);
+        dbg.innov_yaw = ekf_debug.innovation(3);
+        dbg.postfit_x = ekf_debug.postfit(0);
+        dbg.postfit_y = ekf_debug.postfit(1);
+        dbg.postfit_z = ekf_debug.postfit(2);
+        dbg.postfit_yaw = ekf_debug.postfit(3);
+        dbg.nis_x = ekf_debug.nis(0);
+        dbg.nis_y = ekf_debug.nis(1);
+        dbg.nis_z = ekf_debug.nis(2);
+        dbg.nis_yaw = ekf_debug.nis(3);
+        dbg.innov_radial = ekf_debug.innov_radial;
+        dbg.innov_tangential = ekf_debug.innov_tangential;
+
+        dbg.p_xx = ekf_debug.P_diag(0);
+        dbg.p_vx = ekf_debug.P_diag(1);
+        dbg.p_yy = ekf_debug.P_diag(2);
+        dbg.p_vy = ekf_debug.P_diag(3);
+        dbg.p_zz = ekf_debug.P_diag(4);
+        dbg.p_vz = ekf_debug.P_diag(5);
+        dbg.p_yaw = ekf_debug.P_diag(6);
+        dbg.p_vyaw = ekf_debug.P_diag(7);
+        dbg.p_r = ekf_debug.P_diag(8);
+
+        dbg.p_prior_xx = ekf_debug.P_prior_diag(0);
+        dbg.p_prior_vx = ekf_debug.P_prior_diag(1);
+        dbg.p_prior_yy = ekf_debug.P_prior_diag(2);
+        dbg.p_prior_vy = ekf_debug.P_prior_diag(3);
+        dbg.p_prior_zz = ekf_debug.P_prior_diag(4);
+        dbg.p_prior_vz = ekf_debug.P_prior_diag(5);
+        dbg.p_prior_yaw = ekf_debug.P_prior_diag(6);
+        dbg.p_prior_vyaw = ekf_debug.P_prior_diag(7);
+        dbg.p_prior_r = ekf_debug.P_prior_diag(8);
+
+        dbg.s_x = ekf_debug.S_diag(0);
+        dbg.s_y = ekf_debug.S_diag(1);
+        dbg.s_z = ekf_debug.S_diag(2);
+        dbg.s_yaw = ekf_debug.S_diag(3);
+
+        dbg.r_x = ekf_debug.R_diag(0);
+        dbg.r_y = ekf_debug.R_diag(1);
+        dbg.r_z = ekf_debug.R_diag(2);
+        dbg.r_yaw = ekf_debug.R_diag(3);
+
+        dbg.q_x = ekf_debug.Q_diag(0);
+        dbg.q_vx = ekf_debug.Q_diag(1);
+        dbg.q_y = ekf_debug.Q_diag(2);
+        dbg.q_vy = ekf_debug.Q_diag(3);
+        dbg.q_z = ekf_debug.Q_diag(4);
+        dbg.q_vz = ekf_debug.Q_diag(5);
+        dbg.q_yaw = ekf_debug.Q_diag(6);
+        dbg.q_vyaw = ekf_debug.Q_diag(7);
+        dbg.q_r = ekf_debug.Q_diag(8);
+
+        dbg.mahalanobis_sq = ekf_debug.mahalanobis_sq;
+        dbg.mahalanobis_threshold = ekf_debug.mahalanobis_threshold;
+        dbg.has_measurement = ekf_debug.has_measurement;
+        dbg.accepted = ekf_debug.accepted;
+
+        dbg.center_has_measurement = ekf_debug.center_has_measurement;
+        dbg.center_accepted = ekf_debug.center_accepted;
+        dbg.center_meas_x = ekf_debug.center_measurement(0);
+        dbg.center_meas_y = ekf_debug.center_measurement(1);
+        dbg.center_sigma = ekf_debug.center_sigma;
+        dbg.center_innov_x = ekf_debug.center_innovation(0);
+        dbg.center_innov_y = ekf_debug.center_innovation(1);
+        dbg.center_mahalanobis_sq = ekf_debug.center_mahalanobis_sq;
+
+        if (has_nav_snapshot) {
+            dbg.x = nav_snapshot.target_state(0);
+            dbg.vx = nav_snapshot.target_state(1);
+            dbg.y = nav_snapshot.target_state(2);
+            dbg.vy = nav_snapshot.target_state(3);
+            dbg.z = nav_snapshot.target_state(4);
+            dbg.vz = nav_snapshot.target_state(5);
+            dbg.yaw = nav_snapshot.target_state(6);
+            dbg.vyaw = nav_snapshot.target_state(7);
+            dbg.r = nav_snapshot.target_state(8);
+            dbg.another_r = nav_snapshot.another_r;
+            dbg.dz = nav_snapshot.dz;
+            dbg.reset = nav_snapshot.ekf_reset;
+            dbg.reject_streak = nav_snapshot.reject_streak;
+            dbg.tracker_state = static_cast<int>(nav_snapshot.tracker_state);
+            dbg.spin = nav_snapshot.spin;
+            dbg.radius_railed = nav_snapshot.radius_railed;
+            dbg.armor_id = nav_snapshot.target.has_value() ? nav_snapshot.target->id : -1;
+        } else {
+            dbg.tracker_state = static_cast<int>(TrackerState::LOST);
+            dbg.armor_id = -1;
+        }
+        pub_ekf_debug_->publish(dbg);
 
         if (logger_throttler_->should_log()) {
             // 1. 计算 FPS
@@ -512,6 +649,12 @@ rcl_interfaces::msg::SetParametersResult RmTrackerNode::param_cb(const std::vect
             tracker_.yaw_rate_blend_time_ = param.as_double();
         } else if (name == "yaw_rate_hold_after_reset") {
             tracker_.yaw_rate_hold_after_reset_ = param.as_double();
+        } else if (name == "yaw_rate_deadzone_deg_s") {
+            tracker_.yaw_rate_deadzone_deg_s_ = param.as_double();
+        } else if (name == "yaw_rate_deadzone_ramp_deg_s") {
+            tracker_.yaw_rate_deadzone_ramp_deg_s_ = param.as_double();
+        } else if (name == "debug_zero_yaw") {
+            debug_zero_yaw_ = param.as_bool();
         }
     }
     return result;
@@ -537,7 +680,7 @@ void RmTrackerNode::draw_tracking_state(cv::Mat& draw, const RenderSnapshot& sna
         int stroke_thickness = thickness + std::max(1, static_cast<int>(5 * scale));
 
         for (const auto& armor : snapshot.debug_yaw_armors) {
-            Eigen::Vector3d cam_pos = tf_.world_to_cam(armor.pos, current_imu);
+            Eigen::Vector3d cam_pos = tf_.world_to_cam_pos(armor.pos, current_imu);
             auto [uv, visible] = tf_.project_point(cam_pos);
             if (!visible) continue;
 
@@ -586,7 +729,7 @@ void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapsho
         current_imu = imu_rpy_;
     }
 
-    Eigen::Vector3d target_cam = tf_.world_to_cam(snapshot.target.value().pos, current_imu);
+    Eigen::Vector3d target_cam = tf_.world_to_cam_pos(snapshot.target.value().pos, current_imu);
     auto [uv_tgt, vis_tgt] = tf_.project_point(target_cam);
     if (vis_tgt) {
         cv::circle(draw, uv_tgt, 18, cv::Scalar(0, 0, 255), 2);
@@ -615,6 +758,8 @@ void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapsho
     double yaw_tol = snapshot.yaw_tolerance_deg;
     double pitch_tol = snapshot.pitch_tolerance_deg;
     double ekf_yaw_vel = snapshot.ekf_yaw_vel;
+    double yaw_rate = snapshot.yaw_rate_deg;
+    double ff_raw = snapshot.ff_raw_deg;
 
     bool can_fire = std::get<2>(snapshot.gimbal_control);
     double gc_yaw = std::get<0>(snapshot.gimbal_control);
@@ -652,6 +797,12 @@ void RmTrackerNode::draw_aiming_hud(cv::Mat& draw, const RenderSnapshot& snapsho
 
     std::snprintf(buf, sizeof(buf), "Yaw    : %5.2f deg", gc_yaw);
     put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "YawRate: %6.2f deg/s", yaw_rate);
+    put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
+
+    std::snprintf(buf, sizeof(buf), "FFRaw  : %6.2f deg/s", ff_raw);
+    put_text(row, buf, font_normal, cv::Scalar(200, 200, 0), thick_normal); row++;
 
     std::snprintf(buf, sizeof(buf), "P_Tol  : %5.2f deg", pitch_tol);
     put_text(row, buf, font_normal, cv::Scalar(255, 255, 255), thick_normal); row++;
@@ -700,7 +851,7 @@ void RmTrackerNode::draw_enemy_nav(cv::Mat& draw, const RenderSnapshot& snapshot
             double z = (i % 2 == 0) ? za : (za + dz);
             Eigen::Vector3d world_pos(xc - r * std::cos(theta), yc - r * std::sin(theta), z);
 
-            Eigen::Vector3d cam_pos = tf_.world_to_cam(world_pos, current_imu);
+            Eigen::Vector3d cam_pos = tf_.world_to_cam_pos(world_pos, current_imu);
             auto [uv, visible] = tf_.project_point(cam_pos);
             if (visible) {
                 cv::Point pt(static_cast<int>(uv.x), static_cast<int>(uv.y));
@@ -711,7 +862,7 @@ void RmTrackerNode::draw_enemy_nav(cv::Mat& draw, const RenderSnapshot& snapshot
         }
 
         Eigen::Vector3d center_world(xc, yc, za + dz / 2.0);
-        Eigen::Vector3d cam_c = tf_.world_to_cam(center_world, current_imu);
+        Eigen::Vector3d cam_c = tf_.world_to_cam_pos(center_world, current_imu);
         auto [uv_c, vis_c] = tf_.project_point(cam_c);
         if (vis_c) {
             cv::Point c_int(static_cast<int>(uv_c.x), static_cast<int>(uv_c.y));
@@ -729,7 +880,7 @@ void RmTrackerNode::draw_enemy_nav(cv::Mat& draw, const RenderSnapshot& snapshot
             double vy = snapshot.target_state(3);
             if (std::hypot(vx, vy) > 0.1) {
                 Eigen::Vector3d end_world(xc + vx * 0.5, yc + vy * 0.5, za);
-                Eigen::Vector3d cam_end = tf_.world_to_cam(end_world, current_imu);
+                Eigen::Vector3d cam_end = tf_.world_to_cam_pos(end_world, current_imu);
                 auto [uv_end, vis_end] = tf_.project_point(cam_end);
                 if (vis_end) {
                     cv::Point e_int(static_cast<int>(uv_end.x), static_cast<int>(uv_end.y));

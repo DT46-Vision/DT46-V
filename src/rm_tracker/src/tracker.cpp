@@ -674,6 +674,8 @@ bool Tracker::apply_armor_measurement(const Armor& armor) {
 void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<std::pair<std::string, std::string>>& logs) {
     if (jump_cooldown_ > 0) jump_cooldown_--;
     ekf_reset_this_frame_ = false;
+    ekf_reset_last_frame_ = false;
+    radius_railed_last_frame_ = false;
 
     update_plate(armors, dt, logs);
 
@@ -759,6 +761,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
     }
 
     const bool radius_railed = target_state_(8) < radius_params.r_min || target_state_(8) > radius_params.r_max;
+    radius_railed_last_frame_ = radius_railed;
     // 钳制状态范围防发散
     target_state_(8) = std::clamp(target_state_(8), radius_params.r_min, radius_params.r_max);
     target_state_(1) = std::clamp(target_state_(1), -15.0, 15.0);
@@ -788,6 +791,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
             ekf_reject_streak_ = 0;
             did_ekf_reset = true;
             ekf_reset_this_frame_ = true;
+            ekf_reset_last_frame_ = true;
             logs.emplace_back("state", "EKF reset from plate");
         }
     } else if (ekf_matched) {
@@ -868,7 +872,7 @@ void Tracker::update(const std::vector<Armor>& armors, double dt, std::vector<st
 
 std::optional<Armor> Tracker::world_to_muzzle(RmTF& tf, const Armor& target, const Eigen::Vector3d& offset_pos, const Eigen::Vector3d& imu_rpy) {
     Eigen::Vector3d pos_target_world = target.pos;
-    Eigen::Vector3d offset_pos_world = tf.cam_to_world(offset_pos, imu_rpy);
+    Eigen::Vector3d offset_pos_world = tf.cam_to_world_pos(offset_pos, imu_rpy);
     Eigen::Vector3d pos_gun_frame_world = pos_target_world - offset_pos_world;
 
     Armor muzzle_target(target.id, pos_gun_frame_world(0), pos_gun_frame_world(1), pos_gun_frame_world(2), target.yaw, target.index);
@@ -1088,6 +1092,7 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     std::vector<std::pair<std::string, std::string>> logs;
     // 映射：[yaw_deg, pitch_deg, can_fire_flag, yaw_rate_deg]
     std::vector<double> gimbal_control = {0.0, 0.0, 0.0, 0.0};
+    ff_raw_deg_ = 0.0;  // 提前清掉，早退分支不会把上一帧的 HUD 值留着
 
     // 1. 判断并调度基础状态机
     if (tracker_state == TrackerState::LOST) {
@@ -1256,6 +1261,9 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
         ff_hold_clock_ -= dt;
     }
 
+    ff_raw_deg_ = ff_raw;
+    ff_raw = apply_yaw_rate_deadzone(ff_raw, yaw_rate_deadzone_deg_s_, yaw_rate_deadzone_ramp_deg_s_);
+
     const double dt_ff = std::clamp(dt, 0.005, 0.05);
 
     const double tau = yaw_rate_lpf_hz_ > 1e-3
@@ -1293,6 +1301,16 @@ Tracker::track(RmTF& tf, const std::vector<Armor>& raw_armors, const Eigen::Vect
     return {gimbal_control, logs};
 }
 
+double Tracker::apply_yaw_rate_deadzone(double ff_deg_s, double dz, double ramp) {
+    const double threshold = std::max(0.0, dz);
+    const double width = std::max(0.0, ramp);
+    const double mag = std::abs(ff_deg_s);
+    if (mag <= threshold) return 0.0;
+    if (width <= 1e-6) return ff_deg_s;  // ramp=0 退化成硬死区
+    const double gain = std::clamp((mag - threshold) / width, 0.0, 1.0);
+    return ff_deg_s * gain;
+}
+
 // =====================================================================
 // 提取用于 UI 渲染的无锁快照
 // =====================================================================
@@ -1311,7 +1329,11 @@ RenderSnapshot Tracker::get_render_snapshot() const {
     s.gimbal_control = gimbal_control_cache_;
     s.ekf_yaw_vel = target_state_(7);
     s.yaw_rate_deg = yaw_rate_deg_;
+    s.ff_raw_deg = ff_raw_deg_;
     s.bullet_speed = bullet_speed;
+    s.radius_railed = radius_railed_last_frame_;
+    s.ekf_reset = ekf_reset_last_frame_;
+    s.reject_streak = ekf_reject_streak_;
     return s;
 }
 

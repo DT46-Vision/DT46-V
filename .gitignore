@@ -95,3 +95,13 @@ MVS.deb
 # ==========
 
 *.tar
+
+# ========================
+# Local recordings / debug output
+# ========================
+# rosbag2 recordings (rosbag2/ 或 rosbag2_2026_.../)
+rosbag2/
+rosbag2_*/
+# EKF 调试输出（目录或文件）
+ekf_debug/
+ekf_debug*

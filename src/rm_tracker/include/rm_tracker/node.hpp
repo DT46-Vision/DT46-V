@@ -10,6 +10,7 @@
 #include <rm_interfaces/msg/armors_msg.hpp>
 #include <rm_interfaces/msg/decision.hpp>
 #include <rm_interfaces/msg/enemy_center.hpp>
+#include <rm_interfaces/msg/ekf_debug.hpp>
 #include <rm_interfaces/msg/gimbal_control.hpp>
 
 #include <memory>
@@ -103,6 +104,7 @@ private:
     bool display_fps_limit_;
     bool display_;
     bool nav_visual_display_;
+    bool debug_zero_yaw_ = false;  // 调试：发布时把 yaw 强制置 0，只看前馈
     double text_size_;
 
     // FPS 计算
@@ -140,6 +142,7 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_enemy_nav_img_;
     rclcpp::Publisher<rm_interfaces::msg::GimbalControl>::SharedPtr pub_gimbal_control_;
     rclcpp::Publisher<rm_interfaces::msg::EnemyCenter>::SharedPtr pub_enemy_datas_;
+    rclcpp::Publisher<rm_interfaces::msg::EkfDebug>::SharedPtr pub_ekf_debug_;
 
     OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
     std::unique_ptr<LogThrottler> logger_throttler_;

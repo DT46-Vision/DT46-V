@@ -5,6 +5,42 @@
 
 namespace dt46_vision {
 
+// EKF 内部调试快照。状态顺序 [x, vx, y, vy, z, vz, yaw, vyaw, r]。
+struct EkfDebugData {
+    bool valid = false;
+    bool has_measurement = false;
+    bool accepted = false;
+    double dt = 0.0;
+
+    Eigen::Vector4d measurement = Eigen::Vector4d::Zero();
+    Eigen::Vector4d predicted_armor = Eigen::Vector4d::Zero();
+
+    Eigen::Matrix<double, 9, 1> prior_state = Eigen::Matrix<double, 9, 1>::Zero();
+    Eigen::Matrix<double, 9, 1> posterior_state = Eigen::Matrix<double, 9, 1>::Zero();
+
+    Eigen::Matrix<double, 9, 1> P_diag = Eigen::Matrix<double, 9, 1>::Zero();
+    Eigen::Matrix<double, 9, 1> P_prior_diag = Eigen::Matrix<double, 9, 1>::Zero();
+    Eigen::Matrix<double, 9, 1> Q_diag = Eigen::Matrix<double, 9, 1>::Zero();
+    Eigen::Matrix<double, 4, 1> R_diag = Eigen::Matrix<double, 4, 1>::Zero();
+    Eigen::Matrix<double, 4, 1> S_diag = Eigen::Matrix<double, 4, 1>::Zero();
+
+    Eigen::Vector4d innovation = Eigen::Vector4d::Zero();
+    Eigen::Vector4d postfit = Eigen::Vector4d::Zero();
+    Eigen::Vector4d nis = Eigen::Vector4d::Zero();
+    double innov_radial = 0.0;
+    double innov_tangential = 0.0;
+
+    double mahalanobis_sq = 0.0;
+    double mahalanobis_threshold = 30.0;
+
+    bool center_has_measurement = false;
+    bool center_accepted = false;
+    Eigen::Vector2d center_measurement = Eigen::Vector2d::Zero();
+    Eigen::Vector2d center_innovation = Eigen::Vector2d::Zero();
+    double center_sigma = 0.0;
+    double center_mahalanobis_sq = 0.0;
+};
+
 class ExtendedKalmanFilter {
 public:
     ExtendedKalmanFilter();
@@ -49,6 +85,7 @@ public:
     void setState(const Eigen::Matrix<double, 9, 1>& state);
     Eigen::Matrix<double, 9, 1> getState() const;
     Eigen::Matrix<double, 9, 9> getCovariance() const;
+    const EkfDebugData& getDebug() const { return debug_; }
 
 private:
     bool is_initialized_;
@@ -58,6 +95,8 @@ private:
     Eigen::Matrix<double, 9, 9> F_; // 状态转移矩阵
     Eigen::Matrix<double, 9, 9> Q_; // 过程噪声矩阵
     Eigen::Matrix<double, 4, 4> R_; // 观测噪声矩阵
+
+    EkfDebugData debug_;
 
     // 动态噪声计算参数
     double s2qxyz_, s2qyaw_, s2qr_;

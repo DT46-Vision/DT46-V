@@ -44,9 +44,18 @@ public:
      * @return tuple<二维像素点, 是否在视野内>
      */
 
-    // 新增函数的声明
+    // 设置云台 yaw 轴到相机光心的平移（body 系：x 前 / y 右 / z 上，单位 m）。
+    // 相机光心就是 PnP 坐标系原点；补上后转动云台不会给静止目标算出假速度。
+    void set_yaw_to_cam_pos(const Eigen::Vector3d& body_xyz) { yaw_to_cam_pos_body_ = body_xyz; }
+
+    // 纯旋转（只转换方向/相对位移，不加平移）
     Eigen::Vector3d cam_to_world(const Eigen::Vector3d& raw_xyz, const Eigen::Vector3d& imu_rpy);
     Eigen::Vector3d world_to_cam(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy);
+
+    // 绝对位置转换（以云台 yaw 轴为世界原点，含相机杆臂补偿）
+    Eigen::Vector3d cam_to_world_pos(const Eigen::Vector3d& raw_xyz, const Eigen::Vector3d& imu_rpy);
+    Eigen::Vector3d world_to_cam_pos(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy);
+
     // 世界系 -> 相机安装系（与 TF 父帧 camera 一致，不带光学系 [90,0,90] 修正）
     Eigen::Vector3d world_to_mount(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy);
 
@@ -63,6 +72,9 @@ private:
     double cy_;
 
     std::optional<double> initial_yaw_;
+
+    // 云台 yaw 轴 -> 相机光心（body 系：x 前 / y 右 / z 上，m）
+    Eigen::Vector3d yaw_to_cam_pos_body_ = Eigen::Vector3d::Zero();
 
     // 内部高频数学工具：欧拉角转旋转矩阵
     Eigen::Matrix3d euler_to_matrix(const Eigen::Vector3d& rpy_deg, const std::string& order) const;

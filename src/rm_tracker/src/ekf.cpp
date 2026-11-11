@@ -23,6 +23,12 @@ void ExtendedKalmanFilter::init(const Eigen::Matrix<double, 9, 1>& init_x, const
     P_ = init_p;
     X_(6) = normalizeAngle(X_(6));
     is_initialized_ = true;
+    debug_ = EkfDebugData();
+    debug_.valid = true;
+    debug_.prior_state = X_;
+    debug_.posterior_state = X_;
+    debug_.P_diag = P_.diagonal();
+    debug_.P_prior_diag = P_.diagonal();
 }
 
 void ExtendedKalmanFilter::init_QR(double q_xyz, double q_yaw, double q_r, double r_xyz_factor, double r_yaw, double stable_dist) {
@@ -75,10 +81,31 @@ void ExtendedKalmanFilter::predict(double dt) {
     X_(6) += X_(7) * dt;
     X_(6) = normalizeAngle(X_(6));
     P_ = F_ * P_ * F_.transpose() + Q_;
+
+    // 4. 记录先验信息，供 /ekf/debug 观察
+    debug_.dt = dt;
+    debug_.prior_state = X_;
+    debug_.posterior_state = X_;
+    debug_.P_prior_diag = P_.diagonal();
+    debug_.P_diag = P_.diagonal();
+    debug_.Q_diag = Q_.diagonal();
+
+    const double xc = X_(0), yc = X_(2), za = X_(4), yaw = X_(6), r = X_(8);
+    debug_.predicted_armor << xc - r * std::cos(yaw), yc - r * std::sin(yaw), za, yaw;
+
+    // 本帧观测标志在 update / update_center_xy 里重新置位
+    debug_.has_measurement = false;
+    debug_.accepted = false;
+    debug_.center_has_measurement = false;
+    debug_.center_accepted = false;
 }
 
 bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     if (!is_initialized_) return false;
+
+    debug_.has_measurement = true;
+    debug_.accepted = false;
+    debug_.measurement = measurement;
 
     double xc  = X_(0);
     double yc  = X_(2);
@@ -137,8 +164,33 @@ bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
 
     // 5. 【马氏距离野值剔除】自由度为 4 的卡方分布
     double mahalanobis_sq = (Y.transpose() * ldlt.solve(Y)).value();
+
+    // 记录新息、残差协方差与统计检验量
+    debug_.R_diag = R_.diagonal();
+    debug_.S_diag = S.diagonal();
+    debug_.innovation = Y;
+    debug_.mahalanobis_sq = mahalanobis_sq;
+    {
+        Eigen::LLT<Eigen::Matrix<double, 4, 4>> llt(S);
+        if (llt.info() == Eigen::Success) {
+            debug_.nis = llt.matrixL().solve(Y);
+        }
+    }
+    {
+        // 新息在视线径向/切向的分解
+        const Eigen::Vector2d d = measurement.head<2>() - Z_pred.head<2>();
+        const double bearing = std::atan2(Z_pred(1), Z_pred(0));
+        const Eigen::Vector2d radial(std::cos(bearing), std::sin(bearing));
+        const Eigen::Vector2d tangent(-std::sin(bearing), std::cos(bearing));
+        debug_.innov_radial = d.dot(radial);
+        debug_.innov_tangential = d.dot(tangent);
+    }
+
     if (mahalanobis_sq > 30.0) {
         // 如果测量值离群严重，拒绝更新，直接信任当前的预测步
+        debug_.accepted = false;
+        debug_.posterior_state = X_;
+        debug_.P_diag = P_.diagonal();
         return false;
     }
 
@@ -153,12 +205,32 @@ bool ExtendedKalmanFilter::update(const Eigen::Vector4d& measurement) {
     Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
     Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
     P_ = I_KH * P_ * I_KH.transpose() + K * R_ * K.transpose();
+
+    debug_.accepted = true;
+    debug_.posterior_state = X_;
+    debug_.P_diag = P_.diagonal();
+
+    // 后验残差 = 观测 - h(x_post)
+    {
+        const double xc_post = X_(0), yc_post = X_(2), za_post = X_(4);
+        const double yaw_post = X_(6), r_post = X_(8);
+        Eigen::Vector4d Z_post(xc_post - r_post * std::cos(yaw_post),
+                               yc_post - r_post * std::sin(yaw_post),
+                               za_post, yaw_post);
+        debug_.postfit = measurement - Z_post;
+        debug_.postfit(3) = normalizeAngle(debug_.postfit(3));
+    }
     return true;
 }
 
 bool ExtendedKalmanFilter::update_center_xy(double xc_meas, double yc_meas, double sigma_m) {
     if (!is_initialized_) return false;
     if (!(sigma_m > 1e-4)) return false;
+
+    debug_.center_has_measurement = true;
+    debug_.center_accepted = false;
+    debug_.center_measurement << xc_meas, yc_meas;
+    debug_.center_sigma = sigma_m;
 
     Eigen::Matrix<double, 2, 9> H = Eigen::Matrix<double, 2, 9>::Zero();
     H(0, 0) = 1.0;
@@ -177,12 +249,20 @@ bool ExtendedKalmanFilter::update_center_xy(double xc_meas, double yc_meas, doub
     S.computeInverseWithCheck(S_inv, invertible);
     if (!invertible) return false;
 
+    const Eigen::Vector2d center_innov = z - hx;
+    debug_.center_innovation = center_innov;
+    debug_.center_mahalanobis_sq = (center_innov.transpose() * S_inv * center_innov).value();
+
     const Eigen::Matrix<double, 9, 2> K = P_ * H.transpose() * S_inv;
-    X_ += K * (z - hx);
+    X_ += K * center_innov;
 
     const Eigen::Matrix<double, 9, 9> I = Eigen::Matrix<double, 9, 9>::Identity();
     const Eigen::Matrix<double, 9, 9> I_KH = I - K * H;
     P_ = I_KH * P_ * I_KH.transpose() + K * Rm * K.transpose();
+
+    debug_.center_accepted = true;
+    debug_.posterior_state = X_;
+    debug_.P_diag = P_.diagonal();
     return true;
 }
 

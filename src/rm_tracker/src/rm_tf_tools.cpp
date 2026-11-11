@@ -106,6 +106,21 @@ Eigen::Vector3d RmTF::world_to_cam(const Eigen::Vector3d& world_xyz, const Eigen
     return rotate_pos_axis(normal_axis_xyz, cam_inv_fix, "zyx");
 }
 
+// 绝对位置：世界原点取云台 yaw 轴。body 系下相机光心在 yaw 轴前方 b 处，
+// 所以先把相机系点转成 body 系，再加 b，最后旋转到世界系。
+Eigen::Vector3d RmTF::cam_to_world_pos(const Eigen::Vector3d& raw_xyz, const Eigen::Vector3d& imu_rpy) {
+    Eigen::Vector3d cam_fix(-90.0, 0.0, -90.0);
+    Eigen::Vector3d body = rotate_pos_axis(raw_xyz, cam_fix, "xyz") + yaw_to_cam_pos_body_;
+    return rotate_pos_axis(body, imu_rpy, "xyz");
+}
+
+Eigen::Vector3d RmTF::world_to_cam_pos(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy) {
+    Eigen::Vector3d inv_imu_rpy(-imu_rpy(2), -imu_rpy(1), -imu_rpy(0));
+    Eigen::Vector3d body = rotate_pos_axis(world_xyz, inv_imu_rpy, "zyx");
+    Eigen::Vector3d cam_inv_fix(90.0, 0.0, 90.0);
+    return rotate_pos_axis(body - yaw_to_cam_pos_body_, cam_inv_fix, "zyx");
+}
+
 Eigen::Vector3d RmTF::world_to_mount(const Eigen::Vector3d& world_xyz, const Eigen::Vector3d& imu_rpy) {
     Eigen::Vector3d inv_imu_rpy(-imu_rpy(2), -imu_rpy(1), -imu_rpy(0));
     return rotate_pos_axis(world_xyz, inv_imu_rpy, "zyx");

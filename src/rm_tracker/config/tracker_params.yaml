@@ -14,6 +14,7 @@ rm_tracker:
     debug: false
     display_fps_limit: true 
     display: false           # 是否显示 OpenCV 调试图像
+    debug_zero_yaw: false    # 调试：发布 yaw 强制 0，只看前馈效果
     nav_visual_display: false  # 是否发布 /tracker/enemy_nav_img 导航可视化图像
 
     # ----------------------- TRACKER ---------------------
@@ -27,6 +28,13 @@ rm_tracker:
     cam_to_gun_rpy_r: 0.0
     cam_to_gun_rpy_p: 0.0
     cam_to_gun_rpy_y: 0.0
+
+    # [外参] 云台 yaw 轴 -> 相机光心 (Yaw axis to Camera) (x:前, y:右, z:上)
+    # 量 yaw 轴到镜头光心的平移；光心在轴前方 10cm 就填 x: 0.10。
+    # 只影响 EKF / 前馈 / 可视化，不影响瞄准弹道，标错了也不会打偏。
+    yaw_to_cam_pos_x: 0.0
+    yaw_to_cam_pos_y: 0.0
+    yaw_to_cam_pos_z: 0.0
 
     # [逻辑与阈值]
     dist_tol: 0.10              # 预处理：两块板距离容差 (m)
@@ -60,6 +68,9 @@ rm_tracker:
     yaw_rate_max_accel_deg_s2: 1500.0
     yaw_rate_blend_time: 0.10
     yaw_rate_hold_after_reset: 0.10
+    # yaw 前馈软死区：|ff|<=dz 输出 0，dz..dz+ramp 线性恢复；dz=0 关闭
+    yaw_rate_deadzone_deg_s: 0.0
+    yaw_rate_deadzone_ramp_deg_s: 0.0
 
     # 反小陀螺 — 时间累计 (秒), 帧率无关
     min_spinning_vel: 1.0          # 角速度门限 (rad/s)

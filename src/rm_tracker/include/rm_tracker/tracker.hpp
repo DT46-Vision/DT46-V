@@ -81,7 +81,11 @@ struct RenderSnapshot {
     std::tuple<double, double, bool> gimbal_control;
     double ekf_yaw_vel;
     double yaw_rate_deg;
+    double ff_raw_deg;
     double bullet_speed;
+    bool radius_railed;
+    bool ekf_reset;
+    int reject_streak;
 };
 
 // 角度工具函数
@@ -143,6 +147,9 @@ public:
     double yaw_rate_max_accel_deg_s2_ = 1500.0;
     double yaw_rate_blend_time_ = 0.10;
     double yaw_rate_hold_after_reset_ = 0.10;
+    // 小前馈死区：threshold 以下输出 0，threshold..threshold+ramp 线性恢复。
+    double yaw_rate_deadzone_deg_s_ = 0.0;
+    double yaw_rate_deadzone_ramp_deg_s_ = 0.0;
 
     double bullet_speed = 28.0;
     double k_v2 = 0.019;
@@ -176,6 +183,7 @@ public:
     }
     bool spinning() const { return spin_; }
     const std::optional<Armor>& plate_measurement() const { return plate_meas_; }
+    const EkfDebugData& ekf_debug() const { return ekf_.getDebug(); }
 
     void build_ballistic_lut();
 
@@ -186,6 +194,8 @@ private:
     int detect_count_ = 0;
     int lost_count_ = 0;
     int jump_cooldown_ = 0;
+    bool ekf_reset_last_frame_ = false;
+    bool radius_railed_last_frame_ = false;
 
     Eigen::Matrix<double, 9, 1> target_state_;
 
@@ -207,6 +217,7 @@ private:
     // yaw 前馈输出链路：解析视线角速度 -> LPF -> 斜率限幅
     double yaw_rate_deg_ = 0.0;
     double yaw_rate_lpf_ = 0.0;
+    double ff_raw_deg_ = 0.0;        // 死区前的原始前馈，仅用于 HUD
     double v_yaw_blend_ = 1.0;       // 1=跟板(叠加 v_yaw)，0=瞄正前
     double ff_hold_clock_ = 0.0;     // reset 后保持 0 的剩余时间
     bool ekf_reset_this_frame_ = false;
@@ -315,6 +326,9 @@ private:
     void resolve_center_from_armor(double xa, double ya, double r, double& yaw,
                                     double& xc, double& yc,
                                     bool has_prev, double prev_xc, double prev_yc) const;
+
+    // yaw 前馈软死区：|ff|<=dz 输出 0，dz..dz+ramp 线性恢复。
+    static double apply_yaw_rate_deadzone(double ff_deg_s, double dz, double ramp);
 };
 
 } // namespace dt46_vision
